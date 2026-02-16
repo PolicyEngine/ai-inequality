@@ -72,7 +72,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          PUBLIC_URL: /ai-growth-research
+          PUBLIC_URL: /ai-inequality
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
