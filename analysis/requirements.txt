@@ -1,0 +1,6 @@
+policyengine-us>=1.398.0
+pandas>=2.0.0
+numpy>=2.1.0
+plotly>=5.0.0
+jupyter
+microdf-python
