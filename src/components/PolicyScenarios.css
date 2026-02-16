@@ -51,8 +51,10 @@
 }
 
 .scenario-icon {
-  font-size: 2.5rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
 }
 
 .scenario-header h3 {
@@ -116,9 +118,11 @@
 }
 
 .note-icon {
-  font-size: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+  color: var(--pe-teal-600);
 }
 
 .note-content h4 {
@@ -162,8 +166,9 @@
     gap: 0.75rem;
   }
 
-  .scenario-icon {
-    font-size: 2rem;
+  .scenario-icon svg {
+    width: 24px;
+    height: 24px;
   }
 
   .scenario-header h3 {
@@ -189,8 +194,9 @@
     gap: 1rem;
   }
 
-  .note-icon {
-    font-size: 2.5rem;
+  .note-icon svg {
+    width: 28px;
+    height: 28px;
   }
 
   .note-content h4 {
@@ -223,8 +229,9 @@
     padding: 1.75rem 1.25rem;
   }
 
-  .scenario-icon {
-    font-size: 1.75rem;
+  .scenario-icon svg {
+    width: 20px;
+    height: 20px;
   }
 
   .scenario-header h3 {
@@ -244,7 +251,8 @@
     padding: 1.75rem 1.25rem;
   }
 
-  .note-icon {
-    font-size: 2rem;
+  .note-icon svg {
+    width: 24px;
+    height: 24px;
   }
 }

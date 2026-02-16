@@ -50,9 +50,11 @@
 }
 
 .capability-icon {
-  font-size: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 1rem;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+  color: var(--pe-teal-600);
 }
 
 .capability-card h3 {
@@ -137,8 +139,9 @@
     padding: 1.75rem 1.5rem;
   }
 
-  .capability-icon {
-    font-size: 2.5rem;
+  .capability-icon svg {
+    width: 28px;
+    height: 28px;
   }
 
   .capability-card h3 {
@@ -192,8 +195,9 @@
     padding: 1.5rem 1.25rem;
   }
 
-  .capability-icon {
-    font-size: 2rem;
+  .capability-icon svg {
+    width: 24px;
+    height: 24px;
   }
 
   .capability-card h3 {

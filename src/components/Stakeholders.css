@@ -69,7 +69,8 @@
 }
 
 .filter-icon {
-  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
 }
 
 /* Stakeholders Grid */
@@ -191,7 +192,10 @@
 }
 
 .box-icon {
-  font-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pe-teal-600);
 }
 
 .box-header h3 {
@@ -237,12 +241,24 @@
 }
 
 .country-flag {
-  font-size: 2.25rem;
-  transition: transform var(--transition-spring);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: var(--pe-teal-600);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border-radius: var(--radius-lg);
+  letter-spacing: 0.05em;
+  transition: all var(--transition-spring);
+  flex-shrink: 0;
 }
 
 .country-card:hover .country-flag {
-  transform: scale(1.1);
+  transform: scale(1.05);
+  background: var(--pe-teal-700);
 }
 
 .country-card strong {
@@ -331,8 +347,9 @@
     gap: var(--space-3);
   }
 
-  .box-icon {
-    font-size: 2rem;
+  .box-icon svg {
+    width: 20px;
+    height: 20px;
   }
 
   .box-header h3 {
@@ -354,7 +371,9 @@
   }
 
   .country-flag {
-    font-size: 1.75rem;
+    width: 40px;
+    height: 40px;
+    font-size: 0.75rem;
   }
 
   .country-card strong {
@@ -406,8 +425,9 @@
     padding: var(--space-6) var(--space-4);
   }
 
-  .box-icon {
-    font-size: 1.75rem;
+  .box-icon svg {
+    width: 18px;
+    height: 18px;
   }
 
   .box-header h3 {
@@ -419,7 +439,9 @@
   }
 
   .country-flag {
-    font-size: 1.5rem;
+    width: 36px;
+    height: 36px;
+    font-size: 0.7rem;
   }
 
   .country-card strong {

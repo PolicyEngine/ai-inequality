@@ -1,29 +1,36 @@
 import React from "react";
 import "./PolicyEngineCapabilities.css";
+import {
+  IconLockOpen,
+  IconRobot,
+  IconBolt,
+  IconUsersGroup,
+  IconWorld,
+} from "@tabler/icons-react";
 
 function PolicyEngineCapabilities() {
   const capabilities = [
     {
       title: "Open-source microsimulation",
-      icon: "🔓",
+      icon: <IconLockOpen size={32} stroke={1.5} />,
       description:
         "Transparent, auditable tax-benefit modeling enables collaborative examination of policy coordination problems.",
     },
     {
       title: "AI pioneer in policy analysis",
-      icon: "🤖",
+      icon: <IconRobot size={32} stroke={1.5} />,
       description:
         "First policy analysis platform to integrate LLMs (April 3, 2023)—just 3 weeks after GPT-4 launched. Substantial ongoing AI integration.",
     },
     {
       title: "Real-time policy impact",
-      icon: "⚡",
+      icon: <IconBolt size={32} stroke={1.5} />,
       description:
         "Instant calculation of distributional effects across US federal and state programs for millions of households.",
     },
     {
       title: "Collaborative research",
-      icon: "🤝",
+      icon: <IconUsersGroup size={32} stroke={1.5} />,
       description:
         "Open platform enables researchers worldwide to validate, extend, and build upon policy simulations.",
     },
@@ -53,7 +60,7 @@ function PolicyEngineCapabilities() {
 
         <div className="open-source-box">
           <div className="box-content">
-            <h3>🌐 Open source enables transparent analysis</h3>
+            <h3><IconWorld size={24} stroke={1.5} style={{ verticalAlign: 'middle', marginRight: '0.5rem' }} />Open source enables transparent analysis</h3>
             <p>
               Unlike proprietary economic models, PolicyEngine's open-source
               approach enables transparent, collaborative examination of complex
@@ -85,6 +92,14 @@ function PolicyEngineCapabilities() {
                 className="capability-link"
               >
                 Read our research →
+              </a>
+              <a
+                href="https://policyengine.org/us/model"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="capability-link"
+              >
+                Explore the model →
               </a>
             </div>
           </div>

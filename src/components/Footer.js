@@ -6,11 +6,12 @@ function Footer() {
     <footer className="footer">
       <div className="footer-content">
         <div className="footer-section">
-          <h4>About PolicyEngine</h4>
+          <h4>About</h4>
           <p>
             PolicyEngine is a nonprofit building open-source tax-benefit
             microsimulation models to make public policy more transparent,
-            accessible, and impactful.
+            accessible, and impactful. This research initiative examines how
+            policy tools can address AI-driven economic disruption.
           </p>
         </div>
         <div className="footer-section">
@@ -27,7 +28,7 @@ function Footer() {
             </li>
             <li>
               <a
-                href="https://github.com/PolicyEngine"
+                href="https://github.com/PolicyEngine/ai-inequality"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -35,35 +36,15 @@ function Footer() {
               </a>
             </li>
             <li>
-              <a
-                href="https://policyengine.org/us/research"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Research
-              </a>
-            </li>
-            <li>
-              <a
-                href="https://blog.policyengine.org"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Blog
+              <a href="mailto:hello@policyengine.org">
+                hello@policyengine.org
               </a>
             </li>
           </ul>
         </div>
-        <div className="footer-section">
-          <h4>Contact</h4>
-          <p>
-            Interested in collaborating on this research?
-            <br />
-            <a href="mailto:hello@policyengine.org">hello@policyengine.org</a>
-          </p>
-        </div>
       </div>
       <div className="footer-bottom">
+        <span className="footer-brand">PolicyEngine</span>
         <p>
           &copy; {new Date().getFullYear()} PolicyEngine. All rights reserved.
         </p>

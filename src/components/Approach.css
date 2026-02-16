@@ -1,0 +1,334 @@
+/* Approach Section */
+.approach-section {
+  padding: var(--space-24) var(--space-8);
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.approach-section .section-header {
+  text-align: center;
+  margin-bottom: var(--space-16);
+}
+
+.approach-section .eyebrow {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--pe-teal-600);
+  margin-bottom: var(--space-3);
+  padding: var(--space-1) var(--space-4);
+  background: var(--pe-teal-50);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--pe-teal-200);
+}
+
+.approach-section .section-header h2 {
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  color: var(--pe-gray-900);
+  margin-bottom: var(--space-4);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+/* Pipeline Flow */
+.approach-pipeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-16);
+  align-items: stretch;
+}
+
+.pipeline-step {
+  position: relative;
+  background: white;
+  border: 2px solid var(--pe-teal-200);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  transition: all var(--transition-slow);
+}
+
+.pipeline-step:hover {
+  border-color: var(--pe-teal-500);
+  box-shadow: var(--shadow-teal);
+  transform: translateY(-4px);
+}
+
+.pipeline-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--pe-teal-500), var(--pe-teal-600));
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  box-shadow: 0 4px 12px rgba(57, 198, 192, 0.3);
+}
+
+.pipeline-step h3 {
+  font-size: 1.1rem;
+  color: var(--pe-gray-800);
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.pipeline-step p {
+  font-size: 0.85rem;
+  color: var(--pe-gray-500);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Arrow connector between pipeline steps */
+.pipeline-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pe-teal-500);
+  font-size: 1.5rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Approach Description */
+.approach-description {
+  text-align: center;
+  max-width: 900px;
+  margin: 0 auto var(--space-16);
+  font-size: 1.05rem;
+  color: var(--pe-gray-600);
+  line-height: 1.7;
+  padding: var(--space-8);
+  background: linear-gradient(
+    135deg,
+    var(--pe-teal-50) 0%,
+    rgba(240, 249, 255, 0.5) 100%
+  );
+  border-radius: var(--radius-2xl);
+  position: relative;
+}
+
+.approach-description p {
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Capability Highlights */
+.capability-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-8);
+}
+
+.capability-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  border: 1px solid var(--pe-gray-200);
+  transition: all var(--transition-slow);
+  position: relative;
+  overflow: hidden;
+}
+
+.capability-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pe-teal-500), var(--pe-teal-300));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--transition-slow);
+}
+
+.capability-card:hover {
+  border-color: var(--pe-teal-300);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-6px);
+}
+
+.capability-card:hover::after {
+  transform: scaleX(1);
+}
+
+.capability-card h3 {
+  font-size: 1.15rem;
+  color: var(--pe-gray-800);
+  margin-bottom: var(--space-3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.capability-card p {
+  font-size: 0.95rem;
+  color: var(--pe-gray-500);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* Uncertainty Box */
+.uncertainty-box {
+  margin-top: var(--space-16);
+  padding: var(--space-8);
+  background: linear-gradient(
+    135deg,
+    var(--pe-teal-50) 0%,
+    rgba(240, 249, 255, 0.5) 100%
+  );
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--pe-teal-200);
+  text-align: center;
+}
+
+.uncertainty-box h3 {
+  font-size: 1.25rem;
+  color: var(--pe-gray-800);
+  margin-bottom: var(--space-3);
+  font-weight: 600;
+}
+
+.uncertainty-box > p {
+  font-size: 0.95rem;
+  color: var(--pe-gray-600);
+  line-height: 1.7;
+  max-width: 700px;
+  margin: 0 auto var(--space-8);
+}
+
+.uncertainty-stats {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-10);
+  flex-wrap: wrap;
+}
+
+.uncertainty-stat {
+  text-align: center;
+}
+
+.uncertainty-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--pe-teal-600);
+  letter-spacing: -0.02em;
+}
+
+.uncertainty-label {
+  font-size: 0.85rem;
+  color: var(--pe-gray-500);
+  margin-top: var(--space-1);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .approach-pipeline {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+  }
+
+  .pipeline-arrow {
+    display: none;
+  }
+
+  .capability-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+}
+
+@media (max-width: 768px) {
+  .approach-section {
+    padding: var(--space-12) var(--space-5);
+  }
+
+  .approach-section .section-header h2 {
+    font-size: 1.75rem;
+  }
+
+  .approach-pipeline {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .pipeline-step {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .pipeline-step h3 {
+    font-size: 1rem;
+  }
+
+  .pipeline-step p {
+    font-size: 0.8rem;
+  }
+
+  .approach-description {
+    padding: var(--space-6);
+    font-size: 1rem;
+  }
+
+  .capability-card {
+    padding: var(--space-6);
+  }
+
+  .capability-card h3 {
+    font-size: 1.05rem;
+  }
+
+  .capability-card p {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .approach-section {
+    padding: var(--space-10) var(--space-4);
+  }
+
+  .approach-section .section-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .pipeline-step {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .pipeline-number {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+
+  .pipeline-step h3 {
+    font-size: 0.95rem;
+  }
+
+  .approach-description {
+    padding: var(--space-5);
+    font-size: 0.95rem;
+  }
+
+  .capability-card {
+    padding: var(--space-5);
+  }
+
+  .capability-card h3 {
+    font-size: 1rem;
+  }
+
+  .capability-card p {
+    font-size: 0.85rem;
+  }
+}

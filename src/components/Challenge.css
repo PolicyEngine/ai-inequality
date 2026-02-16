@@ -1,0 +1,242 @@
+/* Challenge Section */
+.challenge-section {
+  padding: var(--space-24) var(--space-8);
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.challenge-section .section-header {
+  text-align: center;
+  margin-bottom: var(--space-16);
+}
+
+.challenge-section .eyebrow {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--pe-teal-600);
+  margin-bottom: var(--space-3);
+  padding: var(--space-1) var(--space-4);
+  background: var(--pe-teal-50);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--pe-teal-200);
+}
+
+.challenge-section .section-header h2 {
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  color: var(--pe-gray-900);
+  margin-bottom: var(--space-4);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.challenge-section .section-intro {
+  font-size: clamp(1rem, 2.5vw, 1.15rem);
+  color: var(--pe-gray-500);
+  max-width: 800px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* Mechanism Cards */
+.challenge-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.mechanism-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: var(--space-10) var(--space-8);
+  border: 1px solid var(--pe-gray-200);
+  transition: all var(--transition-slow);
+  position: relative;
+  overflow: hidden;
+}
+
+.mechanism-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--pe-teal-500), var(--pe-teal-300));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--transition-slow);
+}
+
+.mechanism-card:hover {
+  border-color: var(--pe-teal-300);
+  box-shadow: var(--shadow-teal-lg);
+  transform: translateY(-8px);
+}
+
+.mechanism-card:hover::before {
+  transform: scaleX(1);
+}
+
+.mechanism-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: var(--pe-teal-50);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-5);
+  color: var(--pe-teal-600);
+  transition: all var(--transition-spring);
+}
+
+.mechanism-card:hover .mechanism-icon {
+  background: var(--pe-teal-100);
+  transform: scale(1.1);
+}
+
+.mechanism-card h3 {
+  font-size: 1.25rem;
+  color: var(--pe-gray-800);
+  margin-bottom: var(--space-3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.mechanism-card p {
+  font-size: 0.95rem;
+  color: var(--pe-gray-500);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* Inline Source Links */
+.inline-source {
+  color: var(--pe-teal-600);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px dotted var(--pe-teal-400);
+  transition: all var(--transition-fast);
+}
+
+.inline-source:hover {
+  color: var(--pe-teal-500);
+  border-bottom-style: solid;
+}
+
+/* Callout Box */
+.challenge-callout {
+  background: var(--pe-teal-50);
+  border: 1px solid var(--pe-teal-200);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8) var(--space-10);
+  position: relative;
+  overflow: hidden;
+}
+
+.challenge-callout::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--pe-teal-500), var(--pe-teal-300));
+  border-radius: var(--radius-full);
+}
+
+.challenge-callout p {
+  font-size: 1.05rem;
+  color: var(--pe-gray-700);
+  line-height: 1.7;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .challenge-cards {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+}
+
+@media (max-width: 768px) {
+  .challenge-section {
+    padding: var(--space-12) var(--space-5);
+  }
+
+  .challenge-section .section-header h2 {
+    font-size: 1.75rem;
+  }
+
+  .challenge-section .section-intro {
+    font-size: 1rem;
+    padding: 0 var(--space-2);
+  }
+
+  .mechanism-card {
+    padding: var(--space-8) var(--space-6);
+  }
+
+  .mechanism-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .mechanism-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .mechanism-card h3 {
+    font-size: 1.15rem;
+  }
+
+  .mechanism-card p {
+    font-size: 0.9rem;
+  }
+
+  .challenge-callout {
+    padding: var(--space-6) var(--space-8);
+  }
+
+  .challenge-callout p {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .challenge-section {
+    padding: var(--space-10) var(--space-4);
+  }
+
+  .challenge-section .section-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .mechanism-card {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .mechanism-card h3 {
+    font-size: 1.05rem;
+  }
+
+  .mechanism-card p {
+    font-size: 0.85rem;
+  }
+
+  .challenge-callout {
+    padding: var(--space-5) var(--space-6);
+  }
+
+  .challenge-callout p {
+    font-size: 0.9rem;
+  }
+}

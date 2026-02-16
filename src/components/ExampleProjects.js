@@ -55,49 +55,48 @@ function ExampleProjects() {
 
   return (
     <div id="examples" className="examples-section">
-      <div className="examples-container">
-        <div className="section-header">
-          <h2>What PolicyEngine does</h2>
-          <p className="section-subtitle">
-            Open-source tax-benefit microsimulation enabling distributional
-            analysis of policy interventions
-          </p>
-        </div>
+      <div className="section-header">
+        <span className="eyebrow">Track record</span>
+        <h2>What PolicyEngine does</h2>
+        <p className="examples-subtitle">
+          Open-source tax-benefit microsimulation enabling distributional
+          analysis of policy interventions
+        </p>
+      </div>
 
-        <div className="projects-grid">
-          {projects.map((project, idx) => (
-            <a
-              key={idx}
-              href={project.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="project-card"
-            >
-              <div className="project-image-container">
-                <img
-                  src={project.image}
-                  alt={project.title}
-                  className="project-image"
-                />
-                <div className="project-type">{project.type}</div>
-              </div>
-              <div className="project-content">
-                <h3>{project.title}</h3>
-                <p>{project.description}</p>
-                <span className="project-link-arrow">View project →</span>
-              </div>
-            </a>
-          ))}
-        </div>
+      <div className="projects-grid">
+        {projects.map((project, idx) => (
+          <a
+            key={idx}
+            href={project.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="project-card"
+          >
+            <div className="project-image-container">
+              <img
+                src={project.image}
+                alt={project.title}
+                className="project-image"
+              />
+              <div className="project-type">{project.type}</div>
+            </div>
+            <div className="project-content">
+              <h3>{project.title}</h3>
+              <p>{project.description}</p>
+              <span className="project-link-arrow">View project {"\u2192"}</span>
+            </div>
+          </a>
+        ))}
+      </div>
 
-        <div className="examples-footer">
-          <p>
-            These projects demonstrate PolicyEngine's capability to analyze how
-            policies shape distributional outcomes. The AI research initiative
-            extends this approach to model how policy interventions mediate
-            AI-driven economic shocks.
-          </p>
-        </div>
+      <div className="examples-footer">
+        <p>
+          These projects demonstrate PolicyEngine's capability to analyze how
+          policies shape distributional outcomes. The AI research initiative
+          extends this approach to model how policy interventions mediate
+          AI-driven economic shocks.
+        </p>
       </div>
     </div>
   );

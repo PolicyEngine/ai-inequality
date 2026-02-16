@@ -72,7 +72,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          PUBLIC_URL: /ai-inequality
+          PUBLIC_URL: /${{ github.event.repository.name }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -87,3 +87,19 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Smoke test deployed site
+        run: |
+          sleep 30
+          URL="https://policyengine.github.io/${{ github.event.repository.name }}/"
+          STATUS=$(curl -s -o /tmp/page.html -w "%{http_code}" "$URL")
+          if [ "$STATUS" != "200" ]; then
+            echo "ERROR: Site returned $STATUS"
+            exit 1
+          fi
+          if ! grep -q "/${{ github.event.repository.name }}/static/" /tmp/page.html; then
+            echo "ERROR: Asset paths don't match repo name"
+            cat /tmp/page.html
+            exit 1
+          fi
+          echo "Smoke test passed: $URL returned 200 with correct asset paths"

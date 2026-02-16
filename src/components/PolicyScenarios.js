@@ -1,11 +1,19 @@
 import React from "react";
 import "./PolicyScenarios.css";
+import {
+  IconClipboardList,
+  IconCash,
+  IconShield,
+  IconBuildingBank,
+  IconArrowsShuffle,
+  IconChartBar,
+} from "@tabler/icons-react";
 
 function PolicyScenarios() {
   const scenarios = [
     {
       title: "Current policy baseline",
-      icon: "📋",
+      icon: <IconClipboardList size={28} stroke={1.5} />,
       color: "#64748b",
       highlights: [
         "Existing tax systems",
@@ -16,7 +24,7 @@ function PolicyScenarios() {
     },
     {
       title: "Universal basic income",
-      icon: "💵",
+      icon: <IconCash size={28} stroke={1.5} />,
       color: "#319795",
       highlights: [
         "Unconditional transfers",
@@ -31,14 +39,14 @@ function PolicyScenarios() {
     },
     {
       title: "Expanded safety net",
-      icon: "🛡️",
+      icon: <IconShield size={28} stroke={1.5} />,
       color: "#0ea5e9",
       highlights: ["Enhanced programs", "Job transitions", "Family support"],
       areas: ["UI & wage subsidies", "SNAP & housing", "Child allowances"],
     },
     {
       title: "Capital taxation",
-      icon: "🏛️",
+      icon: <IconBuildingBank size={28} stroke={1.5} />,
       color: "#8b5cf6",
       highlights: [
         "Target capital income",
@@ -49,7 +57,7 @@ function PolicyScenarios() {
     },
     {
       title: "Hybrid approaches",
-      icon: "🔀",
+      icon: <IconArrowsShuffle size={28} stroke={1.5} />,
       color: "#f59e0b",
       highlights: [
         "Combined policies",
@@ -116,7 +124,7 @@ function PolicyScenarios() {
       </div>
 
       <div className="analysis-note">
-        <div className="note-icon">📊</div>
+        <div className="note-icon"><IconChartBar size={24} stroke={1.5} /></div>
         <div className="note-content">
           <h4>Comparative distributional analysis</h4>
           <p>

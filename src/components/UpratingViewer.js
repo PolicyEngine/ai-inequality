@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Papa from "papaparse";
+import { IconBulb } from "@tabler/icons-react";
 
 function UpratingViewer() {
   const [data, setData] = useState([]);
@@ -190,10 +191,11 @@ function UpratingViewer() {
           margin: "0 auto 2rem",
         }}
       >
-        <p style={{ margin: 0, fontWeight: "500" }}>
-          💡 <strong>CBO Income by Source</strong> projections (highlighted in
+        <p style={{ margin: 0, fontWeight: "500", display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
+          <IconBulb size={20} stroke={1.5} style={{ flexShrink: 0, marginTop: "2px" }} />
+          <span><strong>CBO Income by Source</strong> projections (highlighted in
           yellow) are critical for AI scenarios, as AI-driven wage compression
-          and capital income shifts directly impact these growth rates.
+          and capital income shifts directly impact these growth rates.</span>
         </p>
       </div>
 

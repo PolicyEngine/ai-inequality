@@ -1,56 +1,43 @@
 import React from "react";
 import Hero from "../components/Hero";
+import Challenge from "../components/Challenge";
+import Approach from "../components/Approach";
 import ExampleProjects from "../components/ExampleProjects";
-import Overview from "../components/Overview";
-import Stakeholders from "../components/Stakeholders";
+import Evidence from "../components/Evidence";
+import Ecosystem from "../components/Ecosystem";
+import GetInvolved from "../components/GetInvolved";
 
 function Home() {
   return (
-    <>
+    <main>
       <Hero />
+      <Challenge />
+      <Approach />
       <ExampleProjects />
-      <Overview />
-      <div
-        className="section"
-        style={{ textAlign: "center", padding: "4rem 2rem" }}
-      >
+      <Evidence />
+      <Ecosystem />
+      <div id="get-involved">
+        <GetInvolved />
+      </div>
+      <div className="dive-deeper-section">
         <h2>Dive deeper</h2>
-        <p
-          style={{
-            maxWidth: "800px",
-            margin: "0 auto 2rem",
-            fontSize: "1.1rem",
-          }}
-        >
+        <p>
           Explore the academic research context and technical implementation, or
           examine the policy scenarios we can analyze.
         </p>
-        <div
-          style={{
-            display: "flex",
-            gap: "2rem",
-            justifyContent: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <a
-            href="/research"
-            className="cta-button primary"
-            style={{ textDecoration: "none", minWidth: "200px" }}
-          >
-            Research Context →
+        <div className="dive-deeper-links">
+          <a href="/research" className="cta-button primary">
+            Research context {"\u2192"}
           </a>
-          <a
-            href="/policy-analysis"
-            className="cta-button primary"
-            style={{ textDecoration: "none", minWidth: "200px" }}
-          >
-            Policy Analysis →
+          <a href="/policy-analysis" className="cta-button primary">
+            Policy analysis {"\u2192"}
+          </a>
+          <a href="/references" className="cta-button secondary">
+            References {"\u2192"}
           </a>
         </div>
       </div>
-      <Stakeholders />
-    </>
+    </main>
   );
 }
 

@@ -1,19 +1,15 @@
-/* Header - Refined Navigation with Glass Effect */
+/* Header - Fixed navigation with backdrop blur */
 .header-bar {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   transition: all var(--transition-base);
-}
-
-.header-bar:hover {
-  background: rgba(255, 255, 255, 0.95);
 }
 
 .header-content {
@@ -51,6 +47,7 @@
   color: var(--pe-gray-300);
   font-weight: 300;
   font-size: 1.25rem;
+  user-select: none;
 }
 
 .header-title-link {
@@ -63,10 +60,11 @@
   color: var(--pe-gray-800);
   letter-spacing: -0.02em;
   transition: color var(--transition-fast);
+  white-space: nowrap;
 }
 
 .header-title-link:hover .header-title {
-  color: var(--pe-teal-600);
+  color: var(--pe-teal-dark);
 }
 
 /* Navigation */
@@ -99,7 +97,7 @@
   transform: translateX(-50%);
   width: 0;
   height: 2px;
-  background: var(--pe-teal-500);
+  background: var(--pe-teal);
   border-radius: var(--radius-full);
   transition: width var(--transition-base);
 }
@@ -114,33 +112,20 @@
 }
 
 .nav-link.active {
-  color: var(--pe-teal-600);
+  color: var(--pe-teal-dark);
   background: var(--pe-teal-50);
 }
 
 .nav-link.active::after {
   width: 20px;
-  background: var(--pe-teal-500);
+  background: var(--pe-teal);
 }
 
-/* Header Links */
+/* Header right area */
 .header-right {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-}
-
-.header-link {
-  color: var(--pe-gray-600);
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 500;
-  transition: all var(--transition-fast);
-  padding: var(--space-2) 0;
-}
-
-.header-link:hover {
-  color: var(--pe-gray-900);
 }
 
 /* GitHub Link */
@@ -152,6 +137,8 @@
   height: 40px;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
+  color: var(--pe-gray-600);
+  text-decoration: none;
 }
 
 .github-link:hover {
@@ -170,7 +157,99 @@
   opacity: 1;
 }
 
-/* Mobile Navigation */
+.github-icon-svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--pe-gray-600);
+  transition: fill var(--transition-fast);
+}
+
+.github-link:hover .github-icon-svg {
+  fill: var(--pe-gray-900);
+}
+
+/* Mobile hamburger */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.hamburger-btn:hover {
+  background: var(--pe-gray-100);
+}
+
+.hamburger-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 20px;
+}
+
+.hamburger-icon span {
+  display: block;
+  height: 2px;
+  background: var(--pe-gray-700);
+  border-radius: 1px;
+  transition: all var(--transition-fast);
+}
+
+.hamburger-btn.open .hamburger-icon span:nth-child(1) {
+  transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger-btn.open .hamburger-icon span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-btn.open .hamburger-icon span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+/* Mobile menu */
+.mobile-nav {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--pe-gray-200);
+  padding: var(--space-4) var(--space-6);
+  box-shadow: var(--shadow-lg);
+}
+
+.mobile-nav.open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mobile-nav .nav-link {
+  padding: var(--space-3) var(--space-4);
+  font-size: 1rem;
+  border-radius: var(--radius-md);
+}
+
+/* Responsive */
 @media (max-width: 900px) {
   .header-content {
     padding: var(--space-3) var(--space-5);
@@ -178,6 +257,12 @@
 
   .header-nav {
     display: none;
+  }
+
+  .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .header-title {
@@ -190,19 +275,14 @@
 }
 
 @media (max-width: 768px) {
-  .header-bar {
-    padding: 0;
-  }
-
   .header-content {
-    flex-wrap: wrap;
-    gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
+    gap: var(--space-3);
   }
 
   .header-left {
     flex: 1;
-    min-width: 200px;
+    min-width: 0;
   }
 
   .header-title {
@@ -211,10 +291,6 @@
 
   .header-right {
     gap: var(--space-3);
-  }
-
-  .header-link {
-    font-size: 0.8rem;
   }
 }
 
@@ -241,7 +317,7 @@
     height: 36px;
   }
 
-  .github-logo {
+  .github-icon-svg {
     width: 20px;
     height: 20px;
   }

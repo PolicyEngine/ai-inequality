@@ -1,21 +1,29 @@
-/* PolicyEngine AI Growth Research - Design System */
+/* PolicyEngine AI & Inequality Research - Design System */
 :root {
   /* PolicyEngine Brand Colors */
-  --pe-teal-600: #2c7a7b;
-  --pe-teal-500: #319795;
-  --pe-teal-400: #38b2ac;
-  --pe-teal-300: #4fd1c5;
-  --pe-teal-200: #81e6d9;
-  --pe-teal-100: #b2f5ea;
-  --pe-teal-50: #e6fffa;
+  --pe-teal: #39C6C0;
+  --pe-teal-dark: #227773;
+  --pe-teal-light: #F7FDFC;
+  --pe-blue: #2C6496;
+  --pe-blue-light: #D8E6F3;
+  --pe-blue-dark: #17354F;
+
+  /* Teal Scale (based on PE teal #39C6C0) */
+  --pe-teal-600: #227773;
+  --pe-teal-500: #39C6C0;
+  --pe-teal-400: #5DD4CF;
+  --pe-teal-300: #85E0DC;
+  --pe-teal-200: #B0ECE9;
+  --pe-teal-100: #D7F6F4;
+  --pe-teal-50: #F7FDFC;
 
   /* Gray Scale - WCAG AA compliant */
   --pe-gray-900: #1a202c;
   --pe-gray-800: #2d3748;
   --pe-gray-700: #344054;
-  --pe-gray-600: #4a5568;
-  --pe-gray-500: #5a6578; /* Darkened for 4.5:1 contrast */
-  --pe-gray-400: #6b7280; /* Darkened for better contrast */
+  --pe-gray-600: #616161;
+  --pe-gray-500: #5a6578;
+  --pe-gray-400: #6b7280;
   --pe-gray-300: #9ca3af;
   --pe-gray-200: #e2e8f0;
   --pe-gray-100: #f7fafc;
@@ -28,7 +36,8 @@
 
   /* Typography */
   --font-body:
-    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
 
   /* Spacing Scale */
   --space-1: 0.25rem;
@@ -52,8 +61,8 @@
     0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-xl:
     0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --shadow-teal: 0 4px 14px rgba(49, 151, 149, 0.25);
-  --shadow-teal-lg: 0 10px 30px rgba(49, 151, 149, 0.3);
+  --shadow-teal: 0 4px 14px rgba(57, 198, 192, 0.25);
+  --shadow-teal-lg: 0 10px 30px rgba(57, 198, 192, 0.3);
 
   /* Border Radius */
   --radius-sm: 4px;
@@ -85,11 +94,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: white;
-  color: var(--pe-gray-700);
+  color: var(--pe-gray-600);
   line-height: 1.6;
   font-size: 16px;
   overflow-x: hidden;
-  padding-top: 64px; /* Account for fixed header */
+  padding-top: 0;
 }
 
 /* Typography System */
@@ -129,7 +138,7 @@ p {
 }
 
 a {
-  color: var(--pe-teal-600); /* Darkened for WCAG AA contrast (4.28:1) */
+  color: var(--pe-teal-600);
   text-decoration: none;
   transition: color var(--transition-fast);
 }

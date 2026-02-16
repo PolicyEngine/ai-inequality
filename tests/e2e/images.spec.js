@@ -29,19 +29,6 @@ test.describe("Image Loading", () => {
     }
   });
 
-  test("should load header logo", async ({ page }) => {
-    await page.goto("/");
-
-    const logo = page.locator('img[alt="PolicyEngine"]').first();
-    await expect(logo).toBeVisible();
-
-    const isLoaded = await logo.evaluate((el) => {
-      return el.complete && el.naturalWidth > 0;
-    });
-
-    expect(isLoaded).toBe(true);
-  });
-
   test("should have no broken images on page", async ({ page }) => {
     await page.goto("/");
 

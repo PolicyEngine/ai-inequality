@@ -1,25 +1,34 @@
 import React from "react";
 import "./Overview.css";
+import {
+  IconTrendingUp,
+  IconBuildingFactory2,
+  IconAlertTriangle,
+  IconChartBar,
+  IconMicroscope,
+  IconDice,
+  IconWorld,
+} from "@tabler/icons-react";
 
 function Overview() {
   const challenges = [
     {
-      icon: "📈",
+      icon: <IconTrendingUp size={32} stroke={1.5} />,
       title: "Rising incomes",
       desc: "Productivity gains, unevenly distributed",
     },
     {
-      icon: "🏭",
+      icon: <IconBuildingFactory2 size={32} stroke={1.5} />,
       title: "Capital share growth",
       desc: "AI replacing or augmenting labor",
     },
     {
-      icon: "⚠️",
+      icon: <IconAlertTriangle size={32} stroke={1.5} />,
       title: "Labor disruption",
       desc: "Potential technological unemployment",
     },
     {
-      icon: "📊",
+      icon: <IconChartBar size={32} stroke={1.5} />,
       title: "Growing inequality",
       desc: "Gap between beneficiaries and displaced",
     },
@@ -144,7 +153,7 @@ function Overview() {
         <h3 className="subsection-title">Why this matters</h3>
         <div className="impact-grid">
           <div className="impact-card">
-            <span className="impact-icon">🔬</span>
+            <span className="impact-icon"><IconMicroscope size={24} stroke={1.5} /></span>
             <h4>Understand mediation</h4>
             <p>
               How do policies shape AI's distributional impacts on income,
@@ -152,14 +161,14 @@ function Overview() {
             </p>
           </div>
           <div className="impact-card">
-            <span className="impact-icon">📊</span>
+            <span className="impact-icon"><IconChartBar size={24} stroke={1.5} /></span>
             <h4>Compare interventions</h4>
             <p>
               Contrast how current policies vs. alternatives mediate AI shocks
             </p>
           </div>
           <div className="impact-card">
-            <span className="impact-icon">🎲</span>
+            <span className="impact-icon"><IconDice size={24} stroke={1.5} /></span>
             <h4>Quantify uncertainty</h4>
             <p>
               Model ranges of AI scenarios and policy responses, not just point
@@ -167,7 +176,7 @@ function Overview() {
             </p>
           </div>
           <div className="impact-card">
-            <span className="impact-icon">🌐</span>
+            <span className="impact-icon"><IconWorld size={24} stroke={1.5} /></span>
             <h4>Open collaboration</h4>
             <p>
               Transparent microsimulation enables researchers to test their own

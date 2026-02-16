@@ -105,14 +105,17 @@
 }
 
 .icon-large {
-  font-size: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: var(--space-4);
-  display: block;
+  color: var(--pe-teal-600);
   transition: transform var(--transition-spring);
 }
 
 .icon-card:hover .icon-large {
   transform: scale(1.15);
+  color: var(--pe-teal-700);
 }
 
 .icon-card h4 {
@@ -386,14 +389,17 @@
 }
 
 .impact-icon {
-  font-size: 2.5rem;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: var(--space-4);
+  color: var(--pe-teal-600);
   transition: transform var(--transition-spring);
 }
 
 .impact-card:hover .impact-icon {
   transform: scale(1.1) rotate(-5deg);
+  color: var(--pe-teal-700);
 }
 
 .impact-card h4 {
@@ -466,8 +472,9 @@
     padding: var(--space-6) var(--space-5);
   }
 
-  .icon-large {
-    font-size: 2.5rem;
+  .icon-large svg {
+    width: 28px;
+    height: 28px;
   }
 
   .approach-container {
@@ -529,8 +536,9 @@
     padding: var(--space-6);
   }
 
-  .impact-icon {
-    font-size: 2rem;
+  .impact-icon svg {
+    width: 20px;
+    height: 20px;
   }
 }
 

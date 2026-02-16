@@ -1,5 +1,15 @@
 import React, { useState } from "react";
 import "./Stakeholders.css";
+import {
+  IconMicroscope,
+  IconRobot,
+  IconShield,
+  IconCoin,
+  IconTrendingUp,
+  IconSchool,
+  IconChartBar,
+  IconWorld,
+} from "@tabler/icons-react";
 
 function Stakeholders() {
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -104,15 +114,14 @@ function Stakeholders() {
     },
   ];
 
-  // eslint-disable-next-line no-unused-vars
   const categoryIcons = {
-    "AI Research": "🔬",
-    "AI Companies": "🤖",
-    "AI Safety & Policy": "🛡️",
-    Funders: "💰",
-    Forecasting: "📈",
-    "Academic Research": "🎓",
-    "Industry Research": "📊",
+    "AI Research": <IconMicroscope size={16} stroke={1.5} />,
+    "AI Companies": <IconRobot size={16} stroke={1.5} />,
+    "AI Safety & Policy": <IconShield size={16} stroke={1.5} />,
+    Funders: <IconCoin size={16} stroke={1.5} />,
+    Forecasting: <IconTrendingUp size={16} stroke={1.5} />,
+    "Academic Research": <IconSchool size={16} stroke={1.5} />,
+    "Industry Research": <IconChartBar size={16} stroke={1.5} />,
   };
 
   // WCAG AA compliant colors (4.5:1 contrast ratio on white)
@@ -196,7 +205,7 @@ function Stakeholders() {
 
       <div className="international-box">
         <div className="box-header">
-          <span className="box-icon">🌍</span>
+          <span className="box-icon"><IconWorld size={24} stroke={1.5} /></span>
           <h3>International expansion</h3>
         </div>
         <p>
@@ -210,7 +219,7 @@ function Stakeholders() {
             rel="noopener noreferrer"
             className="country-card"
           >
-            <span className="country-flag">🇺🇸</span>
+            <span className="country-flag">US</span>
             <div>
               <strong>United States</strong>
               <span className="status-tag operational">Operational</span>
@@ -222,7 +231,7 @@ function Stakeholders() {
             rel="noopener noreferrer"
             className="country-card"
           >
-            <span className="country-flag">🇬🇧</span>
+            <span className="country-flag">UK</span>
             <div>
               <strong>United Kingdom</strong>
               <span className="status-tag operational">Operational</span>
@@ -234,7 +243,7 @@ function Stakeholders() {
             rel="noopener noreferrer"
             className="country-card"
           >
-            <span className="country-flag">🇨🇦</span>
+            <span className="country-flag">CA</span>
             <div>
               <strong>Canada</strong>
               <span className="status-tag development">In Development</span>
