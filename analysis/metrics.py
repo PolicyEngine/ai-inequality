@@ -1,44 +1,6 @@
-"""Pure functions for inequality metrics: Gini, decile shares, Lorenz curve."""
+"""Utility functions for inequality metrics not provided by microdf."""
 
 import numpy as np
-
-
-def weighted_gini(values, weights):
-    """Compute the Gini coefficient for a weighted distribution.
-
-    Uses the Lerman-Yitzhaki (1989) formula with midpoint ranks,
-    which is scale-invariant in weights.
-
-    Args:
-        values: Array of income/wealth values.
-        weights: Array of corresponding weights (e.g., household weights).
-
-    Returns:
-        Gini coefficient in [0, 1].
-    """
-    values = np.asarray(values, dtype=float)
-    weights = np.asarray(weights, dtype=float)
-
-    mask = weights > 0
-    values, weights = values[mask], weights[mask]
-
-    if len(values) == 0:
-        return 0.0
-
-    idx = np.argsort(values)
-    values, weights = values[idx], weights[idx]
-
-    cumw = np.cumsum(weights)
-    total_w = cumw[-1]
-    mu = np.sum(values * weights) / total_w
-
-    if mu == 0:
-        return 0.0
-
-    # Midpoint rank: F_i = (cumw_i - w_i/2) / total_w
-    ranks = (cumw - weights / 2) / total_w
-
-    return float(2 * np.sum(weights * values * ranks) / (total_w * mu) - 1)
 
 
 def compute_decile_shares(values, weights, n=10):

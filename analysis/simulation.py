@@ -5,7 +5,7 @@ import pandas as pd
 from policyengine_us import Microsimulation
 from policyengine_core.reforms import Reform
 
-from .metrics import weighted_gini, compute_decile_shares
+from .metrics import compute_decile_shares
 
 YEAR = 2026
 
@@ -19,8 +19,12 @@ CAPITAL_INCOME_VARS = [
 ]
 
 
-def _extract_results(sim, label, baseline_sim=None):
-    """Extract standard metrics from a simulation or branch."""
+def _extract_results(sim, label):
+    """Extract standard metrics from a simulation or branch.
+
+    Uses MicroSeries.gini() from microdf for Gini calculation —
+    the same implementation used throughout PolicyEngine.
+    """
     net_income = sim.calculate("household_net_income", period=YEAR)
     market_income = sim.calculate("household_market_income", period=YEAR)
     income_tax = sim.calculate("income_tax", map_to="household", period=YEAR)
@@ -30,13 +34,15 @@ def _extract_results(sim, label, baseline_sim=None):
     return {
         "label": label,
         "mean_net_income": float(net_income.mean()),
-        "market_gini": weighted_gini(np.array(market_income.values), np.array(market_income.weights)),
-        "net_gini": weighted_gini(np.array(net_income.values), np.array(net_income.weights)),
+        "market_gini": float(market_income.gini()),
+        "net_gini": float(net_income.gini()),
         "spm_poverty_rate": float(in_poverty.mean()),
         "fed_revenue": float(income_tax.sum()),
         "state_revenue": float(state_income_tax.sum()),
-        "decile_shares": compute_decile_shares(np.array(net_income.values), np.array(net_income.weights)),
-        # Raw arrays for downstream use
+        "decile_shares": compute_decile_shares(
+            np.array(net_income.values), np.array(net_income.weights)
+        ),
+        # Raw MicroSeries for downstream use (charts, state breakdown)
         "_net_income": net_income,
         "_market_income": market_income,
         "_income_tax": income_tax,
