@@ -1,6 +1,7 @@
 import React from "react";
 import PolicyScenarios from "../components/PolicyScenarios";
 import PolicyEngineCapabilities from "../components/PolicyEngineCapabilities";
+import CapitalIncomeCliff from "../components/CapitalIncomeCliff";
 
 function PolicyAnalysis() {
   return (
@@ -28,6 +29,7 @@ function PolicyAnalysis() {
         </p>
       </div>
       <PolicyScenarios />
+      <CapitalIncomeCliff />
       <PolicyEngineCapabilities />
       <div
         className="section"
