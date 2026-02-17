@@ -99,3 +99,133 @@ class TestUBICalculation:
         total_pop = 330e6
         ubi = extra_fed / total_pop if extra_fed > 0 else 0
         assert ubi == 0
+
+
+class TestMarketIncomeConservation:
+    """TDD: Total market income must be unchanged after labor→capital shift.
+
+    The shift redistributes wages to capital income at constant GDP.
+    Every dollar removed from wages must appear in capital income.
+    """
+
+    def _redistribute(self, capital_vars, weights, total_freed):
+        """Run the redistribution algorithm and return scaled vars + total added.
+
+        Uses positive-only weighted totals for both shares and scale factors.
+        """
+        # Positive-only weighted totals for shares
+        positive_totals = {}
+        for name, vals in capital_vars.items():
+            pos = np.where(vals >= 0, vals, 0)
+            positive_totals[name] = float((pos * weights).sum())
+
+        total_positive = sum(positive_totals.values())
+
+        scaled_vars = {}
+        total_added = 0.0
+        for name, vals in capital_vars.items():
+            pos_total = positive_totals[name]
+            if pos_total > 0 and total_positive > 0:
+                share = pos_total / total_positive
+                scale = 1 + (share * total_freed) / pos_total
+                scaled = np.where(vals >= 0, vals * scale, vals)
+            else:
+                scaled = vals.copy()
+            scaled_vars[name] = scaled
+            total_added += float(((scaled - vals) * weights).sum())
+
+        return scaled_vars, total_added
+
+    def test_conservation_no_losses(self):
+        """With all-positive capital income, freed == added exactly."""
+        emp = np.array([100000.0, 50000.0, 75000.0])
+        weights = np.array([1.0, 2.0, 1.5])
+        shift_pct = 0.25
+
+        total_freed = float((emp * shift_pct * weights).sum())
+
+        capital_vars = {
+            "ltcg": np.array([5000.0, 3000.0, 1000.0]),
+            "stcg": np.array([1000.0, 500.0, 200.0]),
+            "interest": np.array([200.0, 100.0, 50.0]),
+        }
+
+        _, total_added = self._redistribute(capital_vars, weights, total_freed)
+        assert total_added == pytest.approx(total_freed, rel=1e-10)
+
+    def test_conservation_with_losses(self):
+        """With capital losses present, freed == added still holds."""
+        emp = np.array([100000.0, 50000.0, 0.0, 75000.0])
+        weights = np.array([1.0, 1.0, 1.0, 1.0])
+        shift_pct = 0.50
+
+        total_freed = float((emp * shift_pct * weights).sum())
+
+        capital_vars = {
+            "ltcg": np.array([5000.0, -1000.0, 2000.0, 0.0]),
+            "stcg": np.array([1000.0, 500.0, 0.0, 300.0]),
+            "interest": np.array([200.0, 100.0, 50.0, 0.0]),
+        }
+
+        _, total_added = self._redistribute(capital_vars, weights, total_freed)
+        assert total_added == pytest.approx(total_freed, rel=1e-10)
+
+    def test_conservation_heavy_losses(self):
+        """Even with large losses, conservation holds."""
+        weights = np.array([1.0, 1.0, 1.0])
+        total_freed = 50000.0
+
+        capital_vars = {
+            "ltcg": np.array([10000.0, -8000.0, 5000.0]),
+            "stcg": np.array([-500.0, 200.0, -300.0]),
+        }
+
+        _, total_added = self._redistribute(capital_vars, weights, total_freed)
+        assert total_added == pytest.approx(total_freed, rel=1e-10)
+
+    def test_total_market_income_unchanged(self):
+        """End-to-end: total market income before == after shift."""
+        emp = np.array([100000.0, 50000.0, 0.0, 75000.0])
+        se = np.array([20000.0, 0.0, 10000.0, 0.0])
+        weights = np.array([1.0, 2.0, 1.0, 1.5])
+        shift_pct = 0.50
+
+        capital_vars = {
+            "ltcg": np.array([5000.0, -1000.0, 2000.0, 0.0]),
+            "stcg": np.array([1000.0, 500.0, 0.0, 300.0]),
+            "interest": np.array([200.0, 100.0, 50.0, 0.0]),
+        }
+
+        # Baseline total market income (weighted)
+        baseline_total = float(
+            ((emp + se + capital_vars["ltcg"] + capital_vars["stcg"]
+              + capital_vars["interest"]) * weights).sum()
+        )
+
+        # After shift
+        new_emp = emp * (1 - shift_pct)
+        new_se = se * (1 - shift_pct)
+        total_freed = float(
+            ((emp * shift_pct + se * shift_pct) * weights).sum()
+        )
+
+        scaled_vars, _ = self._redistribute(capital_vars, weights, total_freed)
+
+        shifted_total = float(
+            ((new_emp + new_se + scaled_vars["ltcg"] + scaled_vars["stcg"]
+              + scaled_vars["interest"]) * weights).sum()
+        )
+
+        assert shifted_total == pytest.approx(baseline_total, rel=1e-10)
+
+    def test_losses_unchanged(self):
+        """Capital losses must not be modified by redistribution."""
+        weights = np.array([1.0, 1.0, 1.0])
+        total_freed = 10000.0
+
+        capital_vars = {
+            "ltcg": np.array([5000.0, -3000.0, 1000.0]),
+        }
+
+        scaled_vars, _ = self._redistribute(capital_vars, weights, total_freed)
+        assert scaled_vars["ltcg"][1] == pytest.approx(-3000.0)

@@ -72,33 +72,30 @@ def _apply_shift(baseline, branch_name, shift_pct):
     se_reduction = se_income * shift_pct
     branch.set_input("self_employment_income", YEAR, se_income - se_reduction)
 
-    # Total labor income freed up (person-level)
+    # Total labor income freed up (weighted aggregate)
     total_freed = float((wage_reduction.sum() + se_reduction.sum()))
 
-    # Distribute freed income across capital vars proportional to existing totals
-    cap_totals = {}
+    # Compute POSITIVE-ONLY weighted totals for redistribution.
+    # Using positive totals for both shares and scale factors ensures
+    # that every freed dollar is redistributed (conservation of market income).
+    cap_positive_totals = {}
     for var in CAPITAL_INCOME_VARS:
         vals = baseline.calculate(var, period=YEAR)
-        cap_totals[var] = float(vals.sum())
+        raw = np.array(vals)
+        w = np.array(vals.weights)
+        cap_positive_totals[var] = float((np.where(raw >= 0, raw, 0) * w).sum())
 
-    total_existing_cap = sum(cap_totals.values())
+    total_positive_cap = sum(cap_positive_totals.values())
 
     for var in CAPITAL_INCOME_VARS:
         original = baseline.calculate(var, period=YEAR)
-        if total_existing_cap > 0:
-            share = cap_totals[var] / total_existing_cap
-        else:
-            share = 1.0 / len(CAPITAL_INCOME_VARS)
-        # Scale up each person's positive capital income proportionally
-        # so the aggregate increase equals share * total_freed.
-        # Losses are left unchanged — scaling them is an artifact.
-        original_total = cap_totals[var]
-        if original_total > 0:
-            scale = 1 + (share * total_freed) / original_total
+        pos_total = cap_positive_totals[var]
+        if pos_total > 0 and total_positive_cap > 0:
+            share = pos_total / total_positive_cap
+            scale = 1 + (share * total_freed) / pos_total
             vals = np.array(original)
             scaled = np.where(vals >= 0, vals * scale, vals)
             branch.set_input(var, YEAR, scaled)
-        # If a capital var has zero total, skip — can't distribute proportionally
 
     return branch, total_freed
 
