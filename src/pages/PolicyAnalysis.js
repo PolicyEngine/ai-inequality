@@ -2,6 +2,8 @@ import React from "react";
 import PolicyScenarios from "../components/PolicyScenarios";
 import PolicyEngineCapabilities from "../components/PolicyEngineCapabilities";
 import CapitalIncomeCliff from "../components/CapitalIncomeCliff";
+import CapitalSweep from "../components/CapitalSweep";
+import LaborShift from "../components/LaborShift";
 
 function PolicyAnalysis() {
   return (
@@ -29,6 +31,8 @@ function PolicyAnalysis() {
         </p>
       </div>
       <PolicyScenarios />
+      <CapitalSweep />
+      <LaborShift />
       <CapitalIncomeCliff />
       <PolicyEngineCapabilities />
       <div

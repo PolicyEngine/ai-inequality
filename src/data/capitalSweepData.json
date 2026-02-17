@@ -1,0 +1,24 @@
+{
+  "sweep": [
+    {"multiplier": 1.0, "capitalShare": 0.110, "label": "Baseline", "marketGini": 0.5975, "netGini": 0.5073, "povertyRate": 0.2053, "fedRevenue": 2220, "stateRevenue": 503, "totalRevenue": 2723, "top10Share": 0.3818, "bottom10Share": -0.0005},
+    {"multiplier": 1.25, "capitalShare": 0.134, "label": "1.25x", "marketGini": 0.6074, "netGini": 0.5170, "povertyRate": 0.2060, "fedRevenue": 2371, "stateRevenue": 529, "totalRevenue": 2900, "top10Share": 0.3902, "bottom10Share": -0.0014},
+    {"multiplier": 1.5, "capitalShare": 0.157, "label": "1.5x", "marketGini": 0.6172, "netGini": 0.5266, "povertyRate": 0.2073, "fedRevenue": 2522, "stateRevenue": 556, "totalRevenue": 3078, "top10Share": 0.3997, "bottom10Share": -0.0024},
+    {"multiplier": 1.75, "capitalShare": 0.178, "label": "1.75x", "marketGini": 0.6268, "netGini": 0.5360, "povertyRate": 0.2070, "fedRevenue": 2673, "stateRevenue": 584, "totalRevenue": 3257, "top10Share": 0.4099, "bottom10Share": -0.0034},
+    {"multiplier": 2.0, "capitalShare": 0.199, "label": "2x", "marketGini": 0.6361, "netGini": 0.5453, "povertyRate": 0.2097, "fedRevenue": 2825, "stateRevenue": 610, "totalRevenue": 3435, "top10Share": 0.4196, "bottom10Share": -0.0046},
+    {"multiplier": 2.5, "capitalShare": 0.237, "label": "2.5x", "marketGini": 0.6539, "netGini": 0.5633, "povertyRate": 0.2101, "fedRevenue": 3133, "stateRevenue": 665, "totalRevenue": 3798, "top10Share": 0.4379, "bottom10Share": -0.0070},
+    {"multiplier": 3.0, "capitalShare": 0.271, "label": "3x", "marketGini": 0.6705, "netGini": 0.5808, "povertyRate": 0.2103, "fedRevenue": 3446, "stateRevenue": 719, "totalRevenue": 4165, "top10Share": 0.4556, "bottom10Share": -0.0094},
+    {"multiplier": 4.0, "capitalShare": 0.331, "label": "4x", "marketGini": 0.7006, "netGini": 0.6134, "povertyRate": 0.2101, "fedRevenue": 4071, "stateRevenue": 828, "totalRevenue": 4899, "top10Share": 0.4892, "bottom10Share": -0.0143},
+    {"multiplier": 5.0, "capitalShare": 0.383, "label": "5x", "marketGini": 0.7270, "netGini": 0.6430, "povertyRate": 0.2124, "fedRevenue": 4702, "stateRevenue": 937, "totalRevenue": 5639, "top10Share": 0.5179, "bottom10Share": -0.0191}
+  ],
+  "deciles": {
+    "labels": ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10"],
+    "baseline": [-0.0005, 0.0263, 0.0375, 0.0501, 0.0616, 0.0730, 0.0929, 0.1201, 0.1571, 0.3818],
+    "2x": [-0.0046, 0.0236, 0.0350, 0.0465, 0.0568, 0.0701, 0.0870, 0.1127, 0.1533, 0.4196],
+    "5x": [-0.0191, 0.0191, 0.0287, 0.0392, 0.0479, 0.0581, 0.0746, 0.0977, 0.1359, 0.5179]
+  },
+  "metadata": {
+    "year": 2026,
+    "description": "Capital income multiplied 1x-5x (positive gains only, losses unchanged). Models AI increasing returns to capital without amplifying existing losses.",
+    "baselineCapitalShare": "11%"
+  }
+}
