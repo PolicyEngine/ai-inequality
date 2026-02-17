@@ -89,12 +89,15 @@ def _apply_shift(baseline, branch_name, shift_pct):
             share = cap_totals[var] / total_existing_cap
         else:
             share = 1.0 / len(CAPITAL_INCOME_VARS)
-        # Scale up each person's capital income proportionally
-        # so the aggregate increase equals share * total_freed
+        # Scale up each person's positive capital income proportionally
+        # so the aggregate increase equals share * total_freed.
+        # Losses are left unchanged — scaling them is an artifact.
         original_total = cap_totals[var]
         if original_total > 0:
             scale = 1 + (share * total_freed) / original_total
-            branch.set_input(var, YEAR, original * scale)
+            vals = np.array(original)
+            scaled = np.where(vals >= 0, vals * scale, vals)
+            branch.set_input(var, YEAR, scaled)
         # If a capital var has zero total, skip — can't distribute proportionally
 
     return branch, total_freed

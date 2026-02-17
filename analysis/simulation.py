@@ -62,11 +62,14 @@ def run_scenarios():
     baseline = Microsimulation()
 
     # Branch BEFORE computing downstream variables
+    # Only scale positive capital income — scaling losses is an artifact
+    # that distorts bottom-decile results without modeling anything real.
     print("Creating doubled capital income branch...")
     doubled = baseline.get_branch("doubled_capital")
     for var in CAPITAL_INCOME_VARS:
         original = baseline.calculate(var, period=YEAR)
-        doubled.set_input(var, YEAR, original * 2)
+        vals = np.array(original)
+        doubled.set_input(var, YEAR, np.where(vals >= 0, vals * 2, vals))
 
     weights = np.array(baseline.calculate("household_weight", period=YEAR))
     household_count_people = baseline.calculate("household_count_people", period=YEAR)
@@ -101,7 +104,8 @@ def run_scenarios():
     ubi_branch = ubi_sim.get_branch("doubled_capital_ubi")
     for var in CAPITAL_INCOME_VARS:
         original = baseline.calculate(var, period=YEAR)
-        ubi_branch.set_input(var, YEAR, original * 2)
+        vals = np.array(original)
+        ubi_branch.set_input(var, YEAR, np.where(vals >= 0, vals * 2, vals))
 
     ubi_results = _extract_results(ubi_branch, "Doubled + UBI")
     ubi_results["ubi_per_person"] = ubi_amount

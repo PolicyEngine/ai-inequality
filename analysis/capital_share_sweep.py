@@ -86,13 +86,14 @@ def _extract_results(sim, label):
     }
 
 
-def run_sweep(multipliers=None, positive_only=False):
+def run_sweep(multipliers=None, positive_only=True):
     """Run capital income sweep across multiplier values.
 
     Args:
         multipliers: List of floats (default MULTIPLIERS).
-        positive_only: If True, only scale non-negative capital income.
-            Losses stay at their original level.
+        positive_only: Only scale non-negative capital income (default True).
+            Losses stay at their original level. Set False to scale everything
+            including losses (not recommended — distorts bottom decile).
 
     Returns:
         Dict with "baseline_capital_share", "rows" (list of per-multiplier
