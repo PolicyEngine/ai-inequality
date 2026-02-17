@@ -157,16 +157,7 @@ function LaborShift() {
               margin={{ left: 20, right: 30, top: 10, bottom: 35 }}
             >
               <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
-              <XAxis
-                dataKey="decile"
-                tick={{ fontSize: 12 }}
-                label={{
-                  value: "Income decile",
-                  position: "bottom",
-                  offset: 0,
-                  style: { fontSize: 13 },
-                }}
-              />
+              <XAxis dataKey="decile" tick={{ fontSize: 12 }} />
               <YAxis
                 tickFormatter={pct}
                 tick={{ fontSize: 12 }}

@@ -4,6 +4,7 @@ import PolicyEngineCapabilities from "../components/PolicyEngineCapabilities";
 import CapitalIncomeCliff from "../components/CapitalIncomeCliff";
 import CapitalSweep from "../components/CapitalSweep";
 import LaborShift from "../components/LaborShift";
+import MarginalTaxRates from "../components/MarginalTaxRates";
 
 function PolicyAnalysis() {
   return (
@@ -33,6 +34,7 @@ function PolicyAnalysis() {
       <PolicyScenarios />
       <CapitalSweep />
       <LaborShift />
+      <MarginalTaxRates />
       <CapitalIncomeCliff />
       <PolicyEngineCapabilities />
       <div
