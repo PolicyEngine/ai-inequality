@@ -1,88 +1,12 @@
 {
   "year": 2026,
-  "delta": 100,
-  "scenarios": [
-    {
-      "label": "Baseline",
-      "employment_income": 0.1723,
-      "self_employment_income": 0.0822,
-      "long_term_capital_gains": 0.0474,
-      "short_term_capital_gains": 0.1068,
-      "qualified_dividend_income": 0.1144
-    },
-    {
-      "label": "2x capital",
-      "employment_income": 0.1786,
-      "self_employment_income": 0.0845,
-      "long_term_capital_gains": 0.0536,
-      "short_term_capital_gains": 0.1090,
-      "qualified_dividend_income": 0.1231
-    },
-    {
-      "label": "5x capital",
-      "employment_income": 0.1784,
-      "self_employment_income": 0.0895,
-      "long_term_capital_gains": 0.0565,
-      "short_term_capital_gains": 0.1127,
-      "qualified_dividend_income": 0.1235
-    },
-    {
-      "label": "10% shift",
-      "employment_income": 0.1835,
-      "self_employment_income": 0.0979,
-      "long_term_capital_gains": 0.0542,
-      "short_term_capital_gains": 0.1071,
-      "qualified_dividend_income": 0.1240
-    },
-    {
-      "label": "50% shift",
-      "employment_income": 0.2574,
-      "self_employment_income": 0.0622,
-      "long_term_capital_gains": 0.0455,
-      "short_term_capital_gains": 0.0845,
-      "qualified_dividend_income": 0.2333
-    }
-  ],
-  "bySource": [
-    {
-      "source": "Employment",
-      "Baseline": 0.1723,
-      "2x capital": 0.1786,
-      "5x capital": 0.1784,
-      "10% shift": 0.1835,
-      "50% shift": 0.2574
-    },
-    {
-      "source": "Self-emp",
-      "Baseline": 0.0822,
-      "2x capital": 0.0845,
-      "5x capital": 0.0895,
-      "10% shift": 0.0979,
-      "50% shift": 0.0622
-    },
-    {
-      "source": "LTCG",
-      "Baseline": 0.0474,
-      "2x capital": 0.0536,
-      "5x capital": 0.0565,
-      "10% shift": 0.0542,
-      "50% shift": 0.0455
-    },
-    {
-      "source": "STCG",
-      "Baseline": 0.1068,
-      "2x capital": 0.1090,
-      "5x capital": 0.1127,
-      "10% shift": 0.1071,
-      "50% shift": 0.0845
-    },
-    {
-      "source": "Qual div",
-      "Baseline": 0.1144,
-      "2x capital": 0.1231,
-      "5x capital": 0.1235,
-      "10% shift": 0.1240,
-      "50% shift": 0.2333
-    }
+  "method": "dollar-weighted (1% proportional bump)",
+  "note": "Dollar-weighted MTR weights each person's marginal rate by their income share, not headcount. Relevant for predicting revenue impact of income-type shifts.",
+  "baseline": [
+    { "source": "Employment",   "key": "employment_income",         "mtr": 0.3278 },
+    { "source": "Self-emp",     "key": "self_employment_income",    "mtr": 0.4389 },
+    { "source": "LTCG",         "key": "long_term_capital_gains",   "mtr": 0.2848 },
+    { "source": "STCG",         "key": "short_term_capital_gains",  "mtr": 0.7219 },
+    { "source": "Qual div",     "key": "qualified_dividend_income", "mtr": 0.2484 }
   ]
 }

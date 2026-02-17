@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   BarChart,
   Bar,
@@ -7,16 +7,19 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  Cell,
 } from "recharts";
 import { IconPercentage, IconInfoCircle } from "@tabler/icons-react";
 import mtrData from "../data/mtrData.json";
 import "./MarginalTaxRates.css";
 
-const TABS = [
-  { key: "bySource", label: "By income source" },
-  { key: "byScenario", label: "By scenario" },
-];
+const COLORS = {
+  Employment: "#319795",
+  "Self-emp": "#805AD5",
+  LTCG: "#D69E2E",
+  STCG: "#e07b39",
+  "Qual div": "#2C6496",
+};
 
 const TOOLTIP_STYLE = {
   background: "#fff",
@@ -28,152 +31,74 @@ const TOOLTIP_STYLE = {
 
 const pct = (v) => `${(v * 100).toFixed(1)}%`;
 
-const SCENARIO_COLORS = {
-  Baseline: "#319795",
-  "2x capital": "#805AD5",
-  "5x capital": "#e53e3e",
-  "10% shift": "#D69E2E",
-  "50% shift": "#2C6496",
-};
-
-const SOURCE_COLORS = {
-  Employment: "#319795",
-  "Self-emp": "#805AD5",
-  LTCG: "#D69E2E",
-  STCG: "#e53e3e",
-  "Qual div": "#2C6496",
-};
-
-const SCENARIOS = ["Baseline", "2x capital", "5x capital", "10% shift", "50% shift"];
-const SOURCES = ["Employment", "Self-emp", "LTCG", "STCG", "Qual div"];
-
 function MarginalTaxRates() {
-  const [activeTab, setActiveTab] = useState("bySource");
-
-  // By-source view: income source on x-axis, bars for each scenario
-  const bySourceData = mtrData.bySource;
-
-  // By-scenario view: scenario on x-axis, bars for each income source
-  const byScenarioData = mtrData.scenarios.map((s) => ({
-    scenario: s.label,
-    Employment: s.employment_income,
-    "Self-emp": s.self_employment_income,
-    LTCG: s.long_term_capital_gains,
-    STCG: s.short_term_capital_gains,
-    "Qual div": s.qualified_dividend_income,
-  }));
-
   return (
     <div id="marginal-tax-rates" className="mtr-section">
       <div className="mtr-header">
         <div className="mtr-icon-wrapper">
           <IconPercentage size={28} stroke={1.5} />
         </div>
-        <h2>Marginal tax rates</h2>
+        <h2>Marginal tax rates by income source</h2>
         <p className="mtr-subtitle">
-          Average effective marginal tax rates by income source across
-          AI-driven economic scenarios
+          Dollar-weighted average effective marginal tax rates — each person's
+          rate weighted by their share of total income in that category
         </p>
       </div>
 
       <div className="mtr-card">
-        <div className="mtr-controls">
-          <div className="mtr-tabs">
-            {TABS.map((tab) => (
-              <button
-                key={tab.key}
-                className={`mtr-tab ${activeTab === tab.key ? "active" : ""}`}
-                onClick={() => setActiveTab(tab.key)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {activeTab === "bySource" && (
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart
-              data={bySourceData}
-              margin={{ left: 20, right: 10, top: 10, bottom: 35 }}
-            >
-              <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
-              <XAxis dataKey="source" tick={{ fontSize: 12 }} />
-              <YAxis
-                tickFormatter={pct}
-                tick={{ fontSize: 12 }}
-                domain={[0, 0.3]}
-                label={{
-                  value: "Average effective MTR",
-                  angle: -90,
-                  position: "insideLeft",
-                  offset: -5,
-                  style: { fontSize: 13 },
-                }}
-              />
-              <Tooltip
-                contentStyle={TOOLTIP_STYLE}
-                formatter={(value, name) => [pct(value), name]}
-              />
-              <Legend />
-              {SCENARIOS.map((s) => (
-                <Bar key={s} dataKey={s} fill={SCENARIO_COLORS[s]} />
+        <ResponsiveContainer width="100%" height={380}>
+          <BarChart
+            data={mtrData.baseline}
+            margin={{ left: 20, right: 20, top: 10, bottom: 5 }}
+          >
+            <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+            <XAxis dataKey="source" tick={{ fontSize: 13 }} />
+            <YAxis
+              tickFormatter={pct}
+              tick={{ fontSize: 12 }}
+              domain={[0, 0.8]}
+              label={{
+                value: "Dollar-weighted MTR",
+                angle: -90,
+                position: "insideLeft",
+                offset: -5,
+                style: { fontSize: 13 },
+              }}
+            />
+            <Tooltip
+              contentStyle={TOOLTIP_STYLE}
+              formatter={(value, _, props) => [
+                pct(value),
+                props.payload.source,
+              ]}
+              labelFormatter={() => "Baseline (2026)"}
+            />
+            <Bar dataKey="mtr" radius={[4, 4, 0, 0]}>
+              {mtrData.baseline.map((entry) => (
+                <Cell
+                  key={entry.source}
+                  fill={COLORS[entry.source] || "#319795"}
+                />
               ))}
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-
-        {activeTab === "byScenario" && (
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart
-              data={byScenarioData}
-              margin={{ left: 20, right: 10, top: 10, bottom: 35 }}
-            >
-              <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
-              <XAxis
-                dataKey="scenario"
-                tick={{ fontSize: 11 }}
-                interval={0}
-                angle={-15}
-                textAnchor="end"
-                height={50}
-              />
-              <YAxis
-                tickFormatter={pct}
-                tick={{ fontSize: 12 }}
-                domain={[0, 0.3]}
-                label={{
-                  value: "Average effective MTR",
-                  angle: -90,
-                  position: "insideLeft",
-                  offset: -5,
-                  style: { fontSize: 13 },
-                }}
-              />
-              <Tooltip
-                contentStyle={TOOLTIP_STYLE}
-                formatter={(value, name) => [pct(value), name]}
-              />
-              <Legend />
-              {SOURCES.map((s) => (
-                <Bar key={s} dataKey={s} fill={SOURCE_COLORS[s]} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
 
         <div className="mtr-callout">
           <IconInfoCircle size={20} stroke={1.5} />
           <div>
-            <strong>Key finding</strong>: Employment income faces the highest
-            baseline MTR (17.2%) while long-term capital gains face the lowest
-            (4.7%). Under a 50% labor-to-capital shift, the employment MTR
-            rises to 25.7% and qualified dividend MTR rises to 23.3%.
+            <strong>Key finding</strong>: Employment income (32.8%) and
+            self-employment (43.9%) face higher dollar-weighted MTRs than
+            long-term capital gains (28.5%) and qualified dividends (24.8%).
+            This indicates a labor-to-capital income shift would reduce tax
+            revenues absent other effects. STCG (72.2%) reflects a small
+            volume of gains concentrated among high-bracket taxpayers.
           </div>
         </div>
 
         <p className="mtr-metadata">
-          PolicyEngine US microsimulation, $100 income bump, {mtrData.year}
+          PolicyEngine US microsimulation, 1% proportional bump, {mtrData.year}.
+          Dollar-weighted: each person's marginal rate weighted by income share.
         </p>
       </div>
     </div>

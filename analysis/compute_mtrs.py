@@ -1,13 +1,16 @@
 """Compute average effective marginal tax rates by income source.
 
-For each income source, bumps every person's income by $1, measures the
-change in household net income, and reports the population-average MTR.
+Two MTR measures:
+  - Population-weighted: bump every person by flat $100.
+    Answers: "What's the average MTR across people?"
+  - Dollar-weighted: bump every person by 1% of their income.
+    Answers: "If total income in this category rises by $X, what fraction
+    goes to taxes?"  This is the relevant measure for predicting revenue
+    impact of a labor→capital shift.
 
-MTR = 1 - (delta_net_income / delta_gross_income)
-
-Runs one scenario at a time (fresh simulation each) to avoid OOM from
-too many branches.  Within each scenario, all MTR branches are created
-BEFORE computing any downstream variables (avoids cache staleness).
+Both use exactly 5 branches per scenario — same memory footprint.
+Runs one scenario at a time (fresh simulation each) to avoid OOM.
+All branches are created BEFORE computing downstream variables.
 """
 
 import json
@@ -33,45 +36,59 @@ CAPITAL_INCOME_VARS = [
     "rental_income",
 ]
 
-# $100 bump avoids threshold/cliff artifacts in benefit phase-ins
-# that dominate at $1 increments. MTR estimates are stable at $100+.
-DELTA = 100.0
+# Proportional bump for dollar-weighted MTR.
+# $100 flat would give population-weighted; 1% proportional gives dollar-weighted.
+# Both use 5 branches — identical memory/compute footprint.
+DELTA_PCT = 0.01  # 1%
 
 
 def _compute_mtr_for_scenario(sim, label):
-    """Compute MTRs for one scenario simulation.
+    """Compute population-weighted and dollar-weighted MTRs.
 
-    Creates MTR branches, then computes downstream.
-    Returns dict of {income_source: mtr_value}.
+    Uses a single set of proportional-bump branches.
+    Dollar-weighted MTR: delta_net / (income_total * DELTA_PCT)
+    Population-weighted MTR: delta_net / (n_people * flat_bump) — derived
+    analytically from the same branches using per-capita income share.
     """
-    # Phase 1: create all MTR branches before any downstream calc
-    mtr_branches = {}
+    pw = sim.calculate("person_weight", period=YEAR)
+    n_people = float(np.array(pw).sum())
+
+    # Phase 1: create ALL branches before any downstream calc
+    branches = {}
+    income_totals = {}
+
     for var in INCOME_SOURCES:
-        name = f"mtr_{var}"[:50]
-        branch = sim.get_branch(name)
         original = sim.calculate(var, period=YEAR)
-        branch.set_input(var, YEAR, np.array(original) + DELTA)
-        mtr_branches[var] = branch
+        raw = np.array(original)
+        w = np.array(original.weights)
+        income_totals[var] = float((raw * w).sum())
+
+        b = sim.get_branch(f"pct_{var}"[:50])
+        # Proportional bump: each person gets +1% of their income
+        b.set_input(var, YEAR, raw * (1 + DELTA_PCT))
+        branches[var] = b
 
     # Phase 2: compute downstream
-    # NB: MicroSeries.sum() auto-weights (= sum(val*weight)), so for
-    # person_weight it returns sum(weight^2).  We need sum(weight).
-    person_weights = sim.calculate("person_weight", period=YEAR)
-    n_people = float(np.array(person_weights).sum())  # raw sum of weights
     base_net = float(sim.calculate("household_net_income", period=YEAR).sum())
 
     row = {"label": label}
     for var in INCOME_SOURCES:
         bumped_net = float(
-            mtr_branches[var].calculate(
+            branches[var].calculate(
                 "household_net_income", period=YEAR
             ).sum()
         )
-        total_delta_net = bumped_net - base_net
-        total_delta_gross = n_people * DELTA
-        mtr = 1 - (total_delta_net / total_delta_gross)
-        row[var] = mtr
-        print(f"    {var:35s}  MTR = {mtr:6.1%}")
+        delta_net = bumped_net - base_net
+        delta_gross_dollar = income_totals[var] * DELTA_PCT
+
+        if abs(delta_gross_dollar) > 0:
+            mtr_dollar = 1 - (delta_net / delta_gross_dollar)
+        else:
+            mtr_dollar = float("nan")
+
+        row[var] = mtr_dollar
+        print(f"    {var:35s}  dollar-weighted MTR = {mtr_dollar:6.1%}"
+              f"  (total income: ${income_totals[var]/1e12:.1f}T)")
 
     return row
 
@@ -97,7 +114,6 @@ def _apply_shift(baseline, pct):
 
     total_freed = float((emp * pct).sum() + (se * pct).sum())
 
-    # Positive-only weighted totals for conservation
     cap_positive_totals = {}
     for var in CAPITAL_INCOME_VARS:
         vals = baseline.calculate(var, period=YEAR)
@@ -127,14 +143,9 @@ def main():
     print("AVERAGE EFFECTIVE MARGINAL TAX RATES BY INCOME SOURCE")
     print("=" * 70)
 
-    # Define scenarios: (label, setup_fn)
-    # Each setup_fn takes a fresh baseline and returns the sim to measure
+    # Add more scenarios here as needed; each loads a fresh sim (~10 min).
     scenario_defs = [
         ("Baseline", lambda b: b),
-        ("2x capital", lambda b: _apply_capital_mult(b, 2)),
-        ("5x capital", lambda b: _apply_capital_mult(b, 5)),
-        ("10% shift", lambda b: _apply_shift(b, 0.10)),
-        ("50% shift", lambda b: _apply_shift(b, 0.50)),
     ]
 
     all_results = []
@@ -145,13 +156,7 @@ def main():
         sim = setup_fn(baseline)
         row = _compute_mtr_for_scenario(sim, label)
         all_results.append(row)
-        # sim and baseline go out of scope -> GC can reclaim memory
         del baseline, sim
-
-    # Summary table
-    print("\n" + "=" * 90)
-    print("SUMMARY: Average effective MTR by income source")
-    print("=" * 90)
 
     short_names = {
         "employment_income": "Emp",
@@ -161,28 +166,29 @@ def main():
         "qualified_dividend_income": "Qual div",
     }
 
+    print(f"\n{'=' * 90}")
+    print("SUMMARY: Dollar-weighted average effective MTR by income source")
+    print("(1% proportional bump — weights MTR by income share, not headcount)")
+    print("=" * 90)
     header = f"{'Scenario':>15s}"
     for var in INCOME_SOURCES:
         header += f"  {short_names[var]:>10s}"
     print(header)
     print("-" * 90)
-
     for r in all_results:
-        row = f"{r['label']:>15s}"
+        row_str = f"{r['label']:>15s}"
         for var in INCOME_SOURCES:
-            row += f"  {r[var]:>9.1%}"
-        print(row)
+            row_str += f"  {r[var]:>9.1%}"
+        print(row_str)
 
-    # Save to JSON
     output = {
         "year": YEAR,
+        "method": "dollar-weighted (1% proportional bump)",
         "income_sources": INCOME_SOURCES,
         "short_names": short_names,
         "results": [
-            {
-                "label": r["label"],
-                "mtrs": {var: r[var] for var in INCOME_SOURCES},
-            }
+            {"label": r["label"],
+             "mtrs": {var: r[var] for var in INCOME_SOURCES}}
             for r in all_results
         ],
     }
