@@ -185,9 +185,9 @@ function LaborShift() {
           <IconInfoCircle size={20} stroke={1.5} />
           <div>
             <strong>Key finding</strong>: A 50% labor-to-capital shift raises
-            poverty from 20.5% to 36.9%. The additional tax revenue funds
-            ~$1,860/person/year in UBI, which reduces poverty to 29% —
-            a partial offset of 8 percentage points out of the 16pp increase.
+            poverty from 20.5% to 36.0%. The additional tax revenue funds
+            ~$1,423/person/year in UBI, which reduces poverty to 29.6% —
+            a partial offset of 6 percentage points out of the 15pp increase.
           </div>
         </div>
 

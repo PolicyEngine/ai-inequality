@@ -1,20 +1,20 @@
 {
   "scenarios": [
     {"label": "Baseline", "shiftPct": 0, "marketGini": 0.5975, "netGini": 0.5073, "povertyRate": 0.2053, "fedRevenue": 2220, "top10Share": 0.3818, "bottom10Share": -0.0005},
-    {"label": "10% shift", "shiftPct": 10, "marketGini": 0.6262, "netGini": 0.5340, "povertyRate": 0.2256, "fedRevenue": 2320, "top10Share": 0.4067, "bottom10Share": -0.0038},
-    {"label": "25% shift", "shiftPct": 25, "marketGini": 0.6746, "netGini": 0.5785, "povertyRate": 0.2565, "fedRevenue": 2495, "top10Share": 0.4516, "bottom10Share": -0.0104},
-    {"label": "50% shift", "shiftPct": 50, "marketGini": 0.7672, "netGini": 0.6639, "povertyRate": 0.3687, "fedRevenue": 2853, "top10Share": 0.5304, "bottom10Share": -0.0252},
-    {"label": "50% + UBI", "shiftPct": 50, "marketGini": 0.7672, "netGini": 0.6433, "povertyRate": 0.2896, "fedRevenue": 2851, "top10Share": 0.5167, "bottom10Share": -0.0213}
+    {"label": "10% shift", "shiftPct": 10, "marketGini": 0.6197, "netGini": 0.5271, "povertyRate": 0.2190, "fedRevenue": 2291, "top10Share": 0.4032, "bottom10Share": -0.0012},
+    {"label": "25% shift", "shiftPct": 25, "marketGini": 0.6573, "netGini": 0.5601, "povertyRate": 0.2501, "fedRevenue": 2421, "top10Share": 0.4420, "bottom10Share": -0.0022},
+    {"label": "50% shift", "shiftPct": 50, "marketGini": 0.7291, "netGini": 0.6228, "povertyRate": 0.3595, "fedRevenue": 2704, "top10Share": 0.5136, "bottom10Share": -0.0050},
+    {"label": "50% + UBI", "shiftPct": 50, "marketGini": 0.7291, "netGini": 0.6083, "povertyRate": 0.2964, "fedRevenue": 2702, "top10Share": 0.5039, "bottom10Share": -0.0029}
   ],
   "deciles": {
     "labels": ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10"],
     "baseline": [-0.0005, 0.0263, 0.0375, 0.0501, 0.0616, 0.0730, 0.0929, 0.1201, 0.1571, 0.3818],
-    "50pctShift": [-0.0252, 0.0178, 0.0275, 0.0365, 0.0464, 0.0587, 0.0729, 0.0965, 0.1384, 0.5304],
-    "50pctUBI": [-0.0213, 0.0194, 0.0298, 0.0383, 0.0481, 0.0608, 0.0746, 0.0958, 0.1379, 0.5167]
+    "50pctShift": [-0.0050, 0.0185, 0.0280, 0.0367, 0.0465, 0.0586, 0.0718, 0.0968, 0.1344, 0.5136],
+    "50pctUBI": [-0.0029, 0.0203, 0.0293, 0.0384, 0.0475, 0.0606, 0.0740, 0.0948, 0.1342, 0.5039]
   },
   "metadata": {
     "year": 2026,
     "description": "Employment and self-employment income reduced by X%, redistributed to capital income at constant GDP. Models AI-driven automation shifting labor income to capital owners.",
-    "ubiPerPerson": 1860
+    "ubiPerPerson": 1423
   }
 }
