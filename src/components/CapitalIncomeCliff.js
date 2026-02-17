@@ -116,8 +116,8 @@ function CapitalIncomeCliff() {
         </div>
         <h2>Capital income cliffs</h2>
         <p className="cliff-subtitle">
-          How benefit cliffs punish low-income families who receive investment
-          income
+          How benefit eligibility thresholds interact with investment income
+          for low-income households
         </p>
       </div>
 
@@ -208,11 +208,11 @@ function CapitalIncomeCliff() {
         <div className="cliff-callout">
           <IconInfoCircle size={20} stroke={1.5} />
           <div>
-            <strong>EITC investment income cliff</strong>: At{" "}
+            <strong>EITC investment income threshold</strong>: At{" "}
             {fmt(cliff.capitalIncome)} in {tabLabel.toLowerCase()}, this
-            household loses {fmt(Math.abs(cliff.drop))} in net income. The EITC
-            has a hard eligibility cutoff based on investment income (~$12,000 in
-            2026), causing a sudden loss of the entire credit.
+            household's net income drops by {fmt(Math.abs(cliff.drop))}. The
+            EITC has a hard eligibility cutoff based on investment income
+            (~$12,000 in 2026), beyond which the entire credit is lost.
           </div>
         </div>
 
