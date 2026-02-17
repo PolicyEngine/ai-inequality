@@ -5,6 +5,7 @@ import os
 import pandas as pd
 
 from .labor_capital_shift import run_scenarios
+from .labor_shift_charts import generate_all as generate_charts
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "outputs", "labor_shift")
 
@@ -33,6 +34,10 @@ def main():
 
     summary = pd.DataFrame(columns)
     print(summary.to_string(index=False))
+
+    # Charts
+    print("\nGenerating visualizations...")
+    generate_charts(results, OUTPUT_DIR)
 
     # Export CSVs
     os.makedirs(OUTPUT_DIR, exist_ok=True)

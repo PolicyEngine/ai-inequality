@@ -5,6 +5,7 @@ import os
 import pandas as pd
 
 from .capital_share_sweep import run_sweep
+from .sweep_charts import generate_all as generate_charts
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "outputs", "capital_sweep")
 
@@ -79,6 +80,10 @@ def main():
     )
     dec_df = dec_df[["Baseline", "2x", "5x"]]
     print(dec_df.to_string(float_format="{:.2%}".format))
+
+    # Charts
+    print("\nGenerating visualizations...")
+    generate_charts(results, OUTPUT_DIR)
 
     # Export
     os.makedirs(OUTPUT_DIR, exist_ok=True)
