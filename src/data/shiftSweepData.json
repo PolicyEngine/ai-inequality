@@ -1,0 +1,89 @@
+{
+  "year": 2026,
+  "scenarios": [
+    {
+      "shift_pct": 0,
+      "label": "Baseline",
+      "net_gini": 0.5073251597768744,
+      "market_gini": 0.5974653802806195,
+      "spm_poverty_rate": 0.20530587231843972,
+      "fed_revenue_b": 2219.7486940059716,
+      "revenue_change_b": 0.0,
+      "income_tax_change_b": 0.0,
+      "payroll_change_b": 0.0,
+      "eitc_change_b": 0.0,
+      "ctc_change_b": 0.0,
+      "snap_change_b": 0.0
+    },
+    {
+      "shift_pct": 10,
+      "label": "10% shift",
+      "net_gini": 0.5270785875649708,
+      "market_gini": 0.6197455072154506,
+      "spm_poverty_rate": 0.21903125701857928,
+      "fed_revenue_b": 2290.790402839786,
+      "revenue_change_b": -10.005794937454537,
+      "income_tax_change_b": 71.04170883381445,
+      "payroll_change_b": -70.16558430749963,
+      "eitc_change_b": -4.2495936493769,
+      "ctc_change_b": -0.5610509124686279,
+      "snap_change_b": -6.071274901923828
+    },
+    {
+      "shift_pct": 20,
+      "label": "20% shift",
+      "net_gini": 0.5486168575230326,
+      "market_gini": 0.6442824099984924,
+      "spm_poverty_rate": 0.2350169136644979,
+      "fed_revenue_b": 2373.411697588104,
+      "revenue_change_b": -12.081155199438241,
+      "income_tax_change_b": 153.66300358213232,
+      "payroll_change_b": -142.53244872188392,
+      "eitc_change_b": -8.271204625468773,
+      "ctc_change_b": -1.2767601587359314,
+      "snap_change_b": -13.663745275481949
+    },
+    {
+      "shift_pct": 30,
+      "label": "30% shift",
+      "net_gini": 0.5719255230919202,
+      "market_gini": 0.6706948075746684,
+      "spm_poverty_rate": 0.27778007887763084,
+      "fed_revenue_b": 2470.4041962812316,
+      "revenue_change_b": -4.52708668057988,
+      "income_tax_change_b": 250.65550227525978,
+      "payroll_change_b": -215.9765159659944,
+      "eitc_change_b": -13.571174627919449,
+      "ctc_change_b": -1.1900118116674498,
+      "snap_change_b": -24.44488655025836
+    },
+    {
+      "shift_pct": 50,
+      "label": "50% shift",
+      "net_gini": 0.6228245926433204,
+      "market_gini": 0.7290864044672063,
+      "spm_poverty_rate": 0.35950679333599483,
+      "fed_revenue_b": 2704.301661053843,
+      "revenue_change_b": 26.64616993336595,
+      "income_tax_change_b": 484.5529670478711,
+      "payroll_change_b": -366.49763400987587,
+      "eitc_change_b": -31.503186056620866,
+      "ctc_change_b": -1.5712308372453614,
+      "snap_change_b": -58.334746210763065
+    },
+    {
+      "shift_pct": 100,
+      "label": "100% shift",
+      "net_gini": 0.8082670073163445,
+      "market_gini": 0.923809596412808,
+      "spm_poverty_rate": 0.7158392893028364,
+      "fed_revenue_b": 3856.0245925091112,
+      "revenue_change_b": 702.8335001244392,
+      "income_tax_change_b": 1636.2758985031396,
+      "payroll_change_b": -728.0646440956516,
+      "eitc_change_b": 50.702914582343354,
+      "ctc_change_b": -2.747790279195221,
+      "snap_change_b": -253.33287858619704
+    }
+  ]
+}
