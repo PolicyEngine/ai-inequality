@@ -3,10 +3,30 @@
   "method": "dollar-weighted (1% proportional bump)",
   "note": "Dollar-weighted MTR weights each person's marginal rate by their income share, not headcount. Relevant for predicting revenue impact of income-type shifts.",
   "baseline": [
-    { "source": "Employment",   "key": "employment_income",         "mtr": 0.3278 },
-    { "source": "Self-emp",     "key": "self_employment_income",    "mtr": 0.4389 },
-    { "source": "LTCG",         "key": "long_term_capital_gains",   "mtr": 0.2848 },
-    { "source": "STCG",         "key": "short_term_capital_gains",  "mtr": 0.7219 },
-    { "source": "Qual div",     "key": "qualified_dividend_income", "mtr": 0.2484 }
+    {
+      "source": "Emp",
+      "key": "employment_income",
+      "mtr": 0.3232
+    },
+    {
+      "source": "Self-emp",
+      "key": "self_employment_income",
+      "mtr": 0.6002
+    },
+    {
+      "source": "LTCG",
+      "key": "long_term_capital_gains",
+      "mtr": 0.2387
+    },
+    {
+      "source": "STCG",
+      "key": "short_term_capital_gains",
+      "mtr": -0.0275
+    },
+    {
+      "source": "Qual div",
+      "key": "qualified_dividend_income",
+      "mtr": 0.1617
+    }
   ]
 }

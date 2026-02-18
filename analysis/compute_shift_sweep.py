@@ -20,16 +20,21 @@ OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "outputs", "shift_sweep.js
 def _revenue_components(sim):
     """Return raw revenue/cost totals (in dollars) for a sim/branch."""
     income_tax = float(sim.calculate("income_tax", map_to="household", period=YEAR).sum())
-    payroll = float(
+    employee_payroll = float(
         sim.calculate("employee_social_security_tax", map_to="household", period=YEAR).sum()
         + sim.calculate("employee_medicare_tax", map_to="household", period=YEAR).sum()
+    )
+    employer_payroll = float(
+        sim.calculate("employer_social_security_tax", map_to="household", period=YEAR).sum()
+        + sim.calculate("employer_medicare_tax", map_to="household", period=YEAR).sum()
     )
     eitc = float(sim.calculate("eitc", map_to="household", period=YEAR).sum())
     ctc = float(sim.calculate("ctc", map_to="household", period=YEAR).sum())
     snap = float(sim.calculate("snap", map_to="household", period=YEAR).sum())
     return {
         "income_tax": income_tax,
-        "payroll": payroll,
+        "employee_payroll": employee_payroll,
+        "employer_payroll": employer_payroll,
         "eitc": eitc,
         "ctc": ctc,
         "snap": snap,
@@ -39,18 +44,22 @@ def _revenue_components(sim):
 def net_fiscal_impact(components, baseline_components):
     """Net revenue change vs baseline (positive = government gains)."""
     delta_income_tax = components["income_tax"] - baseline_components["income_tax"]
-    delta_payroll = components["payroll"] - baseline_components["payroll"]
+    delta_employee_payroll = components["employee_payroll"] - baseline_components["employee_payroll"]
+    delta_employer_payroll = components["employer_payroll"] - baseline_components["employer_payroll"]
     # Increases in EITC/CTC/SNAP are costs (negative for government)
     delta_eitc = -(components["eitc"] - baseline_components["eitc"])
     delta_ctc = -(components["ctc"] - baseline_components["ctc"])
     delta_snap = -(components["snap"] - baseline_components["snap"])
+    total = (delta_income_tax + delta_employee_payroll + delta_employer_payroll
+             + delta_eitc + delta_ctc + delta_snap)
     return {
         "income_tax_change": delta_income_tax,
-        "payroll_change": delta_payroll,
+        "employee_payroll_change": delta_employee_payroll,
+        "employer_payroll_change": delta_employer_payroll,
         "eitc_change": delta_eitc,
         "ctc_change": delta_ctc,
         "snap_change": delta_snap,
-        "total_change": delta_income_tax + delta_payroll + delta_eitc + delta_ctc + delta_snap,
+        "total_change": total,
     }
 
 
@@ -88,7 +97,8 @@ def main():
         "fed_revenue_b": base_metrics["fed_revenue"] / 1e9,
         "revenue_change_b": 0.0,
         "income_tax_change_b": 0.0,
-        "payroll_change_b": 0.0,
+        "employee_payroll_change_b": 0.0,
+        "employer_payroll_change_b": 0.0,
         "eitc_change_b": 0.0,
         "ctc_change_b": 0.0,
         "snap_change_b": 0.0,
@@ -114,7 +124,8 @@ def main():
             "fed_revenue_b": metrics["fed_revenue"] / 1e9,
             "revenue_change_b": delta["total_change"] / 1e9,
             "income_tax_change_b": delta["income_tax_change"] / 1e9,
-            "payroll_change_b": delta["payroll_change"] / 1e9,
+            "employee_payroll_change_b": delta["employee_payroll_change"] / 1e9,
+            "employer_payroll_change_b": delta["employer_payroll_change"] / 1e9,
             "eitc_change_b": delta["eitc_change"] / 1e9,
             "ctc_change_b": delta["ctc_change"] / 1e9,
             "snap_change_b": delta["snap_change"] / 1e9,

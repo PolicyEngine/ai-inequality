@@ -56,9 +56,15 @@ def _extract_results(sim, label):
 def _apply_shift(baseline, branch_name, shift_pct):
     """Create a branch with labor income shifted to capital income.
 
-    Reduces employment_income by shift_pct and distributes the freed
-    wages across capital income variables in proportion to their
-    existing totals.
+    Reduces employment_income and self_employment_income by shift_pct
+    and distributes the freed amount into capital income variables
+    proportionally.
+
+    The freed amount includes employer payroll tax savings: when AI
+    replaces workers, the employer saves wages PLUS the employer-side
+    payroll taxes on those wages. This total employer cost of
+    compensation is what flows to capital owners, conserving total
+    economic value rather than just wages.
     """
     branch = baseline.get_branch(branch_name)
 
@@ -72,8 +78,21 @@ def _apply_shift(baseline, branch_name, shift_pct):
     se_reduction = se_income * shift_pct
     branch.set_input("self_employment_income", YEAR, se_income - se_reduction)
 
-    # Total labor income freed up (weighted aggregate)
-    total_freed = float((wage_reduction.sum() + se_reduction.sum()))
+    # Total wages freed (weighted aggregate)
+    wages_freed = float(wage_reduction.sum() + se_reduction.sum())
+
+    # Employer payroll savings: when AI replaces a worker, the employer
+    # saves the employer-side payroll tax in addition to wages.
+    # Use flat 7.65% (6.2% SS + 1.45% Medicare) — exact for workers
+    # below the SS wage base, slightly overstates for high earners
+    # above the cap (where effective rate is only 1.45%).
+    # We avoid computing employer payroll from the simulation to prevent
+    # branch caching issues with PolicyEngine.
+    EMPLOYER_PAYROLL_RATE = 0.0765
+    er_savings = wages_freed * EMPLOYER_PAYROLL_RATE
+
+    # Total freed = wages + employer payroll savings
+    total_freed = wages_freed + er_savings
 
     # Compute POSITIVE-ONLY weighted totals for redistribution.
     # Using positive totals for both shares and scale factors ensures

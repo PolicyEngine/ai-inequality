@@ -39,26 +39,13 @@ const chartData = sweepData.scenarios.map((s) => ({
   poverty: s.spm_poverty_rate,
   revenue: s.revenue_change_b,
   incomeTax: s.income_tax_change_b,
-  payroll: s.payroll_change_b,
+  employeePayroll: s.employee_payroll_change_b,
+  employerPayroll: s.employer_payroll_change_b,
+  totalPayroll: s.employee_payroll_change_b + s.employer_payroll_change_b,
   eitc: s.eitc_change_b,
   snap: s.snap_change_b,
 }));
 
-// Comparison: shift scenario at 50% vs capital doubling
-const compareData = [
-  {
-    metric: "Net Gini",
-    "50% shift": sweepData.scenarios.find((s) => s.shift_pct === 50)?.net_gini,
-    "Capital 2x": capitalData.doubled.net_gini,
-    Baseline: sweepData.scenarios[0]?.net_gini,
-  },
-  {
-    metric: "Poverty",
-    "50% shift": sweepData.scenarios.find((s) => s.shift_pct === 50)?.spm_poverty_rate,
-    "Capital 2x": capitalData.doubled.spm_poverty_rate,
-    Baseline: sweepData.scenarios[0]?.spm_poverty_rate,
-  },
-];
 
 function ShiftSweep() {
   const [activeTab, setActiveTab] = useState("inequality");
@@ -208,8 +195,8 @@ function ShiftSweep() {
               />
               <Line
                 type="monotone"
-                dataKey="payroll"
-                name="Payroll tax change"
+                dataKey="totalPayroll"
+                name="Payroll tax change (employee + employer)"
                 stroke="#e07b39"
                 strokeWidth={2}
                 dot={{ r: 3 }}
@@ -311,19 +298,25 @@ function ShiftSweep() {
             {activeTab === "inequality" && (
               <div>
                 Inequality and poverty rise monotonically with the shift magnitude.
-                At 50%, SPM poverty reaches 36.0% and the net Gini rises from
-                0.507 to 0.623. At 100%, poverty reaches 71.6% — reflecting that
-                most households have negligible capital income to replace lost wages.
+                At 50%, SPM poverty reaches{" "}
+                {pctFmt(sweepData.scenarios.find((s) => s.shift_pct === 50)?.spm_poverty_rate)}{" "}
+                and the net Gini rises from{" "}
+                {sweepData.scenarios[0]?.net_gini.toFixed(3)} to{" "}
+                {sweepData.scenarios.find((s) => s.shift_pct === 50)?.net_gini.toFixed(3)}.
+                At 100%, poverty reaches{" "}
+                {pctFmt(sweepData.scenarios.find((s) => s.shift_pct === 100)?.spm_poverty_rate)}
+                {" "}— reflecting that most households have negligible capital income
+                to replace lost wages.
               </div>
             )}
             {activeTab === "revenue" && (
               <div>
-                Revenue follows a J-curve: initially falling (payroll losses
-                dominate at small shifts), turning positive around 40%, then
-                rising steeply. At 100%, income tax from capital gains concentrated
-                in the top decile generates +$703B — despite the top decile's
-                LTCG rate (20% + 3.8% NIIT) being lower than the employment MTR
-                (32.8%), D10 gains $2.9T in net market income at full shift.
+                Including both employee and employer payroll taxes, the
+                labor-to-capital shift is revenue-negative at every magnitude.
+                Although income tax revenue rises (capital income faces higher
+                income tax rates than wages alone), the combined payroll tax loss
+                from both sides more than offsets it. Employer payroll tax losses
+                roughly mirror employee losses at each shift level.
               </div>
             )}
           </div>

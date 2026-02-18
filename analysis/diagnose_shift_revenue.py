@@ -10,7 +10,7 @@ dollar-weighted MTR than capital. This script investigates why:
 
 import numpy as np
 from policyengine_us import Microsimulation
-from .labor_capital_shift import CAPITAL_INCOME_VARS, YEAR
+from .labor_capital_shift import CAPITAL_INCOME_VARS, YEAR, _apply_shift
 
 SHIFT_PCT = 0.50
 
@@ -21,34 +21,8 @@ def main():
     print("=" * 70)
 
     baseline = Microsimulation()
-    branch = baseline.get_branch("shift_50")
-
-    # Apply shift
-    emp = baseline.calculate("employment_income", period=YEAR)
-    se = baseline.calculate("self_employment_income", period=YEAR)
-    branch.set_input("employment_income", YEAR, emp * (1 - SHIFT_PCT))
-    branch.set_input("self_employment_income", YEAR, se * (1 - SHIFT_PCT))
-
-    total_freed = float((emp * SHIFT_PCT).sum() + (se * SHIFT_PCT).sum())
-    print(f"\nTotal wages freed: ${total_freed/1e12:.2f}T")
-
-    # Positive-only redistribution
-    cap_positive_totals = {}
-    for var in CAPITAL_INCOME_VARS:
-        vals = baseline.calculate(var, period=YEAR)
-        raw = np.array(vals)
-        w = np.array(vals.weights)
-        cap_positive_totals[var] = float((np.where(raw >= 0, raw, 0) * w).sum())
-    total_positive = sum(cap_positive_totals.values())
-
-    for var in CAPITAL_INCOME_VARS:
-        original = baseline.calculate(var, period=YEAR)
-        pos_total = cap_positive_totals[var]
-        if pos_total > 0 and total_positive > 0:
-            share = pos_total / total_positive
-            scale = 1 + (share * total_freed) / pos_total
-            vals = np.array(original)
-            branch.set_input(var, YEAR, np.where(vals >= 0, vals * scale, vals))
+    branch, total_freed = _apply_shift(baseline, "shift_50", SHIFT_PCT)
+    print(f"\nTotal freed (wages + employer payroll): ${total_freed/1e12:.2f}T")
 
     # --- Revenue decomposition ---
     print("\n--- Revenue decomposition ---")
@@ -56,10 +30,14 @@ def main():
     base_income_tax = float(baseline.calculate("income_tax", map_to="household", period=YEAR).sum())
     shift_income_tax = float(branch.calculate("income_tax", map_to="household", period=YEAR).sum())
 
-    base_payroll = float(baseline.calculate("employee_social_security_tax", map_to="household", period=YEAR).sum()
-                        + baseline.calculate("employee_medicare_tax", map_to="household", period=YEAR).sum())
-    shift_payroll = float(branch.calculate("employee_social_security_tax", map_to="household", period=YEAR).sum()
-                         + branch.calculate("employee_medicare_tax", map_to="household", period=YEAR).sum())
+    base_ee_payroll = float(baseline.calculate("employee_social_security_tax", map_to="household", period=YEAR).sum()
+                           + baseline.calculate("employee_medicare_tax", map_to="household", period=YEAR).sum())
+    shift_ee_payroll = float(branch.calculate("employee_social_security_tax", map_to="household", period=YEAR).sum()
+                            + branch.calculate("employee_medicare_tax", map_to="household", period=YEAR).sum())
+    base_er_payroll = float(baseline.calculate("employer_social_security_tax", map_to="household", period=YEAR).sum()
+                           + baseline.calculate("employer_medicare_tax", map_to="household", period=YEAR).sum())
+    shift_er_payroll = float(branch.calculate("employer_social_security_tax", map_to="household", period=YEAR).sum()
+                            + branch.calculate("employer_medicare_tax", map_to="household", period=YEAR).sum())
 
     base_eitc = float(baseline.calculate("eitc", map_to="household", period=YEAR).sum())
     shift_eitc = float(branch.calculate("eitc", map_to="household", period=YEAR).sum())
@@ -74,7 +52,8 @@ def main():
     print("-" * 70)
     for label, b, s in [
         ("Federal income tax",    base_income_tax, shift_income_tax),
-        ("Payroll tax (employee)", base_payroll,   shift_payroll),
+        ("Payroll tax (employee)", base_ee_payroll, shift_ee_payroll),
+        ("Payroll tax (employer)", base_er_payroll, shift_er_payroll),
         ("EITC (negative)",       -base_eitc,      -shift_eitc),
         ("Child tax credit (neg)", -base_ctc,      -shift_ctc),
         ("SNAP (negative)",       -base_snap,      -shift_snap),
@@ -84,11 +63,13 @@ def main():
 
     print()
     net_income_tax_chg = shift_income_tax - base_income_tax
-    net_payroll_chg = shift_payroll - base_payroll
+    net_ee_payroll_chg = shift_ee_payroll - base_ee_payroll
+    net_er_payroll_chg = shift_er_payroll - base_er_payroll
     net_eitc_chg = -(shift_eitc - base_eitc)  # reduction in EITC = revenue gain
     net_ctc_chg = -(shift_ctc - base_ctc)
     net_snap_chg = -(shift_snap - base_snap)
-    total_chg = net_income_tax_chg + net_payroll_chg + net_eitc_chg + net_ctc_chg + net_snap_chg
+    total_chg = (net_income_tax_chg + net_ee_payroll_chg + net_er_payroll_chg
+                 + net_eitc_chg + net_ctc_chg + net_snap_chg)
     print(f"{'Total net revenue change':<30} ${total_chg/1e9:>+10,.0f}B")
 
     # --- STCG sanity check ---
