@@ -466,11 +466,11 @@
             font-size: 0.58em;
             font-weight: 600;
             color: var(--text-mid);
-            width: 82px;
+            width: 120px;
             text-align: right;
             flex-shrink: 0;
         }
-        .layer-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .layer-chips { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
         .chip {
             font-family: var(--font-mono);
             font-size: 0.56em;
@@ -1018,10 +1018,12 @@
                     <div class="layers">
                         <div class="layer">
                             <div class="layer-label">Commands</div>
-                            <div class="layer-chips">
+                            <div class="layer-chips" style="justify-content: center;">
                                 <span class="chip cmd">/encode-policy</span>
                                 <span class="chip cmd">/review-pr</span>
                                 <span class="chip cmd">/fix-pr</span>
+                                <span class="chip cmd">/audit-state-tax</span>
+                                <span class="chip cmd" style="opacity:0.4;">...</span>
                             </div>
                         </div>
                         <div class="layer-arrow">&darr;</div>
