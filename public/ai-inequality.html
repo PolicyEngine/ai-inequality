@@ -119,12 +119,14 @@
             background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
         }
         .global-footer .footer-logo {
-            font-family: var(--font-sans);
-            font-weight: 700;
-            font-size: 18px;
-            color: white;
+            height: 24px;
             opacity: 0.9;
-            letter-spacing: -0.02em;
+        }
+        .global-footer .footer-logo img {
+            height: 100%;
+            width: auto;
+            display: block;
+            filter: brightness(0) invert(1);
         }
         .global-footer .footer-event {
             font-size: 14px;
@@ -601,7 +603,14 @@
             align-items: center;
             justify-content: center;
             margin-bottom: 14px;
-            font-size: 1.1em;
+        }
+        .mech .mech-icon svg {
+            width: 24px; height: 24px;
+            stroke: var(--pe-teal);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
         .mech h4 {
             font-size: 0.85em;
@@ -769,12 +778,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 28px;
-            margin-top: 48px;
+            gap: 32px;
+            margin-top: 40px;
         }
         .ingredient-box {
-            width: 300px;
-            height: 300px;
+            width: 280px;
+            height: 280px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -784,7 +793,7 @@
                 0 12px 40px rgba(0,0,0,0.04);
         }
         .ingredient-box h3 {
-            font-size: 1.5em;
+            font-size: 1.35em;
             font-weight: 800;
             color: white;
             margin: 0;
@@ -1035,31 +1044,31 @@
             <section>
                 <div class="slide-header">
                     <div class="slide-tag">In production</div>
-                    <h2>What they build with it</h2>
+                    <h2>What gets built on it</h2>
                     <div class="accent-bar"></div>
                 </div>
                 <div class="slide-body">
                     <div class="grid c2">
                         <div class="content-card">
-                            <h4>OBBBA household-by-household</h4>
-                            <p>Interactive tool analyzing the One Big Beautiful Bill Act across 20,000+ representative household types with full distributional impacts.</p>
+                            <h4>Benefits screening (MyFriendBen)</h4>
+                            <p>Uses the PolicyEngine API to help real families find benefit eligibility across federal and state programs.</p>
                         </div>
                         <div class="content-card">
-                            <h4>Autumn Budget 2024 dashboard</h4>
-                            <p>9-provision UK budget analysis used by HM Treasury, MPs, and national media (BBC, Guardian, Times, Telegraph).</p>
+                            <h4>Congressional district analysis (JEC)</h4>
+                            <p>Joint Economic Committee runs district-level tax and benefit simulations for constituent impact reports.</p>
                         </div>
                         <div class="content-card">
-                            <h4>Benefits screening API</h4>
-                            <p>MyFriendBen uses the PolicyEngine API to help real families find benefit eligibility across federal and state programs.</p>
+                            <h4>Academic research (Georgetown, USC, Michigan)</h4>
+                            <p>Researchers use the Python package and API for distributional analysis in published papers and working papers.</p>
                         </div>
                         <div class="content-card">
-                            <h4>AI-written policy reports</h4>
-                            <p>Automatically generated analysis synthesizing microsimulation results into readable research briefs with distributional charts.</p>
+                            <h4>AI-powered policy reports</h4>
+                            <p>Claude Code + PolicyEngine generates full policy analysis briefs &mdash; from natural language prompt to distributional charts.</p>
                         </div>
                     </div>
                 </div>
                 <aside class="notes">
-                    Concrete examples. OBBBA household tool across 20,000 household types. UK Autumn Budget dashboard used by HM Treasury and picked up by BBC, Guardian, Times, Telegraph. MyFriendBen uses our API to screen real families for benefits. And AI-generated policy reports.
+                    What do people build on this? MyFriendBen uses our API to screen real families for benefits. The Joint Economic Committee does district-level analysis. Researchers at Georgetown, USC, and Michigan use the Python package in their work. And with Claude Code, you can go from a natural language question to a full policy brief.
                 </aside>
             </section>
 
@@ -1300,6 +1309,15 @@
             </section>
 
             <!-- PART 4: RULES DEEP DIVE (Ziming) -->
+
+            <section class="gradient-slide">
+                <h2>How we build the model</h2>
+                <p style="font-size: 0.78em; margin-top: 12px;">Starting with the first ingredient: rules</p>
+                <aside class="notes">
+                    Now let me go deeper on each ingredient. Starting with rules — how do we actually encode thousands of pages of tax and benefit law into working code?
+                </aside>
+            </section>
+
             <section style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
                 <div class="slide-header">
                     <div class="slide-tag">The bottleneck</div>
@@ -1331,16 +1349,7 @@
                 </aside>
             </section>
 
-            <!-- SLIDE 6: Transition -->
-            <section class="gradient-slide">
-                <h2>How we use AI to build the model</h2>
-                <p></p>
-                <aside class="notes">
-                    Let me show you how we solved this.
-                </aside>
-            </section>
-
-            <!-- SLIDE 7: Architecture -->
+            <!-- Architecture -->
             <section>
                 <div class="slide-header">
                     <div class="slide-tag">Multi-agent AI</div>
@@ -1757,19 +1766,19 @@
                     <p>AI could reshape market incomes through three channels:</p>
                     <div class="grid c3">
                         <div class="mech">
-                            <div class="mech-icon">&#128200;</div>
+                            <div class="mech-icon"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
                             <h4>Wage inequality</h4>
                             <p>Early-career workers in AI-exposed jobs saw a 16% employment decline; senior workers gained 6-12%. Direction depends on which tasks are complemented vs. automated.</p>
                             <div class="mech-src">Stanford DEL 2025</div>
                         </div>
                         <div class="mech">
-                            <div class="mech-icon">&#127970;</div>
+                            <div class="mech-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="13" rx="1"/><rect x="14" y="8" width="7" height="8" rx="1"/><line x1="6.5" y1="20" x2="6.5" y2="22"/><line x1="17.5" y1="20" x2="17.5" y2="22"/><line x1="2" y1="22" x2="22" y2="22"/></svg></div>
                             <h4>Capital-labor shift</h4>
                             <p>Labor share of income could decline 0.5-1.6 pp per doubling of AI innovation. Capital income and wealth inequality always increase with AI adoption.</p>
                             <div class="mech-src">IMF 2025</div>
                         </div>
                         <div class="mech">
-                            <div class="mech-icon">&#128101;</div>
+                            <div class="mech-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
                             <h4>Labor displacement</h4>
                             <p>11.7% of the US labor market is automatable today (~$1.2T in wage value). Labor force participation projected to drop to 78% by 2030.</p>
                             <div class="mech-src">MIT Iceberg &middot; Metaculus</div>
@@ -1893,7 +1902,7 @@
         </div>
 
         <div class="global-footer">
-            <div class="footer-logo">PolicyEngine</div>
+            <div class="footer-logo"><img src="policyengine-logo.svg" alt="PolicyEngine"></div>
             <div class="footer-event">MIT FutureTech &middot; February 2026</div>
         </div>
     </div>
