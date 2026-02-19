@@ -802,6 +802,105 @@
         .ingredient-box.data { background: var(--pe-teal-dark); }
         .ingredient-box.dynamics { background: var(--pe-dark); }
 
+        /* ═══ RESEARCH CYCLE ═══ */
+        .cycle-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin-top: 24px;
+        }
+        .cycle-node {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 24px;
+            width: 220px;
+            text-align: center;
+            position: relative;
+        }
+        .cycle-node.highlight {
+            border-color: var(--pe-teal);
+            background: var(--pe-light);
+            box-shadow: 0 4px 20px rgba(49, 151, 149, 0.15);
+        }
+        .cycle-node h4 {
+            font-size: 0.6em;
+            margin: 0 0 6px;
+            color: var(--pe-dark);
+        }
+        .cycle-node p {
+            font-size: 0.42em;
+            line-height: 1.4;
+            margin: 0;
+            color: var(--text-mid);
+        }
+        .cycle-node .cycle-examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+            justify-content: center;
+        }
+        .cycle-node .cycle-examples span {
+            font-size: 0.38em;
+            padding: 2px 8px;
+            border-radius: 100px;
+            background: rgba(49, 151, 149, 0.1);
+            color: var(--pe-teal-dark);
+            font-weight: 500;
+        }
+        .cycle-arrow {
+            font-size: 1.2em;
+            color: var(--pe-teal);
+            padding: 0 8px;
+            flex-shrink: 0;
+        }
+        .cycle-output {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+        .cycle-output-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            text-align: center;
+            flex: 1;
+            min-width: 180px;
+            max-width: 240px;
+        }
+        .cycle-output-card h4 {
+            font-size: 0.55em;
+            margin: 0 0 4px;
+            color: var(--pe-dark);
+        }
+        .cycle-output-card p {
+            font-size: 0.4em;
+            margin: 0;
+            color: var(--text-mid);
+            line-height: 1.4;
+        }
+        .cycle-feedback {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 16px;
+            gap: 8px;
+            font-size: 0.45em;
+            color: var(--text-light);
+            font-style: italic;
+        }
+        .cycle-feedback svg {
+            width: 20px; height: 20px;
+            stroke: var(--pe-teal);
+            fill: none;
+            stroke-width: 2;
+        }
+
         /* ═══ MICROSIM TABLE ═══ */
         .msim-table {
             width: 100%;
@@ -1975,6 +2074,79 @@
                 </div>
                 <aside class="notes">
                     The scarier scenario: labor income shifts to capital at constant GDP. A 50% shift nearly doubles poverty to 36%. UBI from extra revenue only gets it down to 29.6% — you can't fully compensate because the tax base is eroding. Employment marginal tax rates rise from 17% to 26% as fewer workers bear more of the burden. This is the scenario where current policy tools are most inadequate.
+                </aside>
+            </section>
+
+            <!-- Research cycle -->
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">The research cycle</div>
+                    <h2>A virtuous loop</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <div class="cycle-diagram">
+                        <div class="cycle-node">
+                            <h4>Task automation studies</h4>
+                            <p>Which jobs and tasks are affected, and how wages respond</p>
+                            <div class="cycle-examples">
+                                <span>MIT FutureTech</span>
+                                <span>Stanford DEL</span>
+                                <span>Anthropic EI</span>
+                            </div>
+                        </div>
+                        <div class="cycle-arrow">&rarr;</div>
+                        <div class="cycle-node">
+                            <h4>AI trajectory forecasts</h4>
+                            <p>When capabilities arrive, adoption rates, displacement timelines</p>
+                            <div class="cycle-examples">
+                                <span>Metaculus</span>
+                                <span>Epoch AI</span>
+                                <span>PWBM</span>
+                            </div>
+                        </div>
+                        <div class="cycle-arrow">&rarr;</div>
+                        <div class="cycle-node highlight">
+                            <h4>Microsimulation models</h4>
+                            <p>Translate scenarios into household-level distributional outcomes</p>
+                            <div class="cycle-examples">
+                                <span>PolicyEngine</span>
+                                <span>OG-USA</span>
+                                <span>TAXSIM</span>
+                            </div>
+                        </div>
+                        <div class="cycle-arrow">&rarr;</div>
+                        <div class="cycle-node">
+                            <h4>Macro forecasts</h4>
+                            <p>Inequality, poverty, revenue, income at each quantile under each policy</p>
+                            <div class="cycle-examples">
+                                <span>Gini trajectories</span>
+                                <span>Poverty paths</span>
+                                <span>P10/P50/P90</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cycle-feedback">
+                        <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        Macro outcomes reveal gaps &rarr; new empirical questions &rarr; better task-level studies
+                    </div>
+                    <div class="cycle-output">
+                        <div class="cycle-output-card">
+                            <h4>For policymakers</h4>
+                            <p>Which interventions are robust across AI trajectories? Where do current tools fail?</p>
+                        </div>
+                        <div class="cycle-output-card">
+                            <h4>For researchers</h4>
+                            <p>Which empirical parameters matter most for distributional outcomes? Where should measurement improve?</p>
+                        </div>
+                        <div class="cycle-output-card">
+                            <h4>For forecasters</h4>
+                            <p>Ground predictions in microsimulation &mdash; what does &ldquo;30% task automation&rdquo; actually mean for household incomes?</p>
+                        </div>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Here's how this all fits together as a research cycle. Task automation studies — like your work here at FutureTech — tell us which jobs are affected and how wages respond. Forecasting platforms like Metaculus give us timelines. Models like PolicyEngine translate those inputs into distributional outcomes — inequality trajectories, poverty paths, income at every quantile. Those macro results reveal gaps and drive new empirical questions. For policymakers, this shows which interventions are robust. For researchers, which parameters matter most. For forecasters, what their predictions actually mean for household incomes.
                 </aside>
             </section>
 
