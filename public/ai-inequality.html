@@ -936,55 +936,14 @@
                 </aside>
             </section>
 
-            <!-- SLIDE 2: FutureTech research -->
-            <section>
-                <div class="slide-header">
-                    <div class="slide-tag">Your research</div>
-                    <h2>FutureTech is mapping the impact</h2>
-                    <div class="accent-bar"></div>
-                </div>
-                <div class="slide-body">
-                    <div class="stats-row">
-                        <div class="stat-card">
-                            <div class="number">11.7%</div>
-                            <div class="desc">of US labor market automatable today</div>
-                            <div class="source">FutureTech Iceberg Index</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="number">$1.2T</div>
-                            <div class="desc">in wage value at stake</div>
-                            <div class="source">FutureTech Iceberg Index</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="number">777</div>
-                            <div class="desc">AI risks catalogued across 43 taxonomies</div>
-                            <div class="source">FutureTech AI Risk Repository</div>
-                        </div>
-                    </div>
-                    <div class="grid c2 mt-md">
-                        <div class="content-card">
-                            <h4>Automation raises or lowers wages depending on task expertise</h4>
-                            <p>Autor &amp; Thompson (2025) show AI raises wages when it eliminates inexpert tasks but lowers them when removing expert tasks &mdash; resolving puzzles about mixed employment effects.</p>
-                        </div>
-                        <div class="content-card">
-                            <h4>AI adoption in science growing near-exponentially</h4>
-                            <p>Fogelson et al. (2025) find rapid growth of AI foundation model usage in research, with scientists often using smaller models than available.</p>
-                        </div>
-                    </div>
-                    <div class="accent-block">
-                        <p>FutureTech quantifies what AI can automate and how it reshapes work. PolicyEngine models what happens next &mdash; how tax and benefit policy distributes the impact across households.</p>
-                    </div>
-                </div>
-                <aside class="notes">
-                    I want to start with your research. The Iceberg Index from this lab found 11.7% of the US labor market is already automatable — 1.2 trillion dollars in wage value. The AI Risk Repository catalogs 777 risks across 43 taxonomies. David Autor and Neil Thompson's "Expertise" paper shows automation's wage effects depend on whether it removes expert or inexpert tasks. And Alex Fogelson's work shows near-exponential growth of AI foundation models in science. FutureTech is quantifying the disruption. We're here to talk about how policy can mediate the distributional impact.
-                </aside>
-            </section>
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- PART 1: WHAT IS POLICYENGINE               -->
+            <!-- ═══════════════════════════════════════════ -->
 
-            <!-- SLIDE 3: What PolicyEngine does -->
             <section>
                 <div class="slide-header">
-                    <div class="slide-tag">The model</div>
-                    <h2>What PolicyEngine does</h2>
+                    <div class="slide-tag">The platform</div>
+                    <h2>What is PolicyEngine</h2>
                     <div class="accent-bar"></div>
                 </div>
                 <div class="slide-body">
@@ -1001,15 +960,15 @@
                             <div class="icon-circle">
                                 <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                             </div>
-                            <h4>Household simulation</h4>
-                            <p>Calculate any household's taxes, benefits, and net income under current law or policy reforms.</p>
+                            <h4>Household calculator + population analysis</h4>
+                            <p>Calculate any household's taxes and benefits, or run reforms against representative survey data for national estimates.</p>
                         </div>
                         <div class="content-card">
                             <div class="icon-circle">
-                                <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                                <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                             </div>
-                            <h4>Population analysis</h4>
-                            <p>Run reforms against representative survey data to estimate budgetary and distributional impacts.</p>
+                            <h4>Python package, REST API, web app</h4>
+                            <p>Use PolicyEngine as a Python library, call the API programmatically, or explore interactively through the web interface.</p>
                         </div>
                     </div>
                     <div class="badges">
@@ -1020,11 +979,137 @@
                     </div>
                 </div>
                 <aside class="notes">
-                    PolicyEngine is three things. First, a structured database of over 10,000 policy parameters — every federal and state tax rate, benefit threshold, income limit, and deduction. Second, a simulation engine that calculates any household's taxes and benefits. Third, population-level microsimulation using enhanced CPS microdata. Everything is open source under AGPL-3.0.
+                    PolicyEngine is an open-source microsimulation platform. Over 10,000 policy parameters — every tax rate, benefit threshold, and deduction. You can use it as a Python package, through the REST API, or via the web app. It covers the US, UK, and Canada.
                 </aside>
             </section>
 
-            <!-- SLIDE 4: Three ingredients -->
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">Credibility</div>
+                    <h2>Who uses PolicyEngine</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <div class="grid c3">
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">10 Downing Street</h4>
+                            <p style="font-size: 0.55em;">UK Prime Minister's office uses PE for policy analysis</p>
+                        </div>
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">US Joint Economic Committee</h4>
+                            <p style="font-size: 0.55em;">Congressional district-level policy analysis</p>
+                        </div>
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">NBER</h4>
+                            <p style="font-size: 0.55em;">MOU for TAXSIM cross-validation partnership</p>
+                        </div>
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">Federal Reserve Bank of Atlanta</h4>
+                            <p style="font-size: 0.55em;">MOU for microsimulation validation</p>
+                        </div>
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">HM Treasury</h4>
+                            <p style="font-size: 0.55em;">UK Autumn Budget analysis dashboard</p>
+                        </div>
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">Bureau of Economic Analysis</h4>
+                            <p style="font-size: 0.55em;">Federal statistical agency engagement</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; justify-content: center;">
+                        <span class="badge">Georgetown University</span>
+                        <span class="badge">American Enterprise Institute</span>
+                        <span class="badge">Niskanen Center</span>
+                        <span class="badge">USC</span>
+                        <span class="badge">University of Michigan</span>
+                        <span class="badge">Colorado Fiscal Institute</span>
+                        <span class="badge">MyFriendBen</span>
+                        <span class="badge">Prenatal-to-3 Policy Impact Center</span>
+                    </div>
+                </div>
+                <aside class="notes">
+                    10 Downing Street uses PolicyEngine. So does HM Treasury. US congressional offices including the Joint Economic Committee. Formal MOUs with NBER and the Atlanta Fed. And dozens of universities, think tanks, and API partners.
+                </aside>
+            </section>
+
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">In production</div>
+                    <h2>What they build with it</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <div class="grid c2">
+                        <div class="content-card">
+                            <h4>OBBBA household-by-household</h4>
+                            <p>Interactive tool analyzing the One Big Beautiful Bill Act across 20,000+ representative household types with full distributional impacts.</p>
+                        </div>
+                        <div class="content-card">
+                            <h4>Autumn Budget 2024 dashboard</h4>
+                            <p>9-provision UK budget analysis used by HM Treasury, MPs, and national media (BBC, Guardian, Times, Telegraph).</p>
+                        </div>
+                        <div class="content-card">
+                            <h4>Benefits screening API</h4>
+                            <p>MyFriendBen uses the PolicyEngine API to help real families find benefit eligibility across federal and state programs.</p>
+                        </div>
+                        <div class="content-card">
+                            <h4>AI-written policy reports</h4>
+                            <p>Automatically generated analysis synthesizing microsimulation results into readable research briefs with distributional charts.</p>
+                        </div>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Concrete examples. OBBBA household tool across 20,000 household types. UK Autumn Budget dashboard used by HM Treasury and picked up by BBC, Guardian, Times, Telegraph. MyFriendBen uses our API to screen real families for benefits. And AI-generated policy reports.
+                </aside>
+            </section>
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- PART 2: LIVE DEMO                          -->
+            <!-- ═══════════════════════════════════════════ -->
+
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">Live demo</div>
+                    <h2>Claude Code + PolicyEngine</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <div class="terminal">
+                        <div class="terminal-bar">
+                            <span class="dot r"></span>
+                            <span class="dot y"></span>
+                            <span class="dot g"></span>
+                        </div>
+                        <pre><span class="c"># Natural language &rarr; policy simulation</span>
+<span class="grn">&gt; What would happen if we doubled the EITC for families with children?</span>
+
+<span class="c"># Claude Code calls the PolicyEngine API, runs microsimulation,</span>
+<span class="c"># and returns budgetary + distributional results in seconds.</span></pre>
+                    </div>
+                    <div class="grid c3 mt-md">
+                        <div class="content-card">
+                            <h4>Ask in plain English</h4>
+                            <p>Describe any policy reform &mdash; tax changes, benefit expansions, UBI proposals &mdash; and get a simulation.</p>
+                        </div>
+                        <div class="content-card">
+                            <h4>Household or population</h4>
+                            <p>Calculate impacts for a specific family or run against representative microdata for national estimates.</p>
+                        </div>
+                        <div class="content-card">
+                            <h4>Instant iteration</h4>
+                            <p>Adjust parameters, compare scenarios, explore edge cases &mdash; all through conversation.</p>
+                        </div>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Let me show you what this looks like. I'll open Claude Code and run a live policy simulation. You can ask anything — double the EITC, add a UBI, change capital gains rates. I'll also do a quick walkthrough of the web app. For your work, you'd mainly use the Python package or the Claude Code plugin.
+                </aside>
+            </section>
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- PART 3: HOW MICROSIMULATION WORKS           -->
+            <!-- ═══════════════════════════════════════════ -->
+
             <section style="display: flex; flex-direction: column; justify-content: center; height: 100%; text-align: center;">
                 <h2 style="text-align: center;">How does microsimulation work?</h2>
                 <div class="ingredient-row">
