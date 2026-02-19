@@ -1299,174 +1299,7 @@
                 </aside>
             </section>
 
-            <!-- SLIDE 5: Who uses PolicyEngine -->
-            <section>
-                <div class="slide-header">
-                    <div class="slide-tag">Credibility</div>
-                    <h2>Who uses PolicyEngine</h2>
-                    <div class="accent-bar"></div>
-                </div>
-                <div class="slide-body">
-                    <div class="grid c3">
-                        <div class="content-card" style="text-align: center; padding: 20px;">
-                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">10 Downing Street</h4>
-                            <p style="font-size: 0.55em;">UK Prime Minister's office uses PE for policy analysis</p>
-                        </div>
-                        <div class="content-card" style="text-align: center; padding: 20px;">
-                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">US Joint Economic Committee</h4>
-                            <p style="font-size: 0.55em;">Congressional district-level policy analysis</p>
-                        </div>
-                        <div class="content-card" style="text-align: center; padding: 20px;">
-                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">NBER</h4>
-                            <p style="font-size: 0.55em;">MOU for TAXSIM cross-validation partnership</p>
-                        </div>
-                        <div class="content-card" style="text-align: center; padding: 20px;">
-                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">Federal Reserve Bank of Atlanta</h4>
-                            <p style="font-size: 0.55em;">MOU for microsimulation validation</p>
-                        </div>
-                        <div class="content-card" style="text-align: center; padding: 20px;">
-                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">HM Treasury</h4>
-                            <p style="font-size: 0.55em;">UK Autumn Budget analysis dashboard</p>
-                        </div>
-                        <div class="content-card" style="text-align: center; padding: 20px;">
-                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">Bureau of Economic Analysis</h4>
-                            <p style="font-size: 0.55em;">Federal statistical agency engagement</p>
-                        </div>
-                    </div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; justify-content: center;">
-                        <span class="badge">Georgetown University</span>
-                        <span class="badge">American Enterprise Institute</span>
-                        <span class="badge">Niskanen Center</span>
-                        <span class="badge">USC</span>
-                        <span class="badge">University of Michigan</span>
-                        <span class="badge">Colorado Fiscal Institute</span>
-                        <span class="badge">MyFriendBen</span>
-                        <span class="badge">Prenatal-to-3 Policy Impact Center</span>
-                    </div>
-                </div>
-                <aside class="notes">
-                    Let me give you a sense of who uses this. The UK Prime Minister's office — 10 Downing Street — uses PolicyEngine for policy analysis. So does HM Treasury. On this side of the Atlantic, US congressional offices including the Joint Economic Committee use it for district-level analysis. We have formal MOUs with NBER for TAXSIM cross-validation and with the Atlanta Fed. The Bureau of Economic Analysis has engaged with us. And dozens of universities, think tanks, and API partners build on the platform.
-                </aside>
-            </section>
-
-            <!-- SLIDE 5: The model -->
-            <section>
-                <div class="slide-header">
-                    <div class="slide-tag">Under the hood</div>
-                    <h2>Enhanced CPS microdata</h2>
-                    <div class="accent-bar"></div>
-                </div>
-                <div class="slide-body">
-                    <p>ML-powered data fusion creates the most detailed open-source tax-benefit microdata in the US.</p>
-                    <div class="stats-row">
-                        <div class="stat-card">
-                            <div class="number">146K</div>
-                            <div class="desc">people across 89K households from Census CPS</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="number">208K</div>
-                            <div class="desc">IRS tax records fused via quantile regression forests</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="number">9,168</div>
-                            <div class="desc">calibration targets from IRS, Census, CBO, and JCT</div>
-                        </div>
-                    </div>
-                    <div class="grid c2 mt-sm">
-                        <div class="content-card">
-                            <h4>Five data sources fused</h4>
-                            <p>CPS ASEC + IRS Public Use File + SIPP + Survey of Consumer Finances + American Community Survey. Gradient descent reweighting matches all 9,168 administrative totals.</p>
-                        </div>
-                        <div class="content-card">
-                            <h4>Validated against gold standards</h4>
-                            <p>Cross-validated with NBER TAXSIM for federal and state income taxes. Benchmarked against CBO, JCT, and Tax Policy Center estimates.</p>
-                        </div>
-                    </div>
-                    <div class="badges">
-                        <span class="badge">Open source</span>
-                        <span class="badge">Hugging Face</span>
-                        <span class="badge">50 states + DC</span>
-                        <span class="badge">PyTorch reweighting</span>
-                    </div>
-                </div>
-                <aside class="notes">
-                    Let me show you what's under the hood. Our Enhanced CPS is the most detailed open-source tax-benefit microdata in the US. We fuse 146,000 people from the Census CPS with 208,000 IRS tax records using quantile regression forests. Then we calibrate to 9,168 administrative targets from IRS, Census, CBO, and JCT using gradient descent optimization. It's validated against NBER TAXSIM, CBO projections, and JCT estimates. All open source, available on Hugging Face.
-                </aside>
-            </section>
-
-            <!-- SLIDE 6: Live demo -->
-            <section>
-                <div class="slide-header">
-                    <div class="slide-tag">Live demo</div>
-                    <h2>Claude Code + PolicyEngine</h2>
-                    <div class="accent-bar"></div>
-                </div>
-                <div class="slide-body">
-                    <div class="terminal">
-                        <div class="terminal-bar">
-                            <span class="dot r"></span>
-                            <span class="dot y"></span>
-                            <span class="dot g"></span>
-                        </div>
-                        <pre><span class="c"># Natural language &rarr; policy simulation</span>
-<span class="grn">&gt; What would happen if we doubled the EITC for families with children?</span>
-
-<span class="c"># Claude Code calls the PolicyEngine API, runs microsimulation,</span>
-<span class="c"># and returns budgetary + distributional results in seconds.</span></pre>
-                    </div>
-                    <div class="grid c3 mt-md">
-                        <div class="content-card">
-                            <h4>Ask in plain English</h4>
-                            <p>Describe any policy reform &mdash; tax changes, benefit expansions, UBI proposals &mdash; and get a simulation.</p>
-                        </div>
-                        <div class="content-card">
-                            <h4>Household or population</h4>
-                            <p>Calculate impacts for a specific family or run against representative microdata for national estimates.</p>
-                        </div>
-                        <div class="content-card">
-                            <h4>Instant iteration</h4>
-                            <p>Adjust parameters, compare scenarios, explore edge cases &mdash; all through conversation.</p>
-                        </div>
-                    </div>
-                </div>
-                <aside class="notes">
-                    Let me show you what this looks like in practice. I'm going to open Claude Code and run a live policy simulation right now. You can ask it anything — double the EITC, add a UBI, change capital gains rates — and it calls our API, runs the microsimulation, and returns results. This is the interface researchers and policymakers can use to explore AI-driven economic scenarios.
-                </aside>
-            </section>
-
-            <!-- SLIDE 7: Track record -->
-            <section>
-                <div class="slide-header">
-                    <div class="slide-tag">Track record</div>
-                    <h2>Recent deliverables</h2>
-                    <div class="accent-bar"></div>
-                </div>
-                <div class="slide-body">
-                    <div class="grid c2">
-                        <div class="content-card">
-                            <h4>OBBBA household-by-household</h4>
-                            <p>Interactive tool analyzing the One Big Beautiful Bill Act across 20,000+ representative household types with full distributional impacts.</p>
-                        </div>
-                        <div class="content-card">
-                            <h4>Autumn Budget 2024 dashboard</h4>
-                            <p>9-provision UK budget analysis used by HM Treasury, MPs, and national media (BBC, Guardian, Times, Telegraph).</p>
-                        </div>
-                        <div class="content-card">
-                            <h4>ACA premium tax credit calculator</h4>
-                            <p>Health insurance subsidy calculator under current and alternative policies, used by benefits counselors and advocacy groups.</p>
-                        </div>
-                        <div class="content-card">
-                            <h4>AI-written policy reports</h4>
-                            <p>Automatically generated policy analysis synthesizing microsimulation results into readable research briefs.</p>
-                        </div>
-                    </div>
-                </div>
-                <aside class="notes">
-                    Some recent deliverables. We shipped an interactive tool analyzing the One Big Beautiful Bill Act across 20,000 household types. Our UK Autumn Budget dashboard covered 9 provisions and was used by HM Treasury and picked up by the BBC, Guardian, Times, and Telegraph. We built an ACA premium tax credit calculator. And we've started generating AI-written policy reports that synthesize microsimulation results.
-                </aside>
-            </section>
-
-            <!-- SLIDE 5: Scale challenge -->
+            <!-- PART 4: RULES DEEP DIVE (Ziming) -->
             <section style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
                 <div class="slide-header">
                     <div class="slide-tag">The bottleneck</div>
@@ -1767,16 +1600,153 @@
                 </aside>
             </section>
 
-            <!-- SLIDE 11: Transition -->
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- PART 5: DATA DEEP DIVE                    -->
+            <!-- ═══════════════════════════════════════════ -->
+
             <section class="gradient-slide">
-                <h2>Now that we can encode policy at scale&hellip;</h2>
-                <p style="font-size: 0.78em; margin-top: 12px;">What can we do with it?</p>
+                <h2>Now let&rsquo;s look at the data</h2>
+                <p style="font-size: 0.78em; margin-top: 12px;">The second ingredient: representative households</p>
                 <aside class="notes">
-                    So now we can encode policy rapidly. The question becomes: what do we do with this capability?
+                    That's the rules side. Now let's look at the data — the second ingredient. How do we build a representative picture of every household in the country?
                 </aside>
             </section>
 
-            <!-- SLIDE 11: Three mechanisms -->
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">Under the hood</div>
+                    <h2>Enhanced CPS microdata</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <p>ML-powered data fusion creates the most detailed open-source tax-benefit microdata in the US.</p>
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="number">146K</div>
+                            <div class="desc">people across 89K households from Census CPS</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="number">208K</div>
+                            <div class="desc">IRS tax records fused via quantile regression forests</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="number">9,168</div>
+                            <div class="desc">calibration targets from IRS, Census, CBO, and JCT</div>
+                        </div>
+                    </div>
+                    <div class="grid c2 mt-sm">
+                        <div class="content-card">
+                            <h4>Five data sources fused</h4>
+                            <p>CPS ASEC + IRS Public Use File + SIPP + Survey of Consumer Finances + American Community Survey. Gradient descent reweighting matches all 9,168 administrative totals.</p>
+                        </div>
+                        <div class="content-card">
+                            <h4>Validated against gold standards</h4>
+                            <p>Cross-validated with NBER TAXSIM for federal and state income taxes. Benchmarked against CBO, JCT, and Tax Policy Center estimates.</p>
+                        </div>
+                    </div>
+                    <div class="badges">
+                        <span class="badge">Open source</span>
+                        <span class="badge">Hugging Face</span>
+                        <span class="badge">50 states + DC</span>
+                        <span class="badge">PyTorch reweighting</span>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Our Enhanced CPS is the most detailed open-source tax-benefit microdata in the US. We fuse 146,000 people from the Census CPS with 208,000 IRS tax records using quantile regression forests. Then we calibrate to 9,168 administrative targets using gradient descent. Validated against NBER TAXSIM, CBO, and JCT. All open source on Hugging Face.
+                </aside>
+            </section>
+
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">Projecting forward</div>
+                    <h2>CBO baseline aging</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <p>We age the microdata forward using CBO&rsquo;s 10-year economic projections.</p>
+                    <div class="pipeline">
+                        <div class="pipe-step">
+                            <div class="pipe-num">1</div>
+                            <h4>CBO projections</h4>
+                            <p>Wage growth, capital income, benefit enrollment, CPI &mdash; by year through 2035</p>
+                        </div>
+                        <div class="pipe-arrow">&rarr;</div>
+                        <div class="pipe-step">
+                            <div class="pipe-num">2</div>
+                            <h4>Growth factors</h4>
+                            <p>Convert projections into per-variable multipliers for each income source</p>
+                        </div>
+                        <div class="pipe-arrow">&rarr;</div>
+                        <div class="pipe-step">
+                            <div class="pipe-num">3</div>
+                            <h4>Apply to microdata</h4>
+                            <p>Scale each household&rsquo;s wages, capital income, benefits by year-specific factors</p>
+                        </div>
+                        <div class="pipe-arrow">&rarr;</div>
+                        <div class="pipe-step">
+                            <div class="pipe-num">4</div>
+                            <h4>Projected population</h4>
+                            <p>2026&ndash;2035 household data consistent with CBO&rsquo;s economic outlook</p>
+                        </div>
+                    </div>
+                    <div class="accent-block">
+                        <p><strong>This is the key lever for AI scenarios.</strong> CBO assumes one economic trajectory. Swap in AI-disrupted growth factors &mdash; different wage paths by occupation, accelerated capital income growth, shifted labor force participation &mdash; and the microsimulation shows you the distributional consequences.</p>
+                    </div>
+                </div>
+                <aside class="notes">
+                    This is the critical piece for today's conversation. We age the microdata forward using CBO's 10-year projections — wage growth, capital income, benefit enrollment, CPI. Every household gets scaled by year-specific factors. CBO assumes one trajectory. But we can swap in AI-disrupted growth factors — different wage paths by occupation, faster capital income growth, lower labor force participation. The microsimulation then tells you who wins, who loses, and by how much.
+                </aside>
+            </section>
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- PART 6: DYNAMICS                           -->
+            <!-- ═══════════════════════════════════════════ -->
+
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">The third ingredient</div>
+                    <h2>Labor supply elasticities</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <p>How people adjust their work in response to policy changes.</p>
+                    <div class="grid c2">
+                        <div class="content-card">
+                            <h4>Intensive margin</h4>
+                            <p>Hours worked. When marginal tax rates change, workers adjust how much they work. PolicyEngine uses CBO&rsquo;s substitution elasticity of 0.25 for labor income.</p>
+                        </div>
+                        <div class="content-card">
+                            <h4>Extensive margin</h4>
+                            <p>Participation. Changes in average tax rates affect whether people work at all. CBO estimates an income elasticity of -0.05, capturing decisions to enter or exit the labor force.</p>
+                        </div>
+                    </div>
+                    <div class="accent-block">
+                        <p><strong>Why this matters for AI.</strong> If AI compresses wages for some occupations, the behavioral response depends on these elasticities. Workers facing lower wages may exit the labor force entirely (extensive margin) or reduce hours (intensive margin). The policy response &mdash; UBI, wage subsidies, retraining credits &mdash; interacts with these elasticities to determine the net effect.</p>
+                    </div>
+                    <div class="badges">
+                        <span class="badge">CBO framework</span>
+                        <span class="badge">Substitution + income effects</span>
+                        <span class="badge">Configurable parameters</span>
+                    </div>
+                </div>
+                <aside class="notes">
+                    The third ingredient — dynamics. How people respond to policy changes. Two margins: intensive, how much you work, and extensive, whether you work at all. We use CBO's elasticity framework. Why does this matter for AI? If AI compresses wages, these elasticities determine whether people reduce hours or leave the workforce entirely. And the policy response — UBI, wage subsidies, retraining credits — interacts with these elasticities. You can't evaluate policy without modeling the behavioral response.
+                </aside>
+            </section>
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- PART 7: AI + INEQUALITY                    -->
+            <!-- ═══════════════════════════════════════════ -->
+
+            <section class="gradient-slide">
+                <h2>How policy shapes AI&rsquo;s impact on inequality</h2>
+                <p style="font-size: 0.78em; margin-top: 12px;">Putting the ingredients together</p>
+                <aside class="notes">
+                    Now let's put all three ingredients together. Rules, data, and dynamics — how do they help us understand AI's impact on inequality?
+                </aside>
+            </section>
+
+            <!-- Three mechanisms -->
             <section>
                 <div class="slide-header">
                     <div class="slide-tag">The challenge</div>
@@ -1847,39 +1817,7 @@
                 </aside>
             </section>
 
-            <!-- SLIDE 13: The gap -->
-            <section>
-                <div class="slide-header">
-                    <div class="slide-tag">The gap</div>
-                    <h2>Why current analysis falls short</h2>
-                    <div class="accent-bar"></div>
-                </div>
-                <div class="slide-body">
-                    <div class="grid c2">
-                        <div class="content-card">
-                            <h4>Single baseline forecasts</h4>
-                            <p>CBO and traditional scoring institutions operate under one economic scenario. AI-driven change involves profound uncertainty about magnitude, timing, and distribution.</p>
-                        </div>
-                        <div class="content-card">
-                            <h4>Policy depends on trajectory</h4>
-                            <p>A UBI might be transformative under rapid displacement but unnecessary under gradual augmentation. Robustness depends on which AI trajectory materializes.</p>
-                        </div>
-                    </div>
-                    <div class="accent-block">
-                        <p>Traditional policy analysis reports only point estimates. AI-driven economic change requires modeling ranges of scenarios to show how policy impacts vary across different trajectories.</p>
-                    </div>
-                    <div class="badges" style="margin-top: 20px;">
-                        <span class="badge">Multiple AI scenarios</span>
-                        <span class="badge">Probabilistic forecasts</span>
-                        <span class="badge">Robust policy analysis</span>
-                    </div>
-                </div>
-                <aside class="notes">
-                    CBO operates under a single baseline. That worked when the economy was predictable. But AI introduces profound uncertainty. A UBI might be transformative if displacement is rapid, but wasteful if AI mostly augments. We need probabilistic analysis across multiple trajectories.
-                </aside>
-            </section>
-
-            <!-- SLIDE 14: Our approach -->
+            <!-- Our approach -->
             <section>
                 <div class="slide-header">
                     <div class="slide-tag">PolicyEngine's role</div>
@@ -1913,7 +1851,7 @@
                         </div>
                     </div>
                     <div class="accent-block">
-                        <p>We don't forecast AI's trajectory or prescribe optimal policies. We provide the infrastructure to translate any AI economic scenario into household-level distributional outcomes under different policy regimes.</p>
+                        <p>Swap CBO&rsquo;s baseline growth factors for AI-disrupted trajectories. The same microsimulation infrastructure &mdash; rules, Enhanced CPS, behavioral responses &mdash; then shows household-level distributional outcomes under different policy regimes.</p>
                     </div>
                 </div>
                 <aside class="notes">
@@ -1921,110 +1859,7 @@
                 </aside>
             </section>
 
-            <!-- SLIDE 15: Infrastructure advantages -->
-            <section>
-                <div class="slide-header">
-                    <div class="slide-tag">Why PolicyEngine</div>
-                    <h2>Infrastructure advantages</h2>
-                    <div class="accent-bar"></div>
-                </div>
-                <div class="slide-body">
-                    <div class="grid c3">
-                        <div class="content-card">
-                            <div class="icon-circle">
-                                <svg viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                            </div>
-                            <h4>Open source</h4>
-                            <p>AGPL-3.0. 10,000+ parameters. Full transparency and reproducibility for any researcher.</p>
-                        </div>
-                        <div class="content-card">
-                            <div class="icon-circle">
-                                <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                            </div>
-                            <h4>Proven infrastructure</h4>
-                            <p>Used by governments, cited by CBO and Treasury. Production infrastructure, not a prototype.</p>
-                        </div>
-                        <div class="content-card">
-                            <div class="icon-circle">
-                                <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                            </div>
-                            <h4>AI-native encoding</h4>
-                            <p>Multi-agent AI encodes policy at scale. 90 minutes per program enables rapid model expansion.</p>
-                        </div>
-                    </div>
-                    <div class="grid c2">
-                        <div class="content-card">
-                            <h4>International coverage</h4>
-                            <p>US and UK operational, Canada in development. Analyze cross-country policy responses to AI.</p>
-                        </div>
-                        <div class="content-card">
-                            <h4>Quantifying uncertainty</h4>
-                            <p>Model ranges of scenarios to show how policy impacts vary across different AI trajectories.</p>
-                        </div>
-                    </div>
-                </div>
-                <aside class="notes">
-                    Why PolicyEngine? It's fully open source. It's proven — governments use it. And our AI-native encoding means we can expand the model rapidly. When a new policy gets proposed, we encode it in 90 minutes. That speed matters when comparing dozens of alternatives across multiple scenarios.
-                </aside>
-            </section>
-
-            <!-- SLIDE 16: Ecosystem -->
-            <section>
-                <div class="slide-header">
-                    <div class="slide-tag">Who's working on this</div>
-                    <h2>The ecosystem</h2>
-                    <div class="accent-bar"></div>
-                </div>
-                <div class="slide-body">
-                    <div class="grid c2">
-                        <div class="eco">
-                            <h4>Research &amp; academia</h4>
-                            <div class="eco-tags">
-                                <span class="etag r">EconTAI Initiative (UVA)</span>
-                                <span class="etag r">Stanford Digital Economy Lab</span>
-                                <span class="etag r">MIT Future Tech Lab</span>
-                                <span class="etag r">Penn Wharton Budget Model</span>
-                                <span class="etag r">Yale Budget Lab</span>
-                                <span class="etag r">Epoch AI</span>
-                            </div>
-                        </div>
-                        <div class="eco">
-                            <h4>AI companies</h4>
-                            <div class="eco-tags">
-                                <span class="etag a">Anthropic</span>
-                                <span class="etag a">OpenAI</span>
-                                <span class="etag a">Google DeepMind</span>
-                            </div>
-                        </div>
-                        <div class="eco">
-                            <h4>Policy &amp; advocacy</h4>
-                            <div class="eco-tags">
-                                <span class="etag p">Windfall Trust</span>
-                                <span class="etag p">AGI Social Contract</span>
-                                <span class="etag p">Brookings</span>
-                                <span class="etag p">Center for AI Safety</span>
-                                <span class="etag p">AI Now Institute</span>
-                            </div>
-                        </div>
-                        <div class="eco">
-                            <h4>Models, tools &amp; funders</h4>
-                            <div class="eco-tags">
-                                <span class="etag t">PolicyEngine</span>
-                                <span class="etag t">OG-USA</span>
-                                <span class="etag t">Don't Lose Your Job</span>
-                                <span class="etag f">Open Philanthropy</span>
-                                <span class="etag f">Future of Life Institute</span>
-                                <span class="etag f">Metaculus</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <aside class="notes">
-                    This work sits in a growing ecosystem. Research groups at UVA, Stanford, MIT, Penn Wharton, and Yale. AI companies publishing economic impact research. Policy organizations working on governance frameworks. And funders recognizing this intersection needs more infrastructure.
-                </aside>
-            </section>
-
-            <!-- SLIDE 17: CTA -->
+            <!-- CTA -->
             <section class="gradient-slide">
                 <div class="cover-logo">PolicyEngine</div>
                 <div class="divider"></div>
