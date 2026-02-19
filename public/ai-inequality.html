@@ -1407,13 +1407,41 @@
                 </aside>
             </section>
 
+            <!-- Problem statement -->
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">The problem</div>
+                    <h2>Policy scoring assumes one future</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <p>Today, policy analysis runs against a single CBO baseline &mdash; one economic trajectory for the next decade.</p>
+                    <div class="grid c2">
+                        <div class="content-card">
+                            <h4>What we do now</h4>
+                            <p>CBO projects one path for wages, capital income, employment, and inflation. At most, a low/high growth sensitivity. Every policy score is conditional on that single future.</p>
+                        </div>
+                        <div class="content-card">
+                            <h4>What we need</h4>
+                            <p>Score policies across a range of plausible economic trajectories &mdash; ideally with probabilities attached &mdash; and ask which interventions are robust across scenarios.</p>
+                        </div>
+                    </div>
+                    <div class="accent-block">
+                        <p>This has always been a limitation of policy scoring. AI makes it acute: the range of plausible economic futures is now wide enough that the &ldquo;right&rdquo; policy depends heavily on which trajectory materializes.</p>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Before we go deeper, here's the core problem. Policy scoring today assumes one future — CBO's baseline. Maybe a low and high growth path, but that's sensitivity analysis, not scenario analysis. The answer you get depends on which trajectory materializes. That's always been a limitation, but AI makes it much bigger — the range of plausible futures is enormous. We need to score policies across that full range. That's what we're building toward.
+                </aside>
+            </section>
+
             <!-- PART 4: RULES DEEP DIVE (Ziming) -->
 
             <section class="gradient-slide">
                 <h2>How we build the model</h2>
                 <p style="font-size: 0.78em; margin-top: 12px;">Starting with the first ingredient: rules</p>
                 <aside class="notes">
-                    Now let me go deeper on each ingredient. Starting with rules — how do we actually encode thousands of pages of tax and benefit law into working code?
+                    So let me show you what we're building. Starting with rules — how do we encode thousands of pages of tax and benefit law into working code?
                 </aside>
             </section>
 
