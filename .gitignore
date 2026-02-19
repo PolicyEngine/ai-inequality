@@ -26,5 +26,11 @@ yarn-error.log*
 *.swp
 *.swo
 
+# Python
+analysis/.venv/
+analysis/outputs/
+__pycache__/
+*.pyc
+
 # Internal documents (not for public repo)
 social-posts.md

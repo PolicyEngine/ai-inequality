@@ -107,7 +107,7 @@ npm run lint -- --fix && npx prettier --write .
 ## Project Structure
 
 ```
-ai-growth-research/
+ai-inequality/
 ├── public/
 │   └── index.html
 ├── src/
@@ -132,7 +132,7 @@ ai-growth-research/
 
 ## Live Site
 
-**https://policyengine.github.io/ai-growth-research/**
+**https://policyengine.github.io/ai-inequality/**
 
 The site automatically deploys to GitHub Pages on every push to `main`.
 
