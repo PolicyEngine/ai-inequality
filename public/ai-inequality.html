@@ -764,6 +764,84 @@
             line-height: 1.5;
         }
 
+        /* ═══ INGREDIENT BOXES ═══ */
+        .ingredient-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 28px;
+            margin-top: 48px;
+        }
+        .ingredient-box {
+            width: 300px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            box-shadow:
+                0 4px 16px rgba(0,0,0,0.08),
+                0 12px 40px rgba(0,0,0,0.04);
+        }
+        .ingredient-box h3 {
+            font-size: 1.5em;
+            font-weight: 800;
+            color: white;
+            margin: 0;
+        }
+        .ingredient-box.rules { background: var(--pe-teal); }
+        .ingredient-box.data { background: var(--pe-teal-dark); }
+        .ingredient-box.dynamics { background: var(--pe-dark); }
+
+        /* ═══ MICROSIM TABLE ═══ */
+        .msim-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 0.58em;
+            margin: 24px 0;
+        }
+        .msim-table th {
+            font-weight: 700;
+            text-align: left;
+            padding: 10px 16px;
+            font-size: 0.95em;
+            letter-spacing: -0.01em;
+            color: var(--pe-dark);
+        }
+        .msim-table td {
+            padding: 10px 16px;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+        .msim-table thead tr:last-child {
+            border-bottom: 3px solid var(--pe-dark);
+        }
+        .msim-table tbody tr {
+            border-bottom: 1px solid #e5eaea;
+        }
+        .msim-table tbody tr:last-child {
+            border-top: 3px solid var(--pe-dark);
+            font-weight: 700;
+        }
+        .msim-table .col-rules { background: rgba(49, 151, 149, 0.08); }
+        .msim-table .col-dynamics { background: rgba(234, 179, 8, 0.08); }
+        .msim-table .col-delta { background: rgba(168, 85, 247, 0.08); }
+        .msim-table .col-weight { background: rgba(100, 116, 139, 0.08); }
+        .msim-table .hidden-col { opacity: 0; }
+        .msim-label {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-family: var(--font-sans);
+            font-size: 0.6em;
+            font-weight: 700;
+            color: white;
+        }
+        .msim-label.rules { background: var(--pe-teal); }
+        .msim-label.dynamics { background: #ca8a04; }
+        .msim-label.data { background: #64748b; }
+
         /* ═══ UTILITY ═══ */
         .mt-sm { margin-top: 12px; }
         .mt-md { margin-top: 20px; }
@@ -943,7 +1021,197 @@
                 </aside>
             </section>
 
-            <!-- SLIDE 4: Who uses PolicyEngine -->
+            <!-- SLIDE 4: Three ingredients -->
+            <section style="display: flex; flex-direction: column; justify-content: center; height: 100%; text-align: center;">
+                <h2 style="text-align: center;">How does microsimulation work?</h2>
+                <div class="ingredient-row">
+                    <div class="ingredient-box rules"><h3>Rules</h3></div>
+                    <div class="ingredient-box data"><h3>Data</h3></div>
+                    <div class="ingredient-box dynamics"><h3>Dynamics</h3></div>
+                </div>
+                <p style="text-align: center; margin-top: 32px; font-size: 0.85em; font-weight: 600; color: var(--pe-dark);">Microsimulation combines these three ingredients</p>
+                <aside class="notes">
+                    Microsimulation has three ingredients. Rules — the tax and benefit code. Data — representative households from surveys. Dynamics — behavioral responses to policy changes. Let me show you how they come together.
+                </aside>
+            </section>
+
+            <!-- SLIDE 4b: Microsim table - Rules only -->
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">How it works</div>
+                    <h2>A microsimulation example</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <table class="msim-table">
+                        <thead>
+                            <tr>
+                                <th colspan="2"></th>
+                                <th style="text-align: center;">Baseline</th>
+                                <th style="text-align: center; color: var(--pe-teal);" colspan="4">Reform</th>
+                            </tr>
+                            <tr>
+                                <th>Gross income</th>
+                                <th># kids</th>
+                                <th class="col-rules">Taxes</th>
+                                <th class="col-rules">Taxes (static)</th>
+                                <th class="col-dynamics hidden-col">&Delta; earnings</th>
+                                <th class="col-delta hidden-col">&Delta; tax</th>
+                                <th class="col-weight hidden-col">Weight</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>$100,000</td>
+                                <td>0</td>
+                                <td class="col-rules">$21,000</td>
+                                <td class="col-rules">$20,000</td>
+                                <td class="col-dynamics hidden-col">+$700</td>
+                                <td class="col-delta hidden-col">-$850</td>
+                                <td class="col-weight hidden-col">500k</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px;">
+                        <span class="msim-label rules">Rules</span>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Start with one household — $100K income, no kids. Under current rules, they owe $21K in taxes. Under a reform — say, a 1-point rate cut — they'd owe $20K. That's the rules engine at work.
+                </aside>
+            </section>
+
+            <!-- SLIDE 4c: Microsim table - Rules + Dynamics -->
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">How it works</div>
+                    <h2>A microsimulation example</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <table class="msim-table">
+                        <thead>
+                            <tr>
+                                <th colspan="2"></th>
+                                <th style="text-align: center;">Baseline</th>
+                                <th style="text-align: center; color: var(--pe-teal);" colspan="4">Reform</th>
+                            </tr>
+                            <tr>
+                                <th>Gross income</th>
+                                <th># kids</th>
+                                <th class="col-rules">Taxes</th>
+                                <th class="col-rules">Taxes (static)</th>
+                                <th class="col-dynamics">&Delta; earnings</th>
+                                <th class="col-delta">&Delta; tax</th>
+                                <th class="col-weight hidden-col">Weight</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>$100,000</td>
+                                <td>0</td>
+                                <td class="col-rules">$21,000</td>
+                                <td class="col-rules">$20,000</td>
+                                <td class="col-dynamics">+$700</td>
+                                <td class="col-delta">-$850</td>
+                                <td class="col-weight hidden-col">500k</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px;">
+                        <span class="msim-label rules">Rules</span>
+                        <span class="msim-label dynamics">Dynamics</span>
+                    </div>
+                </div>
+                <aside class="notes">
+                    But people respond to policy changes. A tax cut means this household earns $700 more — labor supply elasticities. After behavioral adjustment, the actual tax change is $850 less, not $1,000. That's the dynamics layer.
+                </aside>
+            </section>
+
+            <!-- SLIDE 4d: Microsim table - Full with data/aggregation -->
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">How it works</div>
+                    <h2>A microsimulation example</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <table class="msim-table">
+                        <thead>
+                            <tr>
+                                <th colspan="2"></th>
+                                <th style="text-align: center;">Baseline</th>
+                                <th style="text-align: center; color: var(--pe-teal);" colspan="4">Reform</th>
+                            </tr>
+                            <tr>
+                                <th>Gross income</th>
+                                <th># kids</th>
+                                <th class="col-rules">Taxes</th>
+                                <th class="col-rules">Taxes (static)</th>
+                                <th class="col-dynamics">&Delta; earnings</th>
+                                <th class="col-delta">&Delta; tax</th>
+                                <th class="col-weight">Weight</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>$100,000</td>
+                                <td>0</td>
+                                <td class="col-rules">$21,000</td>
+                                <td class="col-rules">$20,000</td>
+                                <td class="col-dynamics">+$700</td>
+                                <td class="col-delta">-$850</td>
+                                <td class="col-weight">500k</td>
+                            </tr>
+                            <tr>
+                                <td>$100,000</td>
+                                <td>2</td>
+                                <td class="col-rules">$12,000</td>
+                                <td class="col-rules">$10,000</td>
+                                <td class="col-dynamics">+$1,000</td>
+                                <td class="col-delta">-$1,700</td>
+                                <td class="col-weight">700k</td>
+                            </tr>
+                            <tr>
+                                <td>$25,000</td>
+                                <td>1</td>
+                                <td class="col-rules">-$3,000</td>
+                                <td class="col-rules">-$3,000</td>
+                                <td class="col-dynamics">$0</td>
+                                <td class="col-delta">$0</td>
+                                <td class="col-weight">100k</td>
+                            </tr>
+                            <tr style="color: var(--text-light); border-bottom: 1px solid #e5eaea;">
+                                <td>&hellip;</td>
+                                <td>&hellip;</td>
+                                <td class="col-rules">&hellip;</td>
+                                <td class="col-rules">&hellip;</td>
+                                <td class="col-dynamics">&hellip;</td>
+                                <td class="col-delta">&hellip;</td>
+                                <td class="col-weight">&hellip;</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2">TOTAL</td>
+                                <td class="col-rules">$960B</td>
+                                <td class="col-rules">$930B</td>
+                                <td class="col-dynamics">+$10B</td>
+                                <td class="col-delta">-$25B</td>
+                                <td class="col-weight">170M</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div style="display: flex; justify-content: center; gap: 12px; margin-top: 20px;">
+                        <span class="msim-label rules">Rules</span>
+                        <span class="msim-label dynamics">Dynamics</span>
+                        <span class="msim-label data">Data</span>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Now add data — every household in the survey, each weighted to represent thousands of real households. Run the rules and dynamics for each one, weight and sum, and you get a national score: this reform costs $25 billion after behavioral responses. That's microsimulation. Rules plus data plus dynamics.
+                </aside>
+            </section>
+
+            <!-- SLIDE 5: Who uses PolicyEngine -->
             <section>
                 <div class="slide-header">
                     <div class="slide-tag">Credibility</div>
