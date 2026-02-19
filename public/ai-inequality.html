@@ -851,7 +851,7 @@
                 <h1>How will policy shape AI's impact on <em>inequality?</em></h1>
                 <p class="cover-subtitle">Open-source microsimulation infrastructure to analyze how tax and benefit policies mediate AI-driven economic change.</p>
                 <aside class="notes">
-                    This talk has four parts. I'll start by describing what PolicyEngine is at a high level. Then Ziming will show you how we use AI to encode policy at scale. Then I'll introduce Rules Foundation, which generalizes that approach. Finally, I'll connect it all to our AI and inequality research initiative.
+                    This talk has four parts. I'll start by describing what PolicyEngine is — what it does, who uses it, and the data infrastructure behind it. Then Ziming will show you how we use AI to encode policy at scale. Then I'll introduce Rules Foundation, which generalizes that approach. Finally, I'll connect it all to our AI and inequality research initiative.
                 </aside>
             </section>
 
@@ -943,7 +943,102 @@
                 </aside>
             </section>
 
-            <!-- SLIDE 4: Live demo -->
+            <!-- SLIDE 4: Who uses PolicyEngine -->
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">Credibility</div>
+                    <h2>Who uses PolicyEngine</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <div class="grid c3">
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">10 Downing Street</h4>
+                            <p style="font-size: 0.55em;">UK Prime Minister's office uses PE for policy analysis</p>
+                        </div>
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">US Joint Economic Committee</h4>
+                            <p style="font-size: 0.55em;">Congressional district-level policy analysis</p>
+                        </div>
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">NBER</h4>
+                            <p style="font-size: 0.55em;">MOU for TAXSIM cross-validation partnership</p>
+                        </div>
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">Federal Reserve Bank of Atlanta</h4>
+                            <p style="font-size: 0.55em;">MOU for microsimulation validation</p>
+                        </div>
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">HM Treasury</h4>
+                            <p style="font-size: 0.55em;">UK Autumn Budget analysis dashboard</p>
+                        </div>
+                        <div class="content-card" style="text-align: center; padding: 20px;">
+                            <h4 style="font-size: 0.72em; margin-bottom: 4px;">Bureau of Economic Analysis</h4>
+                            <p style="font-size: 0.55em;">Federal statistical agency engagement</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; justify-content: center;">
+                        <span class="badge">Georgetown University</span>
+                        <span class="badge">American Enterprise Institute</span>
+                        <span class="badge">Niskanen Center</span>
+                        <span class="badge">USC</span>
+                        <span class="badge">University of Michigan</span>
+                        <span class="badge">Colorado Fiscal Institute</span>
+                        <span class="badge">MyFriendBen</span>
+                        <span class="badge">Prenatal-to-3 Policy Impact Center</span>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Let me give you a sense of who uses this. The UK Prime Minister's office — 10 Downing Street — uses PolicyEngine for policy analysis. So does HM Treasury. On this side of the Atlantic, US congressional offices including the Joint Economic Committee use it for district-level analysis. We have formal MOUs with NBER for TAXSIM cross-validation and with the Atlanta Fed. The Bureau of Economic Analysis has engaged with us. And dozens of universities, think tanks, and API partners build on the platform.
+                </aside>
+            </section>
+
+            <!-- SLIDE 5: The model -->
+            <section>
+                <div class="slide-header">
+                    <div class="slide-tag">Under the hood</div>
+                    <h2>Enhanced CPS microdata</h2>
+                    <div class="accent-bar"></div>
+                </div>
+                <div class="slide-body">
+                    <p>ML-powered data fusion creates the most detailed open-source tax-benefit microdata in the US.</p>
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="number">146K</div>
+                            <div class="desc">people across 89K households from Census CPS</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="number">208K</div>
+                            <div class="desc">IRS tax records fused via quantile regression forests</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="number">9,168</div>
+                            <div class="desc">calibration targets from IRS, Census, CBO, and JCT</div>
+                        </div>
+                    </div>
+                    <div class="grid c2 mt-sm">
+                        <div class="content-card">
+                            <h4>Five data sources fused</h4>
+                            <p>CPS ASEC + IRS Public Use File + SIPP + Survey of Consumer Finances + American Community Survey. Gradient descent reweighting matches all 9,168 administrative totals.</p>
+                        </div>
+                        <div class="content-card">
+                            <h4>Validated against gold standards</h4>
+                            <p>Cross-validated with NBER TAXSIM for federal and state income taxes. Benchmarked against CBO, JCT, and Tax Policy Center estimates.</p>
+                        </div>
+                    </div>
+                    <div class="badges">
+                        <span class="badge">Open source</span>
+                        <span class="badge">Hugging Face</span>
+                        <span class="badge">50 states + DC</span>
+                        <span class="badge">PyTorch reweighting</span>
+                    </div>
+                </div>
+                <aside class="notes">
+                    Let me show you what's under the hood. Our Enhanced CPS is the most detailed open-source tax-benefit microdata in the US. We fuse 146,000 people from the Census CPS with 208,000 IRS tax records using quantile regression forests. Then we calibrate to 9,168 administrative targets from IRS, Census, CBO, and JCT using gradient descent optimization. It's validated against NBER TAXSIM, CBO projections, and JCT estimates. All open source, available on Hugging Face.
+                </aside>
+            </section>
+
+            <!-- SLIDE 6: Live demo -->
             <section>
                 <div class="slide-header">
                     <div class="slide-tag">Live demo</div>
@@ -983,35 +1078,35 @@
                 </aside>
             </section>
 
-            <!-- SLIDE 5: Track record -->
+            <!-- SLIDE 7: Track record -->
             <section>
                 <div class="slide-header">
                     <div class="slide-tag">Track record</div>
-                    <h2>Proven infrastructure</h2>
+                    <h2>Recent deliverables</h2>
                     <div class="accent-bar"></div>
                 </div>
                 <div class="slide-body">
                     <div class="grid c2">
                         <div class="content-card">
-                            <h4>Used by governments</h4>
-                            <p>UK government, US congressional offices, and leading think tanks use PolicyEngine for policy analysis.</p>
+                            <h4>OBBBA household-by-household</h4>
+                            <p>Interactive tool analyzing the One Big Beautiful Bill Act across 20,000+ representative household types with full distributional impacts.</p>
                         </div>
                         <div class="content-card">
-                            <h4>Cited in research</h4>
-                            <p>Referenced by CBO, Treasury, and academic researchers. NBER TAXSIM integration for tax microsimulation.</p>
+                            <h4>Autumn Budget 2024 dashboard</h4>
+                            <p>9-provision UK budget analysis used by HM Treasury, MPs, and national media (BBC, Guardian, Times, Telegraph).</p>
                         </div>
                         <div class="content-card">
-                            <h4>Real-world deployment</h4>
-                            <p>MyFriendBen uses our API to power benefits screening for real families applying for assistance programs.</p>
+                            <h4>ACA premium tax credit calculator</h4>
+                            <p>Health insurance subsidy calculator under current and alternative policies, used by benefits counselors and advocacy groups.</p>
                         </div>
                         <div class="content-card">
-                            <h4>Active development</h4>
-                            <p>OBBBA household-by-household analysis, ACA premium tax credit calculator, AI-written policy reports.</p>
+                            <h4>AI-written policy reports</h4>
+                            <p>Automatically generated policy analysis synthesizing microsimulation results into readable research briefs.</p>
                         </div>
                     </div>
                 </div>
                 <aside class="notes">
-                    This isn't a research prototype. The UK government uses PolicyEngine. US congressional offices use it. CBO and Treasury have cited our work. Our API partner MyFriendBen serves real families. And we just shipped an interactive tool analyzing the One Big Beautiful Bill Act across 20,000+ household types.
+                    Some recent deliverables. We shipped an interactive tool analyzing the One Big Beautiful Bill Act across 20,000 household types. Our UK Autumn Budget dashboard covered 9 provisions and was used by HM Treasury and picked up by the BBC, Guardian, Times, and Telegraph. We built an ACA premium tax credit calculator. And we've started generating AI-written policy reports that synthesize microsimulation results.
                 </aside>
             </section>
 
