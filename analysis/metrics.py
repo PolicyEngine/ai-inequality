@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from .constants import YEAR
+
 
 def compute_decile_shares(values, weights, n=10):
     """Compute income shares by quantile.
@@ -66,3 +68,48 @@ def lorenz_curve(values, weights, n_points=100):
 
     x = np.linspace(0, 1, n_points)
     return x, np.interp(x, pop_fracs, income_fracs)
+
+
+def extract_results(sim, label):
+    """Extract standard metrics from a simulation or branch.
+
+    Returns a dict with core inequality/poverty/revenue metrics plus
+    raw MicroSeries for downstream use (charts, state breakdowns).
+
+    Uses MicroSeries.gini() from microdf for Gini calculation.
+    """
+    net_income = sim.calculate("household_net_income", period=YEAR)
+    market_income = sim.calculate("household_market_income", period=YEAR)
+    income_tax = sim.calculate("income_tax", map_to="household", period=YEAR)
+    state_income_tax = sim.calculate(
+        "state_income_tax", map_to="household", period=YEAR
+    )
+    in_poverty = sim.calculate(
+        "spm_unit_is_in_spm_poverty", map_to="person", period=YEAR
+    )
+
+    decile_shares = compute_decile_shares(
+        np.array(net_income.values), np.array(net_income.weights)
+    )
+
+    return {
+        "label": label,
+        "mean_net_income": float(net_income.mean()),
+        "mean_market_income": float(market_income.mean()),
+        "market_gini": float(market_income.gini()),
+        "net_gini": float(net_income.gini()),
+        "spm_poverty_rate": float(in_poverty.mean()),
+        "fed_revenue": float(income_tax.sum()),
+        "state_revenue": float(state_income_tax.sum()),
+        "total_revenue": float(income_tax.sum()) + float(state_income_tax.sum()),
+        "decile_shares": decile_shares,
+        "top_10_share": decile_shares[9],
+        "bottom_10_share": decile_shares[0],
+        "top_20_share": decile_shares[8] + decile_shares[9],
+        "bottom_20_share": decile_shares[0] + decile_shares[1],
+        # Raw MicroSeries for downstream use (charts, state breakdown)
+        "_net_income": net_income,
+        "_market_income": market_income,
+        "_income_tax": income_tax,
+        "_state_income_tax": state_income_tax,
+    }

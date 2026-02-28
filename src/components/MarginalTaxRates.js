@@ -11,7 +11,8 @@ import {
 } from "recharts";
 import { IconPercentage, IconInfoCircle } from "@tabler/icons-react";
 import mtrData from "../data/mtrData.json";
-import "./MarginalTaxRates.css";
+import { TOOLTIP_STYLE, pct } from "../utils/chartStyles";
+import "./AnalysisSection.css";
 
 const COLORS = {
   Employment: "#319795",
@@ -21,31 +22,21 @@ const COLORS = {
   "Qual div": "#2C6496",
 };
 
-const TOOLTIP_STYLE = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 6,
-  padding: "8px 12px",
-  fontSize: 13,
-};
-
-const pct = (v) => `${(v * 100).toFixed(1)}%`;
-
 function MarginalTaxRates() {
   return (
-    <div id="marginal-tax-rates" className="mtr-section">
-      <div className="mtr-header">
-        <div className="mtr-icon-wrapper">
+    <div id="marginal-tax-rates" className="analysis-section">
+      <div className="analysis-header">
+        <div className="analysis-icon-wrapper">
           <IconPercentage size={28} stroke={1.5} />
         </div>
         <h2>Marginal tax rates by income source</h2>
-        <p className="mtr-subtitle">
+        <p className="analysis-subtitle">
           Dollar-weighted average effective marginal tax rates — each person's
           rate weighted by their share of total income in that category
         </p>
       </div>
 
-      <div className="mtr-card">
+      <div className="analysis-card">
         <ResponsiveContainer width="100%" height={380}>
           <BarChart
             data={mtrData.baseline}
@@ -84,7 +75,7 @@ function MarginalTaxRates() {
           </BarChart>
         </ResponsiveContainer>
 
-        <div className="mtr-callout">
+        <div className="analysis-callout">
           <IconInfoCircle size={20} stroke={1.5} />
           <div>
             <strong>Key finding</strong>: Employment income (32.8%) and
@@ -96,7 +87,7 @@ function MarginalTaxRates() {
           </div>
         </div>
 
-        <p className="mtr-metadata">
+        <p className="analysis-metadata">
           PolicyEngine US microsimulation, 1% proportional bump, {mtrData.year}.
           Dollar-weighted: each person's marginal rate weighted by income share.
         </p>

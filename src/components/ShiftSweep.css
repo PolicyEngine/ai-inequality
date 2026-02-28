@@ -1,104 +1,6 @@
-.shift-sweep-section {
-  padding: 4rem 2rem;
-  background: var(--pe-gray-50, #f7fafc);
-}
+/* ShiftSweep-specific styles (compare table).
+ * Shared layout styles are in AnalysisSection.css. */
 
-.shift-sweep-header {
-  text-align: center;
-  max-width: 700px;
-  margin: 0 auto 2rem;
-}
-
-.shift-sweep-icon-wrapper {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  background: #ebf8ff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1rem;
-  color: #2C6496;
-}
-
-.shift-sweep-header h2 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  color: #1a202c;
-}
-
-.shift-sweep-subtitle {
-  color: #4a5568;
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-.shift-sweep-card {
-  max-width: 900px;
-  margin: 0 auto;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  padding: 1.5rem 2rem 1rem;
-}
-
-.shift-sweep-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.shift-sweep-tab {
-  padding: 0.4rem 1rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background: #fff;
-  color: #4a5568;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.shift-sweep-tab:hover {
-  background: #f7fafc;
-}
-
-.shift-sweep-tab.active {
-  background: #319795;
-  color: #fff;
-  border-color: #319795;
-}
-
-.shift-sweep-callout {
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-  background: #f7fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1rem 1.25rem;
-  margin-top: 1.25rem;
-  font-size: 0.9rem;
-  color: #2d3748;
-  line-height: 1.6;
-}
-
-.shift-sweep-callout svg {
-  flex-shrink: 0;
-  color: #718096;
-  margin-top: 2px;
-}
-
-.shift-sweep-metadata {
-  font-size: 0.8rem;
-  color: #a0aec0;
-  margin-top: 1rem;
-  text-align: right;
-}
-
-/* Compare tab */
 .compare-grid {
   margin-top: 0.5rem;
 }
@@ -110,18 +12,18 @@
 }
 
 .compare-table th {
-  background: #f7fafc;
+  background: var(--pe-gray-50);
   padding: 0.6rem 0.75rem;
   text-align: left;
   font-weight: 600;
-  color: #4a5568;
-  border-bottom: 2px solid #e2e8f0;
+  color: var(--pe-gray-600);
+  border-bottom: 2px solid var(--pe-gray-200);
 }
 
 .compare-table td {
   padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #e2e8f0;
-  color: #2d3748;
+  border-bottom: 1px solid var(--pe-gray-200);
+  color: var(--pe-gray-800);
 }
 
 .compare-row-shift td {

@@ -7,21 +7,10 @@ market income.
 """
 
 import numpy as np
-import pandas as pd
 from policyengine_us import Microsimulation
 
-from .metrics import compute_decile_shares
-
-YEAR = 2026
-
-CAPITAL_INCOME_VARS = [
-    "long_term_capital_gains",
-    "short_term_capital_gains",
-    "taxable_interest_income",
-    "qualified_dividend_income",
-    "non_qualified_dividend_income",
-    "rental_income",
-]
+from .constants import YEAR, CAPITAL_INCOME_VARS
+from .metrics import extract_results as _extract_results
 
 MULTIPLIERS = [1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 4.0, 5.0]
 
@@ -50,40 +39,6 @@ def _apply_multiplier(baseline, branch_name, mult, positive_only=False):
         else:
             branch.set_input(var, YEAR, original * mult)
     return branch
-
-
-def _extract_results(sim, label):
-    """Extract standard metrics from a simulation or branch."""
-    net_income = sim.calculate("household_net_income", period=YEAR)
-    market_income = sim.calculate("household_market_income", period=YEAR)
-    income_tax = sim.calculate("income_tax", map_to="household", period=YEAR)
-    state_tax = sim.calculate(
-        "state_income_tax", map_to="household", period=YEAR
-    )
-    in_poverty = sim.calculate(
-        "spm_unit_is_in_spm_poverty", map_to="person", period=YEAR
-    )
-
-    decile_shares = compute_decile_shares(
-        np.array(net_income.values), np.array(net_income.weights)
-    )
-
-    return {
-        "label": label,
-        "mean_net_income": float(net_income.mean()),
-        "mean_market_income": float(market_income.mean()),
-        "market_gini": float(market_income.gini()),
-        "net_gini": float(net_income.gini()),
-        "spm_poverty_rate": float(in_poverty.mean()),
-        "fed_revenue": float(income_tax.sum()),
-        "state_revenue": float(state_tax.sum()),
-        "total_revenue": float(income_tax.sum()) + float(state_tax.sum()),
-        "decile_shares": decile_shares,
-        "top_10_share": decile_shares[9],
-        "bottom_10_share": decile_shares[0],
-        "top_20_share": decile_shares[8] + decile_shares[9],
-        "bottom_20_share": decile_shares[0] + decile_shares[1],
-    }
 
 
 def run_sweep(multipliers=None, positive_only=True):

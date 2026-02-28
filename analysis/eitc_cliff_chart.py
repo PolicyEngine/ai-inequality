@@ -7,7 +7,7 @@ import numpy as np
 import plotly.graph_objects as go
 from policyengine_us import Simulation
 
-YEAR = 2026
+from .constants import YEAR
 
 
 def make_situation(capital_income, capital_type="qualified_dividend_income"):

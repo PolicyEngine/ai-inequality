@@ -9,7 +9,8 @@ marginal estimate undershoots the realized rate at large shifts.
 
 import numpy as np
 from policyengine_us import Microsimulation
-from .labor_capital_shift import CAPITAL_INCOME_VARS, YEAR, _apply_shift
+from .constants import CAPITAL_INCOME_VARS, YEAR
+from .labor_capital_shift import _apply_shift
 
 SHIFTS = [0.10, 0.20, 0.30, 0.50, 1.00]
 

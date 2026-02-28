@@ -1,15 +1,19 @@
-.cliff-section {
+/* Shared layout styles for all analysis section components.
+ * Each component uses these generic class names instead of
+ * duplicating prefixed versions (sweep-, shift-, mtr-, cliff-). */
+
+.analysis-section {
   padding: var(--space-16) var(--space-8);
   max-width: 900px;
   margin: 0 auto;
 }
 
-.cliff-header {
+.analysis-header {
   text-align: center;
   margin-bottom: var(--space-10);
 }
 
-.cliff-icon-wrapper {
+.analysis-icon-wrapper {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -25,13 +29,13 @@
   margin-bottom: var(--space-4);
 }
 
-.cliff-header h2 {
+.analysis-header h2 {
   font-size: clamp(1.5rem, 4vw, 2rem);
   color: var(--pe-gray-900);
   margin: 0 0 var(--space-2);
 }
 
-.cliff-subtitle {
+.analysis-subtitle {
   color: var(--pe-gray-600);
   font-size: 1.05rem;
   max-width: 560px;
@@ -39,7 +43,7 @@
   line-height: 1.6;
 }
 
-.cliff-card {
+.analysis-card {
   background: white;
   border-radius: var(--radius-xl);
   padding: var(--space-6);
@@ -47,7 +51,7 @@
   border: 1px solid var(--pe-gray-200);
 }
 
-.cliff-controls {
+.analysis-controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -56,7 +60,7 @@
   gap: var(--space-4);
 }
 
-.cliff-tabs {
+.analysis-tabs {
   display: flex;
   gap: var(--space-2);
   background: var(--pe-gray-100);
@@ -64,7 +68,7 @@
   padding: 3px;
 }
 
-.cliff-tab {
+.analysis-tab {
   padding: var(--space-2) var(--space-4);
   border: none;
   border-radius: var(--radius-sm);
@@ -76,32 +80,17 @@
   transition: all var(--transition-fast);
 }
 
-.cliff-tab:hover {
+.analysis-tab:hover {
   color: var(--pe-gray-800);
 }
 
-.cliff-tab.active {
+.analysis-tab.active {
   background: white;
   color: var(--pe-teal-600);
   box-shadow: var(--shadow-sm);
 }
 
-.cliff-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 0.875rem;
-  color: var(--pe-gray-600);
-  cursor: pointer;
-}
-
-.cliff-toggle input[type="checkbox"] {
-  accent-color: var(--pe-teal-500);
-  width: 16px;
-  height: 16px;
-}
-
-.cliff-callout {
+.analysis-callout {
   display: flex;
   gap: var(--space-3);
   align-items: flex-start;
@@ -115,13 +104,13 @@
   color: var(--pe-gray-800);
 }
 
-.cliff-callout svg {
+.analysis-callout svg {
   color: var(--pe-gray-500);
   flex-shrink: 0;
   margin-top: 2px;
 }
 
-.cliff-household-desc {
+.analysis-metadata {
   text-align: center;
   color: var(--pe-gray-500);
   font-size: 0.8rem;
@@ -129,26 +118,60 @@
   margin-bottom: 0;
 }
 
+/* Toggle control (used by CapitalIncomeCliff) */
+.analysis-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  color: var(--pe-gray-600);
+  cursor: pointer;
+}
+
+.analysis-toggle input[type="checkbox"] {
+  accent-color: var(--pe-teal-500);
+  width: 16px;
+  height: 16px;
+}
+
+/* Side-by-side chart grid (used by LaborShift overview) */
+.analysis-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+.analysis-chart-title {
+  font-size: 0.95rem;
+  color: var(--pe-gray-700);
+  margin: 0 0 var(--space-3);
+  text-align: center;
+}
+
 @media (max-width: 768px) {
-  .cliff-section {
+  .analysis-section {
     padding: var(--space-10) var(--space-4);
   }
 
-  .cliff-card {
+  .analysis-card {
     padding: var(--space-4);
   }
 
-  .cliff-controls {
+  .analysis-controls {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .cliff-tabs {
+  .analysis-tabs {
     width: 100%;
   }
 
-  .cliff-tab {
+  .analysis-tab {
     flex: 1;
     text-align: center;
+  }
+
+  .analysis-charts-grid {
+    grid-template-columns: 1fr;
   }
 }

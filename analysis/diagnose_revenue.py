@@ -9,18 +9,7 @@ Quick script to check:
 import numpy as np
 from policyengine_us import Microsimulation
 
-from .metrics import compute_decile_shares
-
-YEAR = 2026
-
-CAPITAL_INCOME_VARS = [
-    "long_term_capital_gains",
-    "short_term_capital_gains",
-    "taxable_interest_income",
-    "qualified_dividend_income",
-    "non_qualified_dividend_income",
-    "rental_income",
-]
+from .constants import YEAR, CAPITAL_INCOME_VARS
 
 SHIFT_PCT = 0.50
 

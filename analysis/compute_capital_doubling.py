@@ -13,7 +13,8 @@ import os
 import numpy as np
 from policyengine_us import Microsimulation
 
-from .labor_capital_shift import CAPITAL_INCOME_VARS, YEAR, _extract_results
+from .constants import CAPITAL_INCOME_VARS, YEAR
+from .metrics import extract_results as _extract_results
 from .compute_shift_sweep import _revenue_components, net_fiscal_impact
 
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "outputs", "capital_doubling.json")

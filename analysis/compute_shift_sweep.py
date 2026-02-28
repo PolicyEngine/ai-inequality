@@ -11,7 +11,9 @@ import os
 import numpy as np
 from policyengine_us import Microsimulation
 
-from .labor_capital_shift import CAPITAL_INCOME_VARS, YEAR, _apply_shift, _extract_results
+from .constants import YEAR
+from .labor_capital_shift import _apply_shift
+from .metrics import extract_results as _extract_results
 
 SHIFT_LEVELS = [0.0, 0.10, 0.20, 0.30, 0.50, 1.00]
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "outputs", "shift_sweep.json")

@@ -5,7 +5,7 @@ import os
 import numpy as np
 from policyengine_us import Simulation
 
-YEAR = 2026
+from .constants import YEAR
 
 
 def make_situation(capital_income, capital_type):

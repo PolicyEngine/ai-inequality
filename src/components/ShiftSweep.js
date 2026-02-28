@@ -13,6 +13,8 @@ import {
 import { IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import sweepData from "../data/shiftSweepData.json";
 import capitalData from "../data/capitalDoublingData.json";
+import { TOOLTIP_STYLE, pct as pctFmt } from "../utils/chartStyles";
+import "./AnalysisSection.css";
 import "./ShiftSweep.css";
 
 const TABS = [
@@ -21,15 +23,6 @@ const TABS = [
   { key: "compare", label: "Shift vs. doubling" },
 ];
 
-const TOOLTIP_STYLE = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 6,
-  padding: "8px 12px",
-  fontSize: 13,
-};
-
-const pctFmt = (v) => `${(v * 100).toFixed(1)}%`;
 const bFmt = (v) => `$${v >= 0 ? "+" : ""}${v.toFixed(0)}B`;
 
 const chartData = sweepData.scenarios.map((s) => ({
@@ -46,34 +39,41 @@ const chartData = sweepData.scenarios.map((s) => ({
   snap: s.snap_change_b,
 }));
 
+// Pre-compute scenario lookups used in the compare tab and callouts
+const baseline = sweepData.scenarios[0];
+const shift50 = sweepData.scenarios.find((s) => s.shift_pct === 50);
+const shift100 = sweepData.scenarios.find((s) => s.shift_pct === 100);
+
 
 function ShiftSweep() {
   const [activeTab, setActiveTab] = useState("inequality");
 
   return (
-    <div id="shift-sweep" className="shift-sweep-section">
-      <div className="shift-sweep-header">
-        <div className="shift-sweep-icon-wrapper">
+    <div id="shift-sweep" className="analysis-section">
+      <div className="analysis-header">
+        <div className="analysis-icon-wrapper">
           <IconArrowsExchange size={28} stroke={1.5} />
         </div>
         <h2>Labor-to-capital shift: sensitivity across shift magnitudes</h2>
-        <p className="shift-sweep-subtitle">
+        <p className="analysis-subtitle">
           How inequality, poverty, and tax revenue change as a growing share of
           labor income is replaced by capital income — holding total GDP constant
         </p>
       </div>
 
-      <div className="shift-sweep-card">
-        <div className="shift-sweep-tabs">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              className={`shift-sweep-tab ${activeTab === tab.key ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
+      <div className="analysis-card">
+        <div className="analysis-controls">
+          <div className="analysis-tabs">
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                className={`analysis-tab ${activeTab === tab.key ? "active" : ""}`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {activeTab === "inequality" && (
@@ -221,51 +221,23 @@ function ShiftSweep() {
                 <tr>
                   <td>Baseline</td>
                   <td>—</td>
-                  <td>{sweepData.scenarios[0]?.net_gini.toFixed(4)}</td>
-                  <td>{pctFmt(sweepData.scenarios[0]?.spm_poverty_rate)}</td>
+                  <td>{baseline?.net_gini.toFixed(4)}</td>
+                  <td>{pctFmt(baseline?.spm_poverty_rate)}</td>
                   <td>—</td>
                 </tr>
                 <tr className="compare-row-shift">
                   <td>50% labor→capital shift</td>
                   <td>Neutral (GDP constant)</td>
-                  <td>
-                    {sweepData.scenarios
-                      .find((s) => s.shift_pct === 50)
-                      ?.net_gini.toFixed(4)}
-                  </td>
-                  <td>
-                    {pctFmt(
-                      sweepData.scenarios.find((s) => s.shift_pct === 50)
-                        ?.spm_poverty_rate
-                    )}
-                  </td>
-                  <td>
-                    {bFmt(
-                      sweepData.scenarios.find((s) => s.shift_pct === 50)
-                        ?.revenue_change_b
-                    )}
-                  </td>
+                  <td>{shift50?.net_gini.toFixed(4)}</td>
+                  <td>{pctFmt(shift50?.spm_poverty_rate)}</td>
+                  <td>{bFmt(shift50?.revenue_change_b)}</td>
                 </tr>
                 <tr className="compare-row-shift">
                   <td>100% labor→capital shift</td>
                   <td>Neutral (GDP constant)</td>
-                  <td>
-                    {sweepData.scenarios
-                      .find((s) => s.shift_pct === 100)
-                      ?.net_gini.toFixed(4)}
-                  </td>
-                  <td>
-                    {pctFmt(
-                      sweepData.scenarios.find((s) => s.shift_pct === 100)
-                        ?.spm_poverty_rate
-                    )}
-                  </td>
-                  <td>
-                    {bFmt(
-                      sweepData.scenarios.find((s) => s.shift_pct === 100)
-                        ?.revenue_change_b
-                    )}
-                  </td>
+                  <td>{shift100?.net_gini.toFixed(4)}</td>
+                  <td>{pctFmt(shift100?.spm_poverty_rate)}</td>
+                  <td>{bFmt(shift100?.revenue_change_b)}</td>
                 </tr>
                 <tr className="compare-row-double">
                   <td>Capital income doubled</td>
@@ -277,7 +249,7 @@ function ShiftSweep() {
               </tbody>
             </table>
 
-            <div className="shift-sweep-callout">
+            <div className="analysis-callout">
               <IconInfoCircle size={20} stroke={1.5} />
               <div>
                 The two AI scenarios have sharply different distributional
@@ -293,18 +265,18 @@ function ShiftSweep() {
         )}
 
         {activeTab !== "compare" && (
-          <div className="shift-sweep-callout">
+          <div className="analysis-callout">
             <IconInfoCircle size={20} stroke={1.5} />
             {activeTab === "inequality" && (
               <div>
                 Inequality and poverty rise monotonically with the shift magnitude.
                 At 50%, SPM poverty reaches{" "}
-                {pctFmt(sweepData.scenarios.find((s) => s.shift_pct === 50)?.spm_poverty_rate)}{" "}
+                {pctFmt(shift50?.spm_poverty_rate)}{" "}
                 and the net Gini rises from{" "}
-                {sweepData.scenarios[0]?.net_gini.toFixed(3)} to{" "}
-                {sweepData.scenarios.find((s) => s.shift_pct === 50)?.net_gini.toFixed(3)}.
+                {baseline?.net_gini.toFixed(3)} to{" "}
+                {shift50?.net_gini.toFixed(3)}.
                 At 100%, poverty reaches{" "}
-                {pctFmt(sweepData.scenarios.find((s) => s.shift_pct === 100)?.spm_poverty_rate)}
+                {pctFmt(shift100?.spm_poverty_rate)}
                 {" "}— reflecting that most households have negligible capital income
                 to replace lost wages.
               </div>
@@ -322,7 +294,7 @@ function ShiftSweep() {
           </div>
         )}
 
-        <p className="shift-sweep-metadata">
+        <p className="analysis-metadata">
           PolicyEngine US microsimulation, 2026. Labor→capital shift holds total
           GDP constant; capital doubling adds new income. Static analysis only.
         </p>
