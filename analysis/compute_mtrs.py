@@ -17,7 +17,7 @@ import json
 import numpy as np
 from policyengine_us import Microsimulation
 
-YEAR = 2026
+from .constants import YEAR, CAPITAL_INCOME_VARS
 
 INCOME_SOURCES = [
     "employment_income",
@@ -25,15 +25,6 @@ INCOME_SOURCES = [
     "long_term_capital_gains",
     "short_term_capital_gains",
     "qualified_dividend_income",
-]
-
-CAPITAL_INCOME_VARS = [
-    "long_term_capital_gains",
-    "short_term_capital_gains",
-    "taxable_interest_income",
-    "qualified_dividend_income",
-    "non_qualified_dividend_income",
-    "rental_income",
 ]
 
 # Proportional bump for dollar-weighted MTR.

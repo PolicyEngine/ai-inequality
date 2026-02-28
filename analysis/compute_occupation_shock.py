@@ -17,10 +17,14 @@ import numpy as np
 import pandas as pd
 from policyengine_us import Microsimulation
 
-from .labor_capital_shift import YEAR, _extract_results
+from .constants import YEAR
+from .metrics import extract_results as _extract_results
 from .compute_shift_sweep import _revenue_components, net_fiscal_impact
 
-YALE_RESOURCES = "/Users/daphnehansell/Documents/GitHub/AI-Employment-Model/resources"
+YALE_RESOURCES = os.environ.get(
+    "YALE_RESOURCES",
+    os.path.join(os.path.dirname(__file__), "..", "external", "AI-Employment-Model", "resources"),
+)
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "outputs", "occupation_shock.json")
 
 # ── Step 1: Compute automation exposure by SOC major group ───────────────────

@@ -13,24 +13,14 @@ import {
 } from "recharts";
 import { IconTrendingUp, IconInfoCircle } from "@tabler/icons-react";
 import sweepData from "../data/capitalSweepData.json";
-import "./CapitalSweep.css";
+import { TOOLTIP_STYLE, pct, dollars } from "../utils/chartStyles";
+import "./AnalysisSection.css";
 
 const TABS = [
   { key: "gini", label: "Inequality" },
   { key: "revenue", label: "Tax revenue" },
   { key: "deciles", label: "Decile shares" },
 ];
-
-const TOOLTIP_STYLE = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 6,
-  padding: "8px 12px",
-  fontSize: 13,
-};
-
-const pct = (v) => `${(v * 100).toFixed(1)}%`;
-const dollars = (v) => `$${v.toLocaleString()}B`;
 
 function CapitalSweep() {
   const [activeTab, setActiveTab] = useState("gini");
@@ -43,25 +33,25 @@ function CapitalSweep() {
   }));
 
   return (
-    <div id="capital-sweep" className="sweep-section">
-      <div className="sweep-header">
-        <div className="sweep-icon-wrapper">
+    <div id="capital-sweep" className="analysis-section">
+      <div className="analysis-header">
+        <div className="analysis-icon-wrapper">
           <IconTrendingUp size={28} stroke={1.5} />
         </div>
         <h2>Capital income sweep</h2>
-        <p className="sweep-subtitle">
+        <p className="analysis-subtitle">
           How rising capital income (1x to 5x) affects inequality, poverty, and
           tax revenue across the full US population
         </p>
       </div>
 
-      <div className="sweep-card">
-        <div className="sweep-controls">
-          <div className="sweep-tabs">
+      <div className="analysis-card">
+        <div className="analysis-controls">
+          <div className="analysis-tabs">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
-                className={`sweep-tab ${activeTab === tab.key ? "active" : ""}`}
+                className={`analysis-tab ${activeTab === tab.key ? "active" : ""}`}
                 onClick={() => setActiveTab(tab.key)}
               >
                 {tab.label}
@@ -235,7 +225,7 @@ function CapitalSweep() {
           </ResponsiveContainer>
         )}
 
-        <div className="sweep-callout">
+        <div className="analysis-callout">
           <IconInfoCircle size={20} stroke={1.5} />
           <div>
             <strong>Key finding</strong>: At 5x capital income, the top decile
@@ -246,7 +236,7 @@ function CapitalSweep() {
           </div>
         </div>
 
-        <p className="sweep-metadata">
+        <p className="analysis-metadata">
           {sweepData.metadata.description} ({sweepData.metadata.year})
         </p>
       </div>

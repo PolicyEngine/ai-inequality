@@ -10,7 +10,9 @@ dollar-weighted MTR than capital. This script investigates why:
 
 import numpy as np
 from policyengine_us import Microsimulation
-from .labor_capital_shift import CAPITAL_INCOME_VARS, YEAR, _apply_shift
+from .constants import CAPITAL_INCOME_VARS, YEAR
+from .labor_capital_shift import _apply_shift
+from .compute_shift_sweep import _revenue_components, net_fiscal_impact
 
 SHIFT_PCT = 0.50
 
@@ -27,50 +29,27 @@ def main():
     # --- Revenue decomposition ---
     print("\n--- Revenue decomposition ---")
 
-    base_income_tax = float(baseline.calculate("income_tax", map_to="household", period=YEAR).sum())
-    shift_income_tax = float(branch.calculate("income_tax", map_to="household", period=YEAR).sum())
-
-    base_ee_payroll = float(baseline.calculate("employee_social_security_tax", map_to="household", period=YEAR).sum()
-                           + baseline.calculate("employee_medicare_tax", map_to="household", period=YEAR).sum())
-    shift_ee_payroll = float(branch.calculate("employee_social_security_tax", map_to="household", period=YEAR).sum()
-                            + branch.calculate("employee_medicare_tax", map_to="household", period=YEAR).sum())
-    base_er_payroll = float(baseline.calculate("employer_social_security_tax", map_to="household", period=YEAR).sum()
-                           + baseline.calculate("employer_medicare_tax", map_to="household", period=YEAR).sum())
-    shift_er_payroll = float(branch.calculate("employer_social_security_tax", map_to="household", period=YEAR).sum()
-                            + branch.calculate("employer_medicare_tax", map_to="household", period=YEAR).sum())
-
-    base_eitc = float(baseline.calculate("eitc", map_to="household", period=YEAR).sum())
-    shift_eitc = float(branch.calculate("eitc", map_to="household", period=YEAR).sum())
-
-    base_ctc = float(baseline.calculate("ctc", map_to="household", period=YEAR).sum())
-    shift_ctc = float(branch.calculate("ctc", map_to="household", period=YEAR).sum())
-
-    base_snap = float(baseline.calculate("snap", map_to="household", period=YEAR).sum())
-    shift_snap = float(branch.calculate("snap", map_to="household", period=YEAR).sum())
+    base_rev = _revenue_components(baseline)
+    shift_rev = _revenue_components(branch)
+    delta = net_fiscal_impact(shift_rev, base_rev)
 
     print(f"{'Component':<30} {'Baseline':>12} {'Shift':>12} {'Change':>12}")
     print("-" * 70)
-    for label, b, s in [
-        ("Federal income tax",    base_income_tax, shift_income_tax),
-        ("Payroll tax (employee)", base_ee_payroll, shift_ee_payroll),
-        ("Payroll tax (employer)", base_er_payroll, shift_er_payroll),
-        ("EITC (negative)",       -base_eitc,      -shift_eitc),
-        ("Child tax credit (neg)", -base_ctc,      -shift_ctc),
-        ("SNAP (negative)",       -base_snap,      -shift_snap),
+    for label, base_key, sign in [
+        ("Federal income tax",    "income_tax",       1),
+        ("Payroll tax (employee)", "employee_payroll", 1),
+        ("Payroll tax (employer)", "employer_payroll", 1),
+        ("EITC (negative)",       "eitc",             -1),
+        ("Child tax credit (neg)", "ctc",             -1),
+        ("SNAP (negative)",       "snap",             -1),
     ]:
+        b = base_rev[base_key] * sign
+        s = shift_rev[base_key] * sign
         chg = s - b
         print(f"{label:<30} ${b/1e9:>10,.0f}B ${s/1e9:>10,.0f}B ${chg/1e9:>+10,.0f}B")
 
     print()
-    net_income_tax_chg = shift_income_tax - base_income_tax
-    net_ee_payroll_chg = shift_ee_payroll - base_ee_payroll
-    net_er_payroll_chg = shift_er_payroll - base_er_payroll
-    net_eitc_chg = -(shift_eitc - base_eitc)  # reduction in EITC = revenue gain
-    net_ctc_chg = -(shift_ctc - base_ctc)
-    net_snap_chg = -(shift_snap - base_snap)
-    total_chg = (net_income_tax_chg + net_ee_payroll_chg + net_er_payroll_chg
-                 + net_eitc_chg + net_ctc_chg + net_snap_chg)
-    print(f"{'Total net revenue change':<30} ${total_chg/1e9:>+10,.0f}B")
+    print(f"{'Total net revenue change':<30} ${delta['total_change']/1e9:>+10,.0f}B")
 
     # --- STCG sanity check ---
     print("\n--- STCG MTR sanity check ---")

@@ -11,46 +11,10 @@ import pandas as pd
 from policyengine_us import Microsimulation
 from policyengine_core.reforms import Reform
 
-from .metrics import compute_decile_shares
-
-YEAR = 2026
-
-CAPITAL_INCOME_VARS = [
-    "long_term_capital_gains",
-    "short_term_capital_gains",
-    "taxable_interest_income",
-    "qualified_dividend_income",
-    "non_qualified_dividend_income",
-    "rental_income",
-]
+from .constants import YEAR, CAPITAL_INCOME_VARS, EMPLOYER_PAYROLL_RATE
+from .metrics import extract_results as _extract_results
 
 SHIFT_LEVELS = [0.10, 0.25, 0.50]
-
-
-def _extract_results(sim, label):
-    """Extract standard metrics from a simulation or branch."""
-    net_income = sim.calculate("household_net_income", period=YEAR)
-    market_income = sim.calculate("household_market_income", period=YEAR)
-    income_tax = sim.calculate("income_tax", map_to="household", period=YEAR)
-    state_tax = sim.calculate("state_income_tax", map_to="household", period=YEAR)
-    in_poverty = sim.calculate(
-        "spm_unit_is_in_spm_poverty", map_to="person", period=YEAR
-    )
-
-    return {
-        "label": label,
-        "mean_net_income": float(net_income.mean()),
-        "market_gini": float(market_income.gini()),
-        "net_gini": float(net_income.gini()),
-        "spm_poverty_rate": float(in_poverty.mean()),
-        "fed_revenue": float(income_tax.sum()),
-        "state_revenue": float(state_tax.sum()),
-        "decile_shares": compute_decile_shares(
-            np.array(net_income.values), np.array(net_income.weights)
-        ),
-        "_net_income": net_income,
-        "_market_income": market_income,
-    }
 
 
 def _apply_shift(baseline, branch_name, shift_pct):
@@ -88,7 +52,6 @@ def _apply_shift(baseline, branch_name, shift_pct):
     # above the cap (where effective rate is only 1.45%).
     # We avoid computing employer payroll from the simulation to prevent
     # branch caching issues with PolicyEngine.
-    EMPLOYER_PAYROLL_RATE = 0.0765
     er_savings = wages_freed * EMPLOYER_PAYROLL_RATE
 
     # Total freed = wages + employer payroll savings

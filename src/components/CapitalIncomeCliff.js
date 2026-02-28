@@ -11,7 +11,8 @@ import {
 } from "recharts";
 import { IconTrendingDown, IconInfoCircle } from "@tabler/icons-react";
 import cliffData from "../data/cliffData.json";
-import "./CapitalIncomeCliff.css";
+import { TOOLTIP_STYLE, fmt } from "../utils/chartStyles";
+import "./AnalysisSection.css";
 
 const TABS = [
   { key: "dividends", label: "Qualified dividends" },
@@ -48,21 +49,6 @@ function niceTicks(dataMax, targetCount = 5) {
   }
   return ticks;
 }
-
-const fmt = (v) =>
-  v.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  });
-
-const TOOLTIP_STYLE = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 6,
-  padding: "8px 12px",
-  fontSize: 13,
-};
 
 function findCliff(data) {
   let worstIdx = 0;
@@ -109,32 +95,32 @@ function CapitalIncomeCliff() {
     TABS.find((t) => t.key === activeTab)?.label || "capital income";
 
   return (
-    <div id="capital-income-cliff" className="cliff-section">
-      <div className="cliff-header">
-        <div className="cliff-icon-wrapper">
+    <div id="capital-income-cliff" className="analysis-section">
+      <div className="analysis-header">
+        <div className="analysis-icon-wrapper">
           <IconTrendingDown size={28} stroke={1.5} />
         </div>
         <h2>Capital income cliffs</h2>
-        <p className="cliff-subtitle">
+        <p className="analysis-subtitle">
           How benefit eligibility thresholds interact with investment income
           for low-income households
         </p>
       </div>
 
-      <div className="cliff-card">
-        <div className="cliff-controls">
-          <div className="cliff-tabs">
+      <div className="analysis-card">
+        <div className="analysis-controls">
+          <div className="analysis-tabs">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
-                className={`cliff-tab ${activeTab === tab.key ? "active" : ""}`}
+                className={`analysis-tab ${activeTab === tab.key ? "active" : ""}`}
                 onClick={() => setActiveTab(tab.key)}
               >
                 {tab.label}
               </button>
             ))}
           </div>
-          <label className="cliff-toggle">
+          <label className="analysis-toggle">
             <input
               type="checkbox"
               checked={showComponents}
@@ -205,7 +191,7 @@ function CapitalIncomeCliff() {
           </LineChart>
         </ResponsiveContainer>
 
-        <div className="cliff-callout">
+        <div className="analysis-callout">
           <IconInfoCircle size={20} stroke={1.5} />
           <div>
             <strong>EITC investment income threshold</strong>: At{" "}
@@ -216,7 +202,7 @@ function CapitalIncomeCliff() {
           </div>
         </div>
 
-        <p className="cliff-household-desc">
+        <p className="analysis-metadata">
           {cliffData.household.description} ({cliffData.household.year})
         </p>
       </div>

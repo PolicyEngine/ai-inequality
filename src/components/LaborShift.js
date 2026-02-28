@@ -11,22 +11,13 @@ import {
 } from "recharts";
 import { IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import shiftData from "../data/laborShiftData.json";
-import "./LaborShift.css";
+import { TOOLTIP_STYLE, pct } from "../utils/chartStyles";
+import "./AnalysisSection.css";
 
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "deciles", label: "Decile shares" },
 ];
-
-const TOOLTIP_STYLE = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 6,
-  padding: "8px 12px",
-  fontSize: 13,
-};
-
-const pct = (v) => `${(v * 100).toFixed(1)}%`;
 
 const COLORS = {
   baseline: "#319795",
@@ -58,25 +49,25 @@ function LaborShift() {
   }));
 
   return (
-    <div id="labor-shift" className="shift-section">
-      <div className="shift-header">
-        <div className="shift-icon-wrapper">
+    <div id="labor-shift" className="analysis-section">
+      <div className="analysis-header">
+        <div className="analysis-icon-wrapper">
           <IconArrowsExchange size={28} stroke={1.5} />
         </div>
         <h2>Labor-to-capital shift</h2>
-        <p className="shift-subtitle">
+        <p className="analysis-subtitle">
           What happens when AI automation shifts wages to capital income at
           constant GDP
         </p>
       </div>
 
-      <div className="shift-card">
-        <div className="shift-controls">
-          <div className="shift-tabs">
+      <div className="analysis-card">
+        <div className="analysis-controls">
+          <div className="analysis-tabs">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
-                className={`shift-tab ${activeTab === tab.key ? "active" : ""}`}
+                className={`analysis-tab ${activeTab === tab.key ? "active" : ""}`}
                 onClick={() => setActiveTab(tab.key)}
               >
                 {tab.label}
@@ -86,9 +77,9 @@ function LaborShift() {
         </div>
 
         {activeTab === "overview" && (
-          <div className="shift-charts-grid">
+          <div className="analysis-charts-grid">
             <div>
-              <h3 className="shift-chart-title">Gini coefficients</h3>
+              <h3 className="analysis-chart-title">Gini coefficients</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={giniData}
@@ -119,7 +110,7 @@ function LaborShift() {
               </ResponsiveContainer>
             </div>
             <div>
-              <h3 className="shift-chart-title">SPM poverty rate</h3>
+              <h3 className="analysis-chart-title">SPM poverty rate</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={povertyData}
@@ -181,7 +172,7 @@ function LaborShift() {
           </ResponsiveContainer>
         )}
 
-        <div className="shift-callout">
+        <div className="analysis-callout">
           <IconInfoCircle size={20} stroke={1.5} />
           <div>
             <strong>Key finding</strong>: A 50% labor-to-capital shift raises
@@ -191,7 +182,7 @@ function LaborShift() {
           </div>
         </div>
 
-        <p className="shift-metadata">
+        <p className="analysis-metadata">
           {shiftData.metadata.description} ({shiftData.metadata.year})
         </p>
       </div>
