@@ -205,7 +205,9 @@ function Stakeholders() {
 
       <div className="international-box">
         <div className="box-header">
-          <span className="box-icon"><IconWorld size={24} stroke={1.5} /></span>
+          <span className="box-icon">
+            <IconWorld size={24} stroke={1.5} />
+          </span>
           <h3>International expansion</h3>
         </div>
         <p>

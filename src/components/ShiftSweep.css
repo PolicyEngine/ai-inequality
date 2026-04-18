@@ -1,35 +1,86 @@
-/* ShiftSweep-specific styles (compare table).
- * Shared layout styles are in AnalysisSection.css. */
-
-.compare-grid {
-  margin-top: 0.5rem;
+.shift-sweep-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pe-gray-500);
+  margin-bottom: var(--space-2);
 }
 
-.compare-table {
-  width: 100%;
-  border-collapse: collapse;
+.shift-sweep-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.shift-sweep-control-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.shift-sweep-tabs {
+  align-items: center;
+}
+
+.shift-sweep-description {
+  max-width: 360px;
+  margin: 0;
   font-size: 0.9rem;
-}
-
-.compare-table th {
-  background: var(--pe-gray-50);
-  padding: 0.6rem 0.75rem;
-  text-align: left;
-  font-weight: 600;
+  line-height: 1.6;
   color: var(--pe-gray-600);
-  border-bottom: 2px solid var(--pe-gray-200);
 }
 
-.compare-table td {
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid var(--pe-gray-200);
+.shift-sweep-link {
+  color: var(--pe-teal-600);
+  text-decoration: none;
+}
+
+.shift-sweep-link:hover {
+  text-decoration: underline;
+}
+
+.shift-sweep-select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--pe-gray-300);
+  border-radius: var(--radius-md, 6px);
+  background: white;
+  font-size: 0.9rem;
   color: var(--pe-gray-800);
+  cursor: pointer;
 }
 
-.compare-row-shift td {
-  background: #fffaf0;
+.shift-sweep-select:focus {
+  outline: 2px solid var(--pe-teal-500);
+  outline-offset: 1px;
 }
 
-.compare-row-double td {
-  background: #e6fffa;
+.shift-sweep-state-exposure,
+.shift-sweep-mtr-chart {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--pe-gray-200);
+}
+
+.shift-sweep-state-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+@media (max-width: 768px) {
+  .shift-sweep-description {
+    max-width: none;
+  }
+
+  .shift-sweep-tabs {
+    width: 100%;
+  }
+
+  .shift-sweep-state-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

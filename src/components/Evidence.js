@@ -1,8 +1,8 @@
 import React from "react";
 import "./Evidence.css";
 
-function Evidence() {
-  const findings = [
+const FINDINGS = {
+  us: [
     {
       source: "Stanford DEL (2025)",
       title: "Canaries in the Coal Mine",
@@ -19,7 +19,8 @@ function Evidence() {
     },
     {
       source: "IMF Working Paper (2025)",
-      title: "AI may reduce wage inequality but always increases wealth inequality",
+      title:
+        "AI may reduce wage inequality but always increases wealth inequality",
       detail:
         "Unlike previous automation, AI could reduce wage inequality (by hitting high-income tasks), but capital income and wealth inequality always increase with AI adoption.",
       url: "https://www.imf.org/en/Publications/WP/Issues/2025/04/04/AI-Adoption-and-Inequality-565729",
@@ -45,12 +46,58 @@ function Evidence() {
         "AI threatens to erode labor-based tax revenue. Consumption taxation becomes primary instrument as labor income erodes. Some reforms make sense now, others would be premature.",
       url: "https://www.brookings.edu/articles/future-tax-policy-a-public-finance-framework-for-the-age-of-ai/",
     },
-  ];
+  ],
+  uk: [
+    {
+      source: "IPPR (2024)",
+      title: "UK GenAI exposure depends heavily on policy choices",
+      detail:
+        "IPPR estimates 11% of UK tasks are exposed to current generative AI and 59% under deeper integration. Its central second-wave scenario has 4.4 million jobs displaced alongside £144bn in annual GDP gains.",
+      url: "https://www.ippr.org/media-office/up-to-8-million-uk-jobs-at-risk-from-ai-unless-government-acts-finds-ippr",
+    },
+    {
+      source: "GOV.UK / DfE (2023)",
+      title:
+        "Finance, professional services, education, and London are more exposed",
+      detail:
+        "The UK government's AI exposure study finds professional occupations, finance and insurance, information and communication, public administration, education, London, and the South East are relatively more exposed to AI and LLM applications.",
+      url: "https://assets.publishing.service.gov.uk/media/656856b8cc1ec500138eef49/Gov.UK_Impact_of_AI_on_UK_Jobs_and_Training.pdf",
+    },
+    {
+      source: "GOV.UK AI skills projections (2026)",
+      title: "AI-related UK jobs could grow sharply by 2035",
+      detail:
+        "The AI Skills for Life and Work projections show jobs directly involving AI activities rising from 158,000 in 2024 to 3.9 million by 2035, with AI occupations projected to grow 12.4% in the adjusted Technological Opportunities scenario.",
+      url: "https://www.gov.uk/government/publications/ai-skills-for-life-and-work-labour-market-and-skills-projections/ai-skills-for-life-and-work-labour-market-and-skills-projections",
+    },
+    {
+      source: "PwC UK (2025)",
+      title: "AI-exposed UK roles show wage premia but slower vacancy growth",
+      detail:
+        "PwC reports an 11% UK wage premium for roles requiring AI skills, while vacancies in AI-exposed occupations grew 12% from 2019 to 2024 compared with 50% for less exposed occupations.",
+      url: "https://www.pwc.co.uk/press-room/press-releases/research-commentary/2024/ai-exposed-sectors-see-pay-and-productivity-uplift--but-job-open.html",
+    },
+    {
+      source: "GOV.UK AI Opportunities Action Plan (2026)",
+      title: "UK policy is starting to build the evidence pipeline",
+      detail:
+        "The government has created a Future of Work Unit to provide evidence on AI's impact on the economy and labour market, and reports more than one million AI courses delivered toward a 10 million worker upskilling goal by 2030.",
+      url: "https://www.gov.uk/government/publications/ai-opportunities-action-plan-one-year-on/ai-opportunities-action-plan-one-year-on",
+    },
+  ],
+};
+
+function Evidence({ countryKey = "us" }) {
+  const findings = FINDINGS[countryKey] ?? FINDINGS.us;
+  const eyebrow =
+    countryKey === "uk"
+      ? "UK evidence and transferable research"
+      : "Key findings (2025-2026)";
 
   return (
     <div id="evidence" className="evidence-section">
       <div className="section-header">
-        <span className="eyebrow">Key findings (2025-2026)</span>
+        <span className="eyebrow">{eyebrow}</span>
         <h2>What the research shows</h2>
       </div>
 

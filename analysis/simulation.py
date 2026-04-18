@@ -6,6 +6,7 @@ from policyengine_us import Microsimulation
 from policyengine_core.reforms import Reform
 
 from .constants import YEAR, CAPITAL_INCOME_VARS
+from .fiscal import compute_ubi_amount, net_fiscal_impact, revenue_components
 from .metrics import extract_results as _extract_results
 
 
@@ -48,9 +49,13 @@ def run_scenarios():
         np.array(household_count_people),
     )
 
-    # UBI scenario: recycle extra federal revenue as flat UBI
-    extra_fed_revenue = doubled_results["fed_revenue"] - baseline_results["fed_revenue"]
-    ubi_amount = extra_fed_revenue / total_population
+    # UBI scenario: recycle the net fiscal gain as a flat UBI
+    baseline_fiscal = revenue_components(baseline)
+    doubled_fiscal = revenue_components(doubled)
+    extra_federal_budget = net_fiscal_impact(
+        doubled_fiscal, baseline_fiscal
+    )["total_change"]
+    ubi_amount = compute_ubi_amount(extra_federal_budget, total_population)
     print(f"UBI amount: ${ubi_amount:,.2f}/person/year (${ubi_amount/12:,.2f}/month)")
 
     reform = Reform.from_dict({
@@ -77,7 +82,8 @@ def run_scenarios():
             "year": YEAR,
             "total_households": float(weights.sum()),
             "total_population": total_population,
-            "extra_fed_revenue": extra_fed_revenue,
+            "extra_federal_budget": extra_federal_budget,
+            "extra_income_tax_revenue": doubled_results["fed_revenue"] - baseline_results["fed_revenue"],
             "extra_state_revenue": doubled_results["state_revenue"] - baseline_results["state_revenue"],
         },
         "state_summary": state_summary,

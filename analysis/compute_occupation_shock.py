@@ -18,8 +18,8 @@ import pandas as pd
 from policyengine_us import Microsimulation
 
 from .constants import YEAR
+from .fiscal import net_fiscal_impact, revenue_components
 from .metrics import extract_results as _extract_results
-from .compute_shift_sweep import _revenue_components, net_fiscal_impact
 
 YALE_RESOURCES = os.environ.get(
     "YALE_RESOURCES",
@@ -29,10 +29,17 @@ OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "outputs", "occupation_sho
 
 # ── Step 1: Compute automation exposure by SOC major group ───────────────────
 
-def build_soc_major_exposure():
-    tasks = pd.read_csv(os.path.join(YALE_RESOURCES, "onet_tasks_v2.csv"))
-    exposure = pd.read_csv(os.path.join(YALE_RESOURCES, "automation_vs_augmentation_by_task_v2.csv"))
-    oes = pd.read_csv(os.path.join(YALE_RESOURCES, "national_M2024_dl.csv"))
+
+def _normalize_soc_code(series):
+    """Normalize SOC codes like 11-1011.00 -> 11-1011."""
+    return series.astype(str).str.extract(r"(\d{2}-\d{4})")[0]
+
+
+def _build_major_exposure_from_frames(tasks, exposure, oes):
+    """Aggregate task-level automation scores to SOC major groups."""
+    tasks = tasks.copy()
+    exposure = exposure.copy()
+    oes = oes.copy()
 
     tasks["task_key"] = tasks["Task"].str.lower().str.strip()
     exposure["task_key"] = exposure["task_name"].str.lower().str.strip()
@@ -40,28 +47,59 @@ def build_soc_major_exposure():
     merged["automation"] = merged["directive"] + merged["feedback_loop"]
     merged["major"] = merged["O*NET-SOC Code"].str[:2].astype(int)
 
-    oes_major = (
-        oes[oes["O_GROUP"] == "major"][["OCC_CODE", "TOT_EMP"]]
-        .copy()
-        .assign(major=lambda d: d["OCC_CODE"].str[:2].astype(int))
-    )
-
     soc_exp = (
         merged.groupby(["major", "O*NET-SOC Code"])
-        .apply(lambda g: pd.Series({
-            "automation": np.average(g["automation"], weights=g["pct"]) if g["pct"].sum() > 0 else g["automation"].mean()
-        }))
+        .apply(
+            lambda g: pd.Series(
+                {
+                    "automation": (
+                        np.average(g["automation"], weights=g["pct"])
+                        if g["pct"].sum() > 0
+                        else g["automation"].mean()
+                    )
+                }
+            ),
+            include_groups=False,
+        )
         .reset_index()
     )
+    soc_exp["soc_code"] = _normalize_soc_code(soc_exp["O*NET-SOC Code"])
 
+    detailed_oes = oes.loc[
+        oes["O_GROUP"].astype(str).str.lower() == "detailed",
+        ["OCC_CODE", "TOT_EMP"],
+    ].copy()
+    if detailed_oes.empty:
+        detailed_oes = oes.loc[
+            ~oes["O_GROUP"].astype(str).str.lower().eq("major"),
+            ["OCC_CODE", "TOT_EMP"],
+        ].copy()
+
+    detailed_oes["soc_code"] = _normalize_soc_code(detailed_oes["OCC_CODE"])
+    detailed_oes = (
+        detailed_oes.dropna(subset=["soc_code"])
+        .groupby("soc_code", as_index=False)["TOT_EMP"]
+        .sum()
+    )
+
+    weighted_soc = soc_exp.merge(detailed_oes, on="soc_code", how="left")
     result = (
-        soc_exp.merge(oes_major[["major", "TOT_EMP"]], on="major", how="left")
-        .groupby("major")
-        .apply(lambda g: np.average(g["automation"], weights=g["TOT_EMP"].fillna(1)))
+        weighted_soc.groupby("major")
+        .apply(
+            lambda g: np.average(g["automation"], weights=g["TOT_EMP"].fillna(1)),
+            include_groups=False,
+        )
         .reset_index()
     )
     result.columns = ["major", "automation"]
     return dict(zip(result["major"], result["automation"]))
+
+
+def build_soc_major_exposure():
+    tasks = pd.read_csv(os.path.join(YALE_RESOURCES, "onet_tasks_v2.csv"))
+    exposure = pd.read_csv(os.path.join(YALE_RESOURCES, "automation_vs_augmentation_by_task_v2.csv"))
+    oes = pd.read_csv(os.path.join(YALE_RESOURCES, "national_M2024_dl.csv"))
+    return _build_major_exposure_from_frames(tasks, exposure, oes)
 
 
 # ── Step 2: POCCU2 → SOC major group mapping ─────────────────────────────────
@@ -208,11 +246,11 @@ def main():
 
     print("\nComputing baseline metrics...")
     base_metrics = _extract_results(baseline, "Baseline")
-    base_rev = _revenue_components(baseline)
+    base_rev = revenue_components(baseline)
 
     print("Computing occupation shock metrics...")
     shock_metrics = _extract_results(branch, "Occ shock")
-    shock_rev = _revenue_components(branch)
+    shock_rev = revenue_components(branch)
     delta = net_fiscal_impact(shock_rev, base_rev)
 
     # ── Per-occupation-group summary ─────────────────────────────────────────

@@ -1,7 +1,8 @@
 import React from "react";
 import "./Ecosystem.css";
 
-function Ecosystem() {
+function Ecosystem({ countryKey = "us" }) {
+  const isUK = countryKey === "uk";
   const categories = [
     {
       title: "Research & academia",
@@ -44,7 +45,9 @@ function Ecosystem() {
         },
         {
           name: "McKinsey Global Institute",
-          desc: "Research on technology, labor markets, and economic disruption.",
+          desc: isUK
+            ? "Research on technology, labour markets, and economic disruption."
+            : "Research on technology, labor markets, and economic disruption.",
           url: "https://www.mckinsey.com/mgi",
         },
       ],
@@ -55,7 +58,9 @@ function Ecosystem() {
       orgs: [
         {
           name: "Anthropic",
-          desc: "Economic impact research. Anthropic Economic Index tracking AI on labor.",
+          desc: isUK
+            ? "Economic impact research. Anthropic Economic Index tracking AI on labour."
+            : "Economic impact research. Anthropic Economic Index tracking AI on labor.",
           url: "https://www.anthropic.com/",
         },
         {
@@ -91,7 +96,9 @@ function Ecosystem() {
         },
         {
           name: "Brookings",
-          desc: "AI tax policy frameworks, labor displacement analysis.",
+          desc: isUK
+            ? "AI tax policy frameworks, labour displacement analysis."
+            : "AI tax policy frameworks, labor displacement analysis.",
           url: "https://www.brookings.edu/articles/future-tax-policy-a-public-finance-framework-for-the-age-of-ai/",
         },
         {
@@ -118,7 +125,7 @@ function Ecosystem() {
         {
           name: "PolicyEngine",
           desc: "Open-source microsimulation for US, UK, Canada. This project.",
-          url: "https://policyengine.org/us/model",
+          url: `https://policyengine.org/${countryKey}/model`,
         },
         {
           name: "OG-USA (DeBacker & Evans)",
@@ -158,7 +165,9 @@ function Ecosystem() {
         },
         {
           name: "Metaculus",
-          desc: "Forecasting platform with AGI timeline and labor market questions.",
+          desc: isUK
+            ? "Forecasting platform with AGI timeline and labour market questions."
+            : "Forecasting platform with AGI timeline and labor market questions.",
           url: "https://www.metaculus.com/",
         },
         {
@@ -190,12 +199,11 @@ function Ecosystem() {
                 className="ecosystem-org-card"
               >
                 <div className="ecosystem-org-name">
-                  {org.name} <span className="ecosystem-org-arrow">{"\u2192"}</span>
+                  {org.name}{" "}
+                  <span className="ecosystem-org-arrow">{"\u2192"}</span>
                 </div>
                 <p className="ecosystem-org-desc">{org.desc}</p>
-                <span
-                  className={`ecosystem-org-tag ${category.tagClass}`}
-                >
+                <span className={`ecosystem-org-tag ${category.tagClass}`}>
                   {category.title}
                 </span>
               </a>
@@ -207,8 +215,9 @@ function Ecosystem() {
       <div className="international-box">
         <h3>International expansion</h3>
         <p>
-          While initial work focuses on the United States using PolicyEngine-US,
-          this framework extends to other countries with existing PolicyEngine models:
+          {isUK
+            ? "This UK page is one example of the same AI policy-analysis framework running across countries with PolicyEngine models:"
+            : "While initial work focuses on the United States, this framework extends to other countries with existing PolicyEngine models:"}
         </p>
         <div className="country-grid">
           <a

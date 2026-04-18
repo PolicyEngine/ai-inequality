@@ -29,8 +29,20 @@ yarn-error.log*
 # Python
 analysis/.venv/
 analysis/outputs/
+.venv/
+.venv312/
+.pytest_cache/
 __pycache__/
 *.pyc
 
+# Playwright / Claude in Chrome debug artifacts
+.playwright-cli/
+playwright-report/
+test-results/
+
+# Claude Code local config
+.claude/
+
 # Internal documents (not for public repo)
 social-posts.md
+.vercel

@@ -4,16 +4,23 @@ import "./App.css";
 import Home from "./pages/Home";
 import ResearchPage from "./pages/Research";
 import PolicyAnalysis from "./pages/PolicyAnalysis";
+import IncomeShift from "./pages/IncomeShift";
 import References from "./pages/References";
+
+const routerBasename =
+  process.env.PUBLIC_URL && process.env.PUBLIC_URL !== "."
+    ? process.env.PUBLIC_URL
+    : undefined;
 
 function App() {
   return (
-    <Router basename={process.env.PUBLIC_URL}>
+    <Router basename={routerBasename}>
       <div className="App">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/research" element={<ResearchPage />} />
           <Route path="/policy-analysis" element={<PolicyAnalysis />} />
+          <Route path="/income-shift" element={<IncomeShift />} />
           <Route path="/references" element={<References />} />
         </Routes>
       </div>

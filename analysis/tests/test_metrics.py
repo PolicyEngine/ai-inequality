@@ -7,7 +7,12 @@ These tests cover decile shares and Lorenz curve utilities.
 import numpy as np
 import pytest
 
-from analysis.metrics import compute_decile_shares, lorenz_curve
+from analysis.metrics import (
+    compute_decile_shares,
+    compute_top_share,
+    compute_top_shares,
+    lorenz_curve,
+)
 
 
 class TestDecileShares:
@@ -50,6 +55,18 @@ class TestDecileShares:
 
         assert len(shares) == 5
         assert sum(shares) == pytest.approx(1.0)
+
+    def test_weighted_records_are_split_across_deciles(self):
+        """A large weight should be apportioned across every bucket it spans."""
+        values = np.array([10.0, 100.0])
+        weights = np.array([9.0, 1.0])
+        shares = compute_decile_shares(values, weights)
+
+        expected_low = 10.0 / 190.0
+        expected_high = 100.0 / 190.0
+
+        assert shares[:9] == pytest.approx([expected_low] * 9)
+        assert shares[9] == pytest.approx(expected_high)
 
 
 class TestLorenzCurve:
@@ -94,3 +111,28 @@ class TestLorenzCurve:
         # Interior points should be below diagonal
         interior = (x > 0.05) & (x < 0.95)
         assert np.all(y[interior] <= x[interior] + 0.01)
+
+
+class TestTopShares:
+    def test_top_share_equal_income_matches_population_share(self):
+        values = np.full(100, 50.0)
+        weights = np.ones(100)
+
+        assert compute_top_share(values, weights, 0.10) == pytest.approx(0.10)
+        assert compute_top_share(values, weights, 0.01) == pytest.approx(0.01)
+
+    def test_top_share_splits_records_at_cutoff(self):
+        values = np.array([10.0, 20.0])
+        weights = np.array([9.5, 0.5])
+
+        # Top 10% should include 0.5 of the first record and all of the second.
+        expected = (0.5 * 10.0 + 0.5 * 20.0) / (9.5 * 10.0 + 0.5 * 20.0)
+        assert compute_top_share(values, weights, 0.10) == pytest.approx(expected)
+
+    def test_compute_top_shares_returns_requested_cutoffs(self):
+        values = np.array([1.0, 2.0, 100.0])
+        weights = np.array([1.0, 1.0, 1.0])
+
+        shares = compute_top_shares(values, weights, top_fractions=(0.10, 0.01))
+        assert set(shares) == {0.10, 0.01}
+        assert shares[0.10] >= shares[0.01]

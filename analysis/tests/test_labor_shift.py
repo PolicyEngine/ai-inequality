@@ -6,6 +6,8 @@ Tests the proportional redistribution math and positive-only scaling.
 import numpy as np
 import pytest
 
+from analysis.fiscal import compute_ubi_amount, net_fiscal_impact
+
 
 class TestLaborShiftMath:
     """Test the wage reduction and capital redistribution math."""
@@ -22,13 +24,15 @@ class TestLaborShiftMath:
         )
 
     def test_total_freed_amount(self):
-        """Total freed income = sum of wage + SE reductions."""
+        """Total freed income = sum of positive wage + SE reductions."""
         emp_income = np.array([100000, 50000])
-        se_income = np.array([20000, 0])
+        se_income = np.array([20000, -10000])
         shift_pct = 0.10
 
-        freed = float((emp_income * shift_pct).sum()
-                       + (se_income * shift_pct).sum())
+        freed = float(
+            (np.where(emp_income > 0, emp_income * shift_pct, 0)).sum()
+            + (np.where(se_income > 0, se_income * shift_pct, 0)).sum()
+        )
         assert freed == pytest.approx(17000.0)
 
     def test_proportional_distribution(self):
@@ -61,7 +65,7 @@ class TestLaborShiftMath:
         """Redistribution only scales positive holdings, not losses."""
         original = np.array([500.0, -200.0, 300.0, 0.0])
         scale = 1.5
-        scaled = np.where(original >= 0, original * scale, original)
+        scaled = np.where(original > 0, original * scale, original)
 
         assert scaled[0] == pytest.approx(750.0)
         assert scaled[1] == pytest.approx(-200.0)  # loss unchanged
@@ -76,36 +80,69 @@ class TestLaborShiftMath:
 
 
 class TestUBICalculation:
-    """Test UBI amount calculation from extra revenue."""
+    """Test UBI amount calculation from net fiscal space."""
 
     def test_ubi_per_person(self):
-        """UBI = extra fed revenue / total population."""
-        extra_fed = 500e9  # $500B
+        """UBI = net fiscal gain / total population."""
+        extra_budget = 500e9  # $500B
         total_pop = 330e6  # 330M people
-        ubi = extra_fed / total_pop
+        ubi = compute_ubi_amount(extra_budget, total_pop)
 
         assert ubi == pytest.approx(1515.15, abs=1)
 
     def test_zero_extra_revenue(self):
-        """No extra revenue means no UBI."""
-        extra_fed = 0
+        """No extra fiscal space means no UBI."""
+        extra_budget = 0
         total_pop = 330e6
-        ubi = extra_fed / total_pop if extra_fed > 0 else 0
+        ubi = compute_ubi_amount(extra_budget, total_pop)
         assert ubi == 0
 
     def test_negative_extra_revenue(self):
-        """Negative extra revenue means no UBI."""
-        extra_fed = -100e9
+        """Negative fiscal change means no UBI."""
+        extra_budget = -100e9
         total_pop = 330e6
-        ubi = extra_fed / total_pop if extra_fed > 0 else 0
+        ubi = compute_ubi_amount(extra_budget, total_pop)
         assert ubi == 0
+
+    def test_ubi_uses_total_fiscal_change_not_income_tax_only(self):
+        """Available UBI budget should reflect taxes and transfer changes.
+
+        Net fiscal impact = Δ(household_tax_before_refundable_credits)
+                            + Δ(employer_payroll_tax)
+                            - Δ(household_refundable_tax_credits)
+                            - Δ(household_benefits)
+        """
+        baseline = {
+            "household_tax_before_refundable_credits": 150.0,
+            "employer_payroll_tax": 50.0,
+            "household_refundable_tax_credits": 18.0,
+            "household_benefits": 4.0,
+            "household_market_income": 1000.0,
+            "household_net_income": 872.0,
+        }
+        shifted = {
+            "household_tax_before_refundable_credits": 165.0,
+            "employer_payroll_tax": 35.0,
+            "household_refundable_tax_credits": 15.0,
+            "household_benefits": 3.0,
+            "household_market_income": 1000.0,
+            "household_net_income": 853.0,
+        }
+
+        delta = net_fiscal_impact(shifted, baseline)
+
+        assert delta["household_tax_before_refundable_credits_change"] == pytest.approx(15.0)
+        assert delta["total_change"] == pytest.approx(4.0)
+        assert delta["_identity_residual"] == pytest.approx(0.0, abs=1e-9)
+        assert compute_ubi_amount(delta["total_change"], 2.0) == pytest.approx(2.0)
 
 
 class TestMarketIncomeConservation:
     """TDD: Total market income must be unchanged after labor→capital shift.
 
-    The shift redistributes wages to capital income at constant GDP.
-    Every dollar removed from wages must appear in capital income.
+    The shift redistributes labor income to capital income at constant
+    modeled market income. Every dollar removed from labor income must
+    appear in capital income.
     """
 
     def _redistribute(self, capital_vars, weights, total_freed):
@@ -116,7 +153,7 @@ class TestMarketIncomeConservation:
         # Positive-only weighted totals for shares
         positive_totals = {}
         for name, vals in capital_vars.items():
-            pos = np.where(vals >= 0, vals, 0)
+            pos = np.where(vals > 0, vals, 0)
             positive_totals[name] = float((pos * weights).sum())
 
         total_positive = sum(positive_totals.values())
@@ -128,7 +165,7 @@ class TestMarketIncomeConservation:
             if pos_total > 0 and total_positive > 0:
                 share = pos_total / total_positive
                 scale = 1 + (share * total_freed) / pos_total
-                scaled = np.where(vals >= 0, vals * scale, vals)
+                scaled = np.where(vals > 0, vals * scale, vals)
             else:
                 scaled = vals.copy()
             scaled_vars[name] = scaled
@@ -186,7 +223,7 @@ class TestMarketIncomeConservation:
     def test_total_market_income_unchanged(self):
         """End-to-end: total market income before == after shift."""
         emp = np.array([100000.0, 50000.0, 0.0, 75000.0])
-        se = np.array([20000.0, 0.0, 10000.0, 0.0])
+        se = np.array([20000.0, 0.0, 10000.0, -5000.0])
         weights = np.array([1.0, 2.0, 1.0, 1.5])
         shift_pct = 0.50
 
@@ -203,10 +240,12 @@ class TestMarketIncomeConservation:
         )
 
         # After shift
-        new_emp = emp * (1 - shift_pct)
-        new_se = se * (1 - shift_pct)
+        emp_reduction = np.where(emp > 0, emp * shift_pct, 0)
+        se_reduction = np.where(se > 0, se * shift_pct, 0)
+        new_emp = emp - emp_reduction
+        new_se = se - se_reduction
         total_freed = float(
-            ((emp * shift_pct + se * shift_pct) * weights).sum()
+            ((emp_reduction + se_reduction) * weights).sum()
         )
 
         scaled_vars, _ = self._redistribute(capital_vars, weights, total_freed)

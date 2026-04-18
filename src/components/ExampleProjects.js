@@ -1,8 +1,8 @@
 import React from "react";
 import "./ExampleProjects.css";
 
-function ExampleProjects() {
-  const projects = [
+const PROJECTS = {
+  us: [
     {
       title: "OBBBA household-by-household analysis",
       description:
@@ -51,7 +51,46 @@ function ExampleProjects() {
       url: "https://policyengine.org/us/research/policyengine-nber-mou-taxsim",
       type: "Research partnership",
     },
-  ];
+  ],
+  uk: [
+    {
+      title: "Autumn Budget 2024 policy reform impacts",
+      description:
+        "PolicyEngine UK analysis of how major Budget measures affect household incomes across the distribution.",
+      image: `${process.env.PUBLIC_URL}/images/ai-analysis.png`,
+      url: "https://policyengine.org/uk/research/autumn-budget-2024-policy-reform-impacts",
+      type: "UK distributional impact",
+    },
+    {
+      title: "PolicyEngine UK model",
+      description:
+        "Open-source tax-benefit microsimulation covering UK taxes, benefits, households, and representative microdata.",
+      image: `${process.env.PUBLIC_URL}/images/how-developers-can-explore-the-policyengine-api.jpg`,
+      url: "https://policyengine.org/uk/model",
+      type: "UK model",
+    },
+    {
+      title: "AI-written policy reports",
+      description:
+        "Automatically generated policy analysis reports using AI to synthesize microsimulation results.",
+      image: `${process.env.PUBLIC_URL}/images/ai-analysis.png`,
+      url: "https://policyengine.org/us/research/gpt-analysis",
+      type: "AI integration",
+    },
+    {
+      title: "Household benefit eligibility API",
+      description:
+        "Programmatic access to calculate tax liabilities and benefit eligibility for household configurations.",
+      image: `${process.env.PUBLIC_URL}/images/how-developers-can-explore-the-policyengine-api.jpg`,
+      url: "https://policyengine.org/uk/api",
+      type: "Developer API",
+    },
+  ],
+};
+
+function ExampleProjects({ countryKey = "us" }) {
+  const projects = PROJECTS[countryKey] ?? PROJECTS.us;
+  const isUK = countryKey === "uk";
 
   return (
     <div id="examples" className="examples-section">
@@ -59,8 +98,9 @@ function ExampleProjects() {
         <span className="eyebrow">Track record</span>
         <h2>What PolicyEngine does</h2>
         <p className="examples-subtitle">
-          Open-source tax-benefit microsimulation enabling distributional
-          analysis of policy interventions
+          {isUK
+            ? "UK tax-benefit microsimulation for distributional analysis of policy interventions"
+            : "Open-source tax-benefit microsimulation enabling distributional analysis of policy interventions"}
         </p>
       </div>
 
@@ -84,7 +124,9 @@ function ExampleProjects() {
             <div className="project-content">
               <h3>{project.title}</h3>
               <p>{project.description}</p>
-              <span className="project-link-arrow">View project {"\u2192"}</span>
+              <span className="project-link-arrow">
+                View project {"\u2192"}
+              </span>
             </div>
           </a>
         ))}

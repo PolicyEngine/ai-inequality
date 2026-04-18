@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -14,6 +12,7 @@ import {
 import { IconTrendingUp, IconInfoCircle } from "@tabler/icons-react";
 import sweepData from "../data/capitalSweepData.json";
 import { TOOLTIP_STYLE, pct, dollars } from "../utils/chartStyles";
+import { niceTicks } from "../utils/chartTicks";
 import "./AnalysisSection.css";
 
 const TABS = [
@@ -24,6 +23,36 @@ const TABS = [
 
 function CapitalSweep() {
   const [activeTab, setActiveTab] = useState("gini");
+  const baseline = sweepData.sweep[0];
+  const fiveX = sweepData.sweep.find((row) => row.multiplier === 5.0);
+  const extraRevenue = fiveX ? fiveX.totalRevenue - baseline.totalRevenue : 0;
+  const multiplierTicks = niceTicks(
+    sweepData.sweep[0].multiplier,
+    sweepData.sweep[sweepData.sweep.length - 1].multiplier,
+    9,
+  );
+  const giniTicks = niceTicks(
+    Math.min(
+      ...sweepData.sweep.map((row) => Math.min(row.marketGini, row.netGini)),
+    ),
+    Math.max(
+      ...sweepData.sweep.map((row) => Math.max(row.marketGini, row.netGini)),
+    ),
+    6,
+  );
+  const revenueTicks = niceTicks(
+    Math.min(
+      ...sweepData.sweep.map((row) =>
+        Math.min(row.fedRevenue, row.stateRevenue, row.totalRevenue),
+      ),
+    ),
+    Math.max(
+      ...sweepData.sweep.map((row) =>
+        Math.max(row.fedRevenue, row.stateRevenue, row.totalRevenue),
+      ),
+    ),
+    6,
+  );
 
   const decileData = sweepData.deciles.labels.map((label, i) => ({
     decile: label,
@@ -40,8 +69,8 @@ function CapitalSweep() {
         </div>
         <h2>Capital income sweep</h2>
         <p className="analysis-subtitle">
-          How rising capital income (1x to 5x) affects inequality, poverty, and
-          tax revenue across the full US population
+          How rising capital income (1x to 5x) affects inequality and tax
+          revenue across the full US population
         </p>
       </div>
 
@@ -70,8 +99,11 @@ function CapitalSweep() {
               <XAxis
                 dataKey="multiplier"
                 type="number"
-                domain={[1, 5]}
-                ticks={[1, 1.5, 2, 2.5, 3, 4, 5]}
+                domain={[
+                  multiplierTicks[0],
+                  multiplierTicks[multiplierTicks.length - 1],
+                ]}
+                ticks={multiplierTicks}
                 tickFormatter={(v) => `${v}x`}
                 tick={{ fontSize: 12 }}
                 label={{
@@ -82,7 +114,8 @@ function CapitalSweep() {
                 }}
               />
               <YAxis
-                domain={[0.48, 0.75]}
+                ticks={giniTicks}
+                domain={[giniTicks[0], giniTicks[giniTicks.length - 1]]}
                 tick={{ fontSize: 12 }}
                 tickFormatter={(v) => v.toFixed(2)}
                 label={{
@@ -115,15 +148,6 @@ function CapitalSweep() {
                 strokeWidth={3}
                 dot={{ r: 4 }}
               />
-              <Line
-                type="monotone"
-                dataKey="povertyRate"
-                name="SPM poverty rate"
-                stroke="#805AD5"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                dot={{ r: 4 }}
-              />
             </LineChart>
           </ResponsiveContainer>
         )}
@@ -138,8 +162,11 @@ function CapitalSweep() {
               <XAxis
                 dataKey="multiplier"
                 type="number"
-                domain={[1, 5]}
-                ticks={[1, 1.5, 2, 2.5, 3, 4, 5]}
+                domain={[
+                  multiplierTicks[0],
+                  multiplierTicks[multiplierTicks.length - 1],
+                ]}
+                ticks={multiplierTicks}
                 tickFormatter={(v) => `${v}x`}
                 tick={{ fontSize: 12 }}
                 label={{
@@ -150,6 +177,11 @@ function CapitalSweep() {
                 }}
               />
               <YAxis
+                ticks={revenueTicks}
+                domain={[
+                  revenueTicks[0],
+                  revenueTicks[revenueTicks.length - 1],
+                ]}
                 tick={{ fontSize: 12 }}
                 tickFormatter={(v) => `$${v.toLocaleString()}B`}
                 label={{
@@ -196,7 +228,7 @@ function CapitalSweep() {
 
         {activeTab === "deciles" && (
           <ResponsiveContainer width="100%" height={400}>
-            <BarChart
+            <LineChart
               data={decileData}
               margin={{ left: 20, right: 30, top: 10, bottom: 5 }}
             >
@@ -218,10 +250,28 @@ function CapitalSweep() {
                 formatter={(value, name) => [pct(value), name]}
               />
               <Legend />
-              <Bar dataKey="Baseline" fill="#319795" />
-              <Bar dataKey="2x" fill="#805AD5" />
-              <Bar dataKey="5x" fill="#e53e3e" />
-            </BarChart>
+              <Line
+                type="monotone"
+                dataKey="Baseline"
+                stroke="#319795"
+                strokeWidth={3}
+                dot={{ r: 4 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="2x"
+                stroke="#805AD5"
+                strokeWidth={2.5}
+                dot={{ r: 4 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="5x"
+                stroke="#e53e3e"
+                strokeWidth={2.5}
+                dot={{ r: 4 }}
+              />
+            </LineChart>
           </ResponsiveContainer>
         )}
 
@@ -229,10 +279,12 @@ function CapitalSweep() {
           <IconInfoCircle size={20} stroke={1.5} />
           <div>
             <strong>Key finding</strong>: At 5x capital income, the top decile
-            captures 52% of net income (up from 38% at baseline) while poverty
-            holds steady at ~20.5%. The existing tax-benefit system offsets
-            bottom-decile losses but does not reduce top-end concentration.
-            The scenario generates $2.9T in additional annual tax revenue.
+            captures {pct(fiveX?.top10Share)} of net income up from{" "}
+            {pct(baseline?.top10Share)} at baseline. The existing tax-benefit
+            system offsets some bottom-decile losses but does not prevent
+            top-end concentration. The scenario generates{" "}
+            {dollars(Math.round(extraRevenue))} in additional annual tax
+            revenue.
           </div>
         </div>
 

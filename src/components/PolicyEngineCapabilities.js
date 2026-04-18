@@ -60,7 +60,14 @@ function PolicyEngineCapabilities() {
 
         <div className="open-source-box">
           <div className="box-content">
-            <h3><IconWorld size={24} stroke={1.5} style={{ verticalAlign: 'middle', marginRight: '0.5rem' }} />Open source enables transparent analysis</h3>
+            <h3>
+              <IconWorld
+                size={24}
+                stroke={1.5}
+                style={{ verticalAlign: "middle", marginRight: "0.5rem" }}
+              />
+              Open source enables transparent analysis
+            </h3>
             <p>
               Unlike proprietary economic models, PolicyEngine's open-source
               approach enables transparent, collaborative examination of complex

@@ -1,26 +1,17 @@
 import React from "react";
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from "recharts";
 import { IconPercentage, IconInfoCircle } from "@tabler/icons-react";
 import mtrData from "../data/mtrData.json";
 import { TOOLTIP_STYLE, pct } from "../utils/chartStyles";
 import "./AnalysisSection.css";
-
-const COLORS = {
-  Employment: "#319795",
-  "Self-emp": "#805AD5",
-  LTCG: "#D69E2E",
-  STCG: "#e07b39",
-  "Qual div": "#2C6496",
-};
 
 function MarginalTaxRates() {
   return (
@@ -38,7 +29,7 @@ function MarginalTaxRates() {
 
       <div className="analysis-card">
         <ResponsiveContainer width="100%" height={380}>
-          <BarChart
+          <LineChart
             data={mtrData.baseline}
             margin={{ left: 20, right: 20, top: 10, bottom: 5 }}
           >
@@ -64,15 +55,14 @@ function MarginalTaxRates() {
               ]}
               labelFormatter={() => "Baseline (2026)"}
             />
-            <Bar dataKey="mtr" radius={[4, 4, 0, 0]}>
-              {mtrData.baseline.map((entry) => (
-                <Cell
-                  key={entry.source}
-                  fill={COLORS[entry.source] || "#319795"}
-                />
-              ))}
-            </Bar>
-          </BarChart>
+            <Line
+              type="linear"
+              dataKey="mtr"
+              stroke="#2C6496"
+              strokeWidth={3}
+              dot={{ r: 5, fill: "#2C6496" }}
+            />
+          </LineChart>
         </ResponsiveContainer>
 
         <div className="analysis-callout">
@@ -82,8 +72,8 @@ function MarginalTaxRates() {
             self-employment (43.9%) face higher dollar-weighted MTRs than
             long-term capital gains (28.5%) and qualified dividends (24.8%).
             This indicates a labor-to-capital income shift would reduce tax
-            revenues absent other effects. STCG (72.2%) reflects a small
-            volume of gains concentrated among high-bracket taxpayers.
+            revenues absent other effects. STCG (72.2%) reflects a small volume
+            of gains concentrated among high-bracket taxpayers.
           </div>
         </div>
 

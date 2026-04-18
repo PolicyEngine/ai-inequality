@@ -1,21 +1,21 @@
 /* PolicyEngine AI & Inequality Research - Design System */
 :root {
   /* PolicyEngine Brand Colors */
-  --pe-teal: #39C6C0;
+  --pe-teal: #39c6c0;
   --pe-teal-dark: #227773;
-  --pe-teal-light: #F7FDFC;
-  --pe-blue: #2C6496;
-  --pe-blue-light: #D8E6F3;
-  --pe-blue-dark: #17354F;
+  --pe-teal-light: #f7fdfc;
+  --pe-blue: #2c6496;
+  --pe-blue-light: #d8e6f3;
+  --pe-blue-dark: #17354f;
 
   /* Teal Scale (based on PE teal #39C6C0) */
   --pe-teal-600: #227773;
-  --pe-teal-500: #39C6C0;
-  --pe-teal-400: #5DD4CF;
-  --pe-teal-300: #85E0DC;
-  --pe-teal-200: #B0ECE9;
-  --pe-teal-100: #D7F6F4;
-  --pe-teal-50: #F7FDFC;
+  --pe-teal-500: #39c6c0;
+  --pe-teal-400: #5dd4cf;
+  --pe-teal-300: #85e0dc;
+  --pe-teal-200: #b0ece9;
+  --pe-teal-100: #d7f6f4;
+  --pe-teal-50: #f7fdfc;
 
   /* Gray Scale - WCAG AA compliant */
   --pe-gray-900: #1a202c;

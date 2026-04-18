@@ -1,17 +1,16 @@
 import React from "react";
 import "./GetInvolved.css";
 
-function GetInvolved() {
+function GetInvolved({ countryKey = "us" }) {
+  const modelling = countryKey === "uk" ? "modelling" : "modeling";
   const columns = [
     {
       title: "Research partners",
-      description:
-        "We\u2019re looking for economists with macro modeling experience who want to integrate AI scenarios into microsimulation infrastructure. Whether you\u2019re a postdoc, PhD student, or established researcher, we\u2019d love to explore collaboration.",
+      description: `We\u2019re looking for economists with macro ${modelling} experience who want to integrate AI scenarios into microsimulation infrastructure. Whether you\u2019re a postdoc, PhD student, or established researcher, we\u2019d love to explore collaboration.`,
     },
     {
       title: "Funders",
-      description:
-        "This work sits at the intersection of AI safety, economic policy, and inequality \u2014 three areas that are individually well-funded but poorly integrated. We\u2019re seeking support to hire a dedicated researcher and expand our modeling capabilities.",
+      description: `This work sits at the intersection of AI safety, economic policy, and inequality \u2014 three areas that are individually well-funded but poorly integrated. We\u2019re seeking support to hire a dedicated researcher and expand our ${modelling} capabilities.`,
     },
     {
       title: "Community",

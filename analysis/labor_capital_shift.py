@@ -1,17 +1,18 @@
 """Microsimulation scenarios for labor-to-capital income shift.
 
-Models AI-driven automation as a shift from labor income to capital income
-at constant total GDP. For each shift level (e.g. 10%, 25%, 50%), we reduce
-all employment income by that fraction and redistribute the lost wages into
-capital income variables proportionally.
+Models AI-driven automation as a shift from positive labor income to capital income
+while keeping modeled household market income constant. For each shift level
+(e.g. 10%, 25%, 50%), we reduce positive labor income by that fraction and
+redistribute the lost labor income into capital income variables
+proportionally.
 """
 
 import numpy as np
-import pandas as pd
 from policyengine_us import Microsimulation
 from policyengine_core.reforms import Reform
 
-from .constants import YEAR, CAPITAL_INCOME_VARS, EMPLOYER_PAYROLL_RATE
+from .constants import YEAR, CAPITAL_INCOME_VARS
+from .fiscal import compute_ubi_amount, net_fiscal_impact, revenue_components
 from .metrics import extract_results as _extract_results
 
 SHIFT_LEVELS = [0.10, 0.25, 0.50]
@@ -20,42 +21,36 @@ SHIFT_LEVELS = [0.10, 0.25, 0.50]
 def _apply_shift(baseline, branch_name, shift_pct):
     """Create a branch with labor income shifted to capital income.
 
-    Reduces employment_income and self_employment_income by shift_pct
-    and distributes the freed amount into capital income variables
+    Reduces positive employment_income and self_employment_income by shift_pct
+    and distributes the freed amount into positive capital income variables
     proportionally.
 
-    The freed amount includes employer payroll tax savings: when AI
-    replaces workers, the employer saves wages PLUS the employer-side
-    payroll taxes on those wages. This total employer cost of
-    compensation is what flows to capital owners, conserving total
-    economic value rather than just wages.
+    Redistributes only the positive labor income removed from wages and
+    self-employment income. Negative self-employment income is left unchanged.
+    Employer payroll tax effects remain fiscal
+    effects in the model; they are not added back into household capital
+    income.
     """
     branch = baseline.get_branch(branch_name)
 
-    # Cut employment income
+    # Cut only positive labor income. Losses are not "freed" income.
     emp_income = baseline.calculate("employment_income", period=YEAR)
-    wage_reduction = emp_income * shift_pct
-    branch.set_input("employment_income", YEAR, emp_income - wage_reduction)
+    emp_raw = np.asarray(emp_income, dtype=float)
+    emp_weights = np.asarray(emp_income.weights, dtype=float)
+    wage_reduction = np.where(emp_raw > 0, emp_raw * shift_pct, 0)
+    branch.set_input("employment_income", YEAR, emp_raw - wage_reduction)
 
-    # Also cut self-employment income by the same fraction
     se_income = baseline.calculate("self_employment_income", period=YEAR)
-    se_reduction = se_income * shift_pct
-    branch.set_input("self_employment_income", YEAR, se_income - se_reduction)
+    se_raw = np.asarray(se_income, dtype=float)
+    se_weights = np.asarray(se_income.weights, dtype=float)
+    se_reduction = np.where(se_raw > 0, se_raw * shift_pct, 0)
+    branch.set_input("self_employment_income", YEAR, se_raw - se_reduction)
 
-    # Total wages freed (weighted aggregate)
-    wages_freed = float(wage_reduction.sum() + se_reduction.sum())
-
-    # Employer payroll savings: when AI replaces a worker, the employer
-    # saves the employer-side payroll tax in addition to wages.
-    # Use flat 7.65% (6.2% SS + 1.45% Medicare) — exact for workers
-    # below the SS wage base, slightly overstates for high earners
-    # above the cap (where effective rate is only 1.45%).
-    # We avoid computing employer payroll from the simulation to prevent
-    # branch caching issues with PolicyEngine.
-    er_savings = wages_freed * EMPLOYER_PAYROLL_RATE
-
-    # Total freed = wages + employer payroll savings
-    total_freed = wages_freed + er_savings
+    # Total labor income freed (weighted aggregate).
+    total_freed = float(
+        (wage_reduction * emp_weights).sum()
+        + (se_reduction * se_weights).sum()
+    )
 
     # Compute POSITIVE-ONLY weighted totals for redistribution.
     # Using positive totals for both shares and scale factors ensures
@@ -65,7 +60,7 @@ def _apply_shift(baseline, branch_name, shift_pct):
         vals = baseline.calculate(var, period=YEAR)
         raw = np.array(vals)
         w = np.array(vals.weights)
-        cap_positive_totals[var] = float((np.where(raw >= 0, raw, 0) * w).sum())
+        cap_positive_totals[var] = float((np.where(raw > 0, raw, 0) * w).sum())
 
     total_positive_cap = sum(cap_positive_totals.values())
 
@@ -76,7 +71,7 @@ def _apply_shift(baseline, branch_name, shift_pct):
             share = pos_total / total_positive_cap
             scale = 1 + (share * total_freed) / pos_total
             vals = np.array(original)
-            scaled = np.where(vals >= 0, vals * scale, vals)
+            scaled = np.where(vals > 0, vals * scale, vals)
             branch.set_input(var, YEAR, scaled)
 
     return branch, total_freed
@@ -122,10 +117,13 @@ def run_scenarios(shift_levels=None):
         r["total_freed"] = freed
         shift_results.append(r)
 
-    # UBI scenario: use the largest shift's extra revenue to fund UBI
-    largest = shift_results[-1]
-    extra_fed = largest["fed_revenue"] - baseline_results["fed_revenue"]
-    ubi_amount = extra_fed / total_population if extra_fed > 0 else 0
+    # UBI scenario: use the largest shift's net fiscal gain to fund UBI
+    baseline_fiscal = revenue_components(baseline)
+    largest_fiscal = revenue_components(branches[shift_levels[-1]][0])
+    extra_budget = net_fiscal_impact(
+        largest_fiscal, baseline_fiscal
+    )["total_change"]
+    ubi_amount = compute_ubi_amount(extra_budget, total_population)
 
     ubi_results = None
     if ubi_amount > 0:

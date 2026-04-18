@@ -20,11 +20,11 @@ def main():
 
     columns = {"Metric": [
         "Market income Gini",
-        "Net income Gini",
+        "Net income incl. health benefits Gini",
         "SPM poverty rate",
         "Federal income tax revenue",
-        "Top decile income share",
-        "Bottom decile income share",
+        "Top decile resource share",
+        "Bottom decile resource share",
     ]}
     columns["Baseline"] = _format_row(results["baseline"])
     for r in results["shifts"]:
@@ -50,18 +50,24 @@ def main():
     numeric = pd.DataFrame([{
         "scenario": r["label"],
         "market_gini": r["market_gini"],
-        "net_gini": r["net_gini"],
+        "net_gini_including_health_benefits": (
+            r["net_gini_including_health_benefits"]
+        ),
         "spm_poverty_rate": r["spm_poverty_rate"],
         "fed_revenue": r["fed_revenue"],
-        "top_decile_share": r["decile_shares"][9],
-        "bottom_decile_share": r["decile_shares"][0],
+        "top_decile_resource_share": (
+            r["decile_shares_including_health_benefits"][9]
+        ),
+        "bottom_decile_resource_share": (
+            r["decile_shares_including_health_benefits"][0]
+        ),
     } for r in rows])
     numeric.to_csv(os.path.join(OUTPUT_DIR, "summary_metrics.csv"), index=False)
 
     decile_data = {"decile": list(range(1, 11))}
     for r in rows:
         key = r["label"].lower().replace(" ", "_").replace("%", "pct")
-        decile_data[key] = r["decile_shares"]
+        decile_data[key] = r["decile_shares_including_health_benefits"]
     pd.DataFrame(decile_data).to_csv(
         os.path.join(OUTPUT_DIR, "decile_shares.csv"), index=False
     )
@@ -73,11 +79,11 @@ def main():
 def _format_row(r):
     return [
         f"{r['market_gini']:.4f}",
-        f"{r['net_gini']:.4f}",
+        f"{r['net_gini_including_health_benefits']:.4f}",
         f"{r['spm_poverty_rate']:.2%}",
         f"${r['fed_revenue']:,.0f}",
-        f"{r['decile_shares'][9]:.2%}",
-        f"{r['decile_shares'][0]:.2%}",
+        f"{r['decile_shares_including_health_benefits'][9]:.2%}",
+        f"{r['decile_shares_including_health_benefits'][0]:.2%}",
     ]
 
 

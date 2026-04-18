@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -11,7 +11,9 @@ import {
 } from "recharts";
 import { IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import shiftData from "../data/laborShiftData.json";
-import { TOOLTIP_STYLE, pct } from "../utils/chartStyles";
+import sweepData from "../data/shiftSweepData.json";
+import { TOOLTIP_STYLE, dollars, fmt, pct } from "../utils/chartStyles";
+import { niceTicks } from "../utils/chartTicks";
 import "./AnalysisSection.css";
 
 const TABS = [
@@ -29,24 +31,57 @@ const COLORS = {
 
 function LaborShift() {
   const [activeTab, setActiveTab] = useState("overview");
+  const baseline = shiftData.scenarios[0];
+  const shift50 = shiftData.scenarios.find((s) => s.shiftPct === 50);
+  const shift50Ubi = shiftData.scenarios.find((s) => s.label.includes("UBI"));
+  const hasUbiScenario = Boolean(shift50Ubi && shiftData.deciles["50pctUBI"]);
+  const healthDelta =
+    baseline && shift50
+      ? shift50.healthcareBenefitValue - baseline.healthcareBenefitValue
+      : 0;
+  const hasHealthSweepGini = sweepData.scenarios.every(
+    (scenario) => scenario.net_gini_including_health_benefits != null,
+  );
+  const overviewNetLabel = hasHealthSweepGini
+    ? "Resources incl. health"
+    : "Net Gini";
 
-  const giniData = shiftData.scenarios.map((s) => ({
-    scenario: s.label,
-    "Market Gini": s.marketGini,
-    "Net Gini": s.netGini,
+  const giniData = sweepData.scenarios.map((s) => ({
+    shiftPct: s.shift_pct,
+    label: s.label,
+    "Market Gini": s.market_gini,
+    [overviewNetLabel]: s.net_gini_including_health_benefits ?? s.net_gini,
   }));
+  const overviewShiftTicks = niceTicks(
+    giniData[0].shiftPct,
+    giniData[giniData.length - 1].shiftPct,
+    11,
+  );
+  const overviewGiniTicks = niceTicks(
+    Math.min(
+      ...giniData.map((row) =>
+        Math.min(row["Market Gini"], row[overviewNetLabel]),
+      ),
+    ),
+    Math.max(
+      ...giniData.map((row) =>
+        Math.max(row["Market Gini"], row[overviewNetLabel]),
+      ),
+    ),
+    6,
+  );
 
-  const povertyData = shiftData.scenarios.map((s) => ({
-    scenario: s.label,
-    "SPM poverty rate": s.povertyRate,
-  }));
-
-  const decileData = shiftData.deciles.labels.map((label, i) => ({
-    decile: label,
-    Baseline: shiftData.deciles.baseline[i],
-    "50% shift": shiftData.deciles["50pctShift"][i],
-    "50% + UBI": shiftData.deciles["50pctUBI"][i],
-  }));
+  const decileData = shiftData.deciles.labels.map((label, i) => {
+    const row = {
+      decile: label,
+      Baseline: shiftData.deciles.baseline[i],
+      "50% shift": shiftData.deciles["50pctShift"][i],
+    };
+    if (hasUbiScenario) {
+      row["50% shift + UBI"] = shiftData.deciles["50pctUBI"][i];
+    }
+    return row;
+  });
 
   return (
     <div id="labor-shift" className="analysis-section">
@@ -57,7 +92,8 @@ function LaborShift() {
         <h2>Labor-to-capital shift</h2>
         <p className="analysis-subtitle">
           What happens when AI automation shifts wages to capital income at
-          constant GDP
+          constant modeled market income, counting Medicaid, CHIP, and ACA
+          support in household resources
         </p>
       </div>
 
@@ -78,64 +114,61 @@ function LaborShift() {
 
         {activeTab === "overview" && (
           <div className="analysis-charts-grid">
-            <div>
-              <h3 className="analysis-chart-title">Gini coefficients</h3>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <h3 className="analysis-chart-title">
+                Gini coefficients by shift level
+              </h3>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart
+                <LineChart
                   data={giniData}
                   margin={{ left: 10, right: 10, top: 5, bottom: 5 }}
                 >
                   <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
                   <XAxis
-                    dataKey="scenario"
+                    type="number"
+                    dataKey="shiftPct"
+                    domain={[
+                      overviewShiftTicks[0],
+                      overviewShiftTicks[overviewShiftTicks.length - 1],
+                    ]}
+                    ticks={overviewShiftTicks}
+                    tickFormatter={(v) => `${v}%`}
                     tick={{ fontSize: 11 }}
-                    interval={0}
-                    angle={-20}
-                    textAnchor="end"
-                    height={50}
+                    height={40}
                   />
                   <YAxis
-                    domain={[0.45, 0.8]}
+                    ticks={overviewGiniTicks}
+                    domain={[
+                      overviewGiniTicks[0],
+                      overviewGiniTicks[overviewGiniTicks.length - 1],
+                    ]}
                     tick={{ fontSize: 12 }}
                     tickFormatter={(v) => v.toFixed(2)}
                   />
                   <Tooltip
                     contentStyle={TOOLTIP_STYLE}
                     formatter={(v, name) => [v.toFixed(4), name]}
+                    labelFormatter={(value) =>
+                      giniData.find((row) => row.shiftPct === value)?.label ??
+                      `${value}% shift`
+                    }
                   />
                   <Legend />
-                  <Bar dataKey="Market Gini" fill="#e53e3e" />
-                  <Bar dataKey="Net Gini" fill="#319795" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div>
-              <h3 className="analysis-chart-title">SPM poverty rate</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={povertyData}
-                  margin={{ left: 10, right: 10, top: 5, bottom: 5 }}
-                >
-                  <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="scenario"
-                    tick={{ fontSize: 11 }}
-                    interval={0}
-                    angle={-20}
-                    textAnchor="end"
-                    height={50}
+                  <Line
+                    type="monotone"
+                    dataKey="Market Gini"
+                    stroke="#e53e3e"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
                   />
-                  <YAxis
-                    domain={[0, 0.4]}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={pct}
+                  <Line
+                    type="monotone"
+                    dataKey={overviewNetLabel}
+                    stroke="#319795"
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
                   />
-                  <Tooltip
-                    contentStyle={TOOLTIP_STYLE}
-                    formatter={(v) => [pct(v), "Poverty rate"]}
-                  />
-                  <Bar dataKey="SPM poverty rate" fill="#e53e3e" />
-                </BarChart>
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -143,7 +176,7 @@ function LaborShift() {
 
         {activeTab === "deciles" && (
           <ResponsiveContainer width="100%" height={400}>
-            <BarChart
+            <LineChart
               data={decileData}
               margin={{ left: 20, right: 30, top: 10, bottom: 35 }}
             >
@@ -153,7 +186,7 @@ function LaborShift() {
                 tickFormatter={pct}
                 tick={{ fontSize: 12 }}
                 label={{
-                  value: "Share of net income",
+                  value: "Share of household resources",
                   angle: -90,
                   position: "insideLeft",
                   offset: -5,
@@ -165,10 +198,30 @@ function LaborShift() {
                 formatter={(value, name) => [pct(value), name]}
               />
               <Legend />
-              <Bar dataKey="Baseline" fill={COLORS.baseline} />
-              <Bar dataKey="50% shift" fill={COLORS.shift50} />
-              <Bar dataKey="50% + UBI" fill={COLORS.ubi} />
-            </BarChart>
+              <Line
+                type="monotone"
+                dataKey="Baseline"
+                stroke={COLORS.baseline}
+                strokeWidth={3}
+                dot={{ r: 4 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="50% shift"
+                stroke={COLORS.shift50}
+                strokeWidth={2.5}
+                dot={{ r: 4 }}
+              />
+              {hasUbiScenario && (
+                <Line
+                  type="monotone"
+                  dataKey="50% shift + UBI"
+                  stroke={COLORS.ubi}
+                  strokeWidth={2.5}
+                  dot={{ r: 4 }}
+                />
+              )}
+            </LineChart>
           </ResponsiveContainer>
         )}
 
@@ -176,9 +229,30 @@ function LaborShift() {
           <IconInfoCircle size={20} stroke={1.5} />
           <div>
             <strong>Key finding</strong>: A 50% labor-to-capital shift raises
-            poverty from 20.5% to 36.0%. The additional tax revenue funds
-            ~$1,423/person/year in UBI, which reduces poverty to 29.6% —
-            a partial offset of 6 percentage points out of the 15pp increase.
+            the top decile's share of household resources from{" "}
+            {pct(baseline?.top10Share)} to {pct(shift50?.top10Share)}. Health
+            coverage support changes from{" "}
+            {dollars(baseline?.healthcareBenefitValue ?? 0)} to{" "}
+            {dollars(shift50?.healthcareBenefitValue ?? 0)} (
+            {healthDelta >= 0 ? "+" : ""}
+            {dollars(healthDelta)}), with the 50% shift scenario carrying{" "}
+            {dollars(shift50?.medicaidBenefits ?? 0)} in Medicaid,{" "}
+            {dollars(shift50?.chipBenefits ?? 0)} in CHIP, and{" "}
+            {dollars(shift50?.acaBenefits ?? 0)} in ACA premium support.
+            {hasUbiScenario ? (
+              <>
+                {" "}
+                The additional fiscal space funds{" "}
+                {fmt(shift50Ubi?.ubiPerPerson)} per person per year in UBI.
+              </>
+            ) : (
+              <>
+                {" "}
+                Once payroll tax losses and transfer changes are counted, this
+                scenario does not generate enough fiscal space for a
+                budget-neutral UBI.
+              </>
+            )}
           </div>
         </div>
 

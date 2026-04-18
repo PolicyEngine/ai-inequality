@@ -20,11 +20,7 @@
   width: 52px;
   height: 52px;
   border-radius: var(--radius-lg);
-  background: linear-gradient(
-    135deg,
-    var(--pe-teal-100),
-    var(--pe-teal-200)
-  );
+  background: linear-gradient(135deg, var(--pe-teal-100), var(--pe-teal-200));
   color: var(--pe-teal-600);
   margin-bottom: var(--space-4);
 }

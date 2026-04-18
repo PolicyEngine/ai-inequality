@@ -12,7 +12,8 @@ const Source = ({ href, children }) => (
   </a>
 );
 
-function Approach() {
+function Approach({ countryKey = "us" }) {
+  const isUK = countryKey === "uk";
   const pipeline = [
     {
       step: 1,
@@ -22,12 +23,16 @@ function Approach() {
     {
       step: 2,
       title: "PolicyEngine microsimulation",
-      description: "Open-source tax-benefit models for US, UK, Canada",
+      description: isUK
+        ? "Open-source UK tax-benefit model and household microdata"
+        : "Open-source tax-benefit models for US, UK, Canada",
     },
     {
       step: 3,
       title: "Distributional outcomes",
-      description: "Inequality metrics, poverty rates, winners/losers analysis",
+      description: isUK
+        ? "Inequality metrics, fiscal impacts, winners/losers analysis"
+        : "Inequality metrics, poverty rates, winners/losers analysis",
     },
     {
       step: 4,
@@ -46,7 +51,8 @@ function Approach() {
           <Source href="https://github.com/PolicyEngine">
             open source (AGPL-3.0)
           </Source>
-          . 10,000+ policy parameters encoded for the US tax-benefit system.
+          . 10,000+ policy parameters encoded across country tax-benefit
+          systems, including the UK.
         </>
       ),
     },
@@ -106,9 +112,9 @@ function Approach() {
         <p>
           We don't forecast AI's trajectory or prescribe optimal policies. We
           provide the infrastructure to translate any AI economic scenario into
-          household-level distributional outcomes under different policy
-          regimes {"\u2014"} enabling researchers, policymakers, and funders to
-          evaluate policy responses rigorously.
+          household-level distributional outcomes under different policy regimes{" "}
+          {"\u2014"} enabling researchers, policymakers, and funders to evaluate
+          policy responses rigorously.
         </p>
       </div>
 
@@ -124,10 +130,10 @@ function Approach() {
       <div className="uncertainty-box">
         <h3>Quantifying uncertainty</h3>
         <p>
-          Traditional policy analysis reports only point estimates (e.g., CBO
-          baseline forecasts). AI-driven economic change involves profound
-          uncertainty. We model ranges of scenarios to show how policy impacts
-          vary across different AI trajectories.
+          Traditional policy analysis reports only point estimates (e.g.,{" "}
+          {isUK ? "OBR" : "CBO"} baseline forecasts). AI-driven economic change
+          involves profound uncertainty. We model ranges of scenarios to show
+          how policy impacts vary across different AI trajectories.
         </p>
         <div className="uncertainty-stats">
           <div className="uncertainty-stat">

@@ -6,25 +6,25 @@ Produces:
   src/data/capitalDoublingData.json - Detailed capital doubling with program breakdowns
   src/data/laborShiftData.json     - Labor-to-capital shift scenarios + UBI
   src/data/shiftSweepData.json     - Shift sweep with revenue decomposition
+  src/data/incomeDistributionData.json - Baseline income composition by percentile group
   src/data/mtrData.json            - Marginal tax rates by income source
   src/data/cliffData.json          - Household-level cliff analysis
 """
 
 import json
 import numpy as np
-from policyengine_us import Microsimulation, CountryTaxBenefitSystem
+from policyengine_us import Microsimulation
 from policyengine_core.reforms import Reform
+from analysis.compute_shift_sweep import run_shift_sweep as run_shift_sweep_analysis
+from analysis.constants import CAPITAL_INCOME_VARS, YEAR
+from analysis.income_distribution_breakdown import (
+    build_income_distribution_payload,
+)
+from analysis.labor_capital_shift import run_scenarios as run_labor_shift_scenarios
+from analysis.website_exports import labor_shift_website_payload
 
-YEAR = 2026
 DATA_DIR = "src/data"
 
-CAPITAL_INCOME_VARS = [
-    "long_term_capital_gains",
-    "short_term_capital_gains",
-    "qualified_dividend_income",
-    "taxable_interest_income",
-    "rental_income",
-]
 LABOR_INCOME_VARS = [
     "employment_income",
     "self_employment_income",
@@ -290,71 +290,9 @@ def gen_capital_doubling():
 # ===== Labor Shift =====
 def gen_labor_shift():
     print("Generating laborShiftData.json...")
-    shifts = [0, 10, 25, 50]
-    labels = ["Baseline", "10% shift", "25% shift", "50% shift"]
-
-    scenarios = []
-    deciles_data = {}
-
-    for pct, label in zip(shifts, labels):
-        print(f"  {label}...")
-        sim = Microsimulation()
-        if pct > 0:
-            shift_labor_to_capital(sim, pct)
-        m = basic_metrics(sim)
-        scenarios.append({
-            "label": label,
-            "shiftPct": pct,
-            **m,
-        })
-        if label == "Baseline":
-            deciles_data["baseline"] = decile_shares(sim)
-        elif label == "50% shift":
-            deciles_data["50pctShift"] = decile_shares(sim)
-
-    # 50% shift + UBI
-    print("  50% shift + UBI...")
-    # Calculate extra tax revenue from 50% shift
-    base_sim = Microsimulation()
-    base_rev = base_sim.calc("income_tax", period=YEAR).sum()
-    shift50_sim = Microsimulation()
-    shift_labor_to_capital(shift50_sim, 50)
-    shift50_rev = shift50_sim.calc("income_tax", period=YEAR).sum()
-    extra_rev = shift50_rev - base_rev
-    population = get_weights(base_sim).sum()
-
-    # Even if revenue drops, use a modest UBI funded externally for comparison
-    ubi_amount = max(round(float(extra_rev / population)), 100)
-
-    reform = Reform.from_dict(
-        {
-            "gov.contrib.ubi_center.basic_income.amount.person.flat": {
-                "2026-01-01.2028-12-31": ubi_amount
-            },
-        },
-        "policyengine_us",
-    )
-    ubi_sim = Microsimulation(reform=reform)
-    shift_labor_to_capital(ubi_sim, 50)
-    ubi_m = basic_metrics(ubi_sim)
-    scenarios.append({
-        "label": "50% shift + UBI",
-        "shiftPct": 50,
-        **ubi_m,
-    })
-    deciles_data["50pctUBI"] = decile_shares(ubi_sim)
-
-    result = {
-        "scenarios": scenarios,
-        "deciles": {
-            "labels": [f"D{i}" for i in range(1, 11)],
-            **deciles_data,
-        },
-        "metadata": {
-            "year": YEAR,
-            "description": "Employment and self-employment income reduced by X%, redistributed to capital income proportional to existing holdings at constant total income. Models AI-driven automation shifting labor income to capital owners.",
-        },
-    }
+    print("  Running corrected labor-shift analysis pipeline...")
+    results = run_labor_shift_scenarios()
+    result = labor_shift_website_payload(results)
     with open(f"{DATA_DIR}/laborShiftData.json", "w") as f:
         json.dump(result, f, indent=2)
     print("  Done.")
@@ -363,51 +301,17 @@ def gen_labor_shift():
 # ===== Shift Sweep =====
 def gen_shift_sweep():
     print("Generating shiftSweepData.json...")
-    shifts = [0, 10, 20, 30, 50, 100]
-    labels = [
-        "Baseline",
-        "10% shift",
-        "20% shift",
-        "30% shift",
-        "50% shift",
-        "100% shift",
-    ]
-
-    baseline_sim = Microsimulation()
-    base_det = detailed_metrics(baseline_sim)
-
-    scenarios = []
-    for pct, label in zip(shifts, labels):
-        print(f"  {label}...")
-        sim = Microsimulation()
-        if pct > 0:
-            shift_labor_to_capital(sim, pct)
-        det = detailed_metrics(sim)
-
-        rev_change = (det["fedRevenue"] + det["stateRevenue"]) - (
-            base_det["fedRevenue"] + base_det["stateRevenue"]
-        )
-
-        scenarios.append({
-            "shift_pct": pct,
-            "label": label,
-            "net_gini": det["netGini"],
-            "market_gini": det["marketGini"],
-            "spm_poverty_rate": det["povertyRate"],
-            "fed_revenue_b": det["fedRevenue"],
-            "revenue_change_b": rev_change,
-            "income_tax_change_b": det["income_tax_b"] - base_det["income_tax_b"],
-            "employee_payroll_change_b": det["employee_payroll_b"]
-            - base_det["employee_payroll_b"],
-            "employer_payroll_change_b": det["employer_payroll_b"]
-            - base_det["employer_payroll_b"],
-            "eitc_change_b": det["eitc_cost_b"] - base_det["eitc_cost_b"],
-            "ctc_change_b": det["ctc_cost_b"] - base_det["ctc_cost_b"],
-            "snap_change_b": det["snap_cost_b"] - base_det["snap_cost_b"],
-        })
-
-    result = {"year": YEAR, "scenarios": scenarios}
+    result = run_shift_sweep_analysis(verbose=True)
     with open(f"{DATA_DIR}/shiftSweepData.json", "w") as f:
+        json.dump(result, f, indent=2)
+    print("  Done.")
+
+
+# ===== Income Distribution =====
+def gen_income_distribution():
+    print("Generating incomeDistributionData.json...")
+    result = build_income_distribution_payload()
+    with open(f"{DATA_DIR}/incomeDistributionData.json", "w") as f:
         json.dump(result, f, indent=2)
     print("  Done.")
 
@@ -542,6 +446,7 @@ if __name__ == "__main__":
     gen_capital_doubling()
     gen_labor_shift()
     gen_shift_sweep()
+    gen_income_distribution()
     gen_mtr_data()
     gen_cliff_data()
 

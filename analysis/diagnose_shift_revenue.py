@@ -12,7 +12,7 @@ import numpy as np
 from policyengine_us import Microsimulation
 from .constants import CAPITAL_INCOME_VARS, YEAR
 from .labor_capital_shift import _apply_shift
-from .compute_shift_sweep import _revenue_components, net_fiscal_impact
+from .fiscal import net_fiscal_impact, revenue_components
 
 SHIFT_PCT = 0.50
 
@@ -24,32 +24,51 @@ def main():
 
     baseline = Microsimulation()
     branch, total_freed = _apply_shift(baseline, "shift_50", SHIFT_PCT)
-    print(f"\nTotal freed (wages + employer payroll): ${total_freed/1e12:.2f}T")
+    print(f"\nTotal freed labor income: ${total_freed/1e12:.2f}T")
 
     # --- Revenue decomposition ---
     print("\n--- Revenue decomposition ---")
 
-    base_rev = _revenue_components(baseline)
-    shift_rev = _revenue_components(branch)
+    base_rev = revenue_components(baseline)
+    shift_rev = revenue_components(branch)
     delta = net_fiscal_impact(shift_rev, base_rev)
 
-    print(f"{'Component':<30} {'Baseline':>12} {'Shift':>12} {'Change':>12}")
-    print("-" * 70)
-    for label, base_key, sign in [
-        ("Federal income tax",    "income_tax",       1),
-        ("Payroll tax (employee)", "employee_payroll", 1),
-        ("Payroll tax (employer)", "employer_payroll", 1),
-        ("EITC (negative)",       "eitc",             -1),
-        ("Child tax credit (neg)", "ctc",             -1),
-        ("SNAP (negative)",       "snap",             -1),
+    print(f"{'Component':<40} {'Baseline':>12} {'Shift':>12} {'Change':>12}")
+    print("-" * 82)
+    # Non-overlapping aggregates (these sum to the total).
+    for label, key, sign in [
+        ("Fed income tax (before ref credits)",
+         "fed_income_tax_before_refundable_credits", 1),
+        ("  of which main rates",                "fed_income_tax_main_rates", 1),
+        ("  of which capital gains tax",         "fed_capital_gains_tax", 1),
+        ("  of which AMT",                       "fed_alternative_minimum_tax", 1),
+        ("  of which NIIT",                      "fed_net_investment_income_tax", 1),
+        ("  less nonrefundable credits",         "fed_nonrefundable_credits", 1),
+        ("Employee payroll (SS)",                "employee_social_security_tax", 1),
+        ("Employee payroll (Medicare)",          "employee_medicare_tax", 1),
+        ("Employer payroll (SS)",                "employer_social_security_tax", 1),
+        ("Employer payroll (Medicare)",          "employer_medicare_tax", 1),
+        ("Self-employment tax",                  "self_employment_tax", 1),
+        ("State tax before refundable credits",  "state_tax_before_refundable_credits", 1),
+        ("Fed refundable credits (negative)",    "income_tax_refundable_credits", -1),
+        ("  of which EITC",                      "eitc", -1),
+        ("  of which refundable CTC",            "refundable_ctc", -1),
+        ("State refundable credits (negative)",  "state_refundable_credits", -1),
+        ("Benefits (negative)",                  "household_benefits", -1),
+        ("  of which SNAP",                      "snap", -1),
+        ("  of which SSI",                       "ssi", -1),
+        ("  of which TANF",                      "tanf", -1),
+        ("  of which health",                    "health_benefits", -1),
+        ("  of which state",                     "state_benefits", -1),
     ]:
-        b = base_rev[base_key] * sign
-        s = shift_rev[base_key] * sign
+        b = base_rev[key] * sign
+        s = shift_rev[key] * sign
         chg = s - b
-        print(f"{label:<30} ${b/1e9:>10,.0f}B ${s/1e9:>10,.0f}B ${chg/1e9:>+10,.0f}B")
+        print(f"{label:<40} ${b/1e9:>10,.0f}B ${s/1e9:>10,.0f}B ${chg/1e9:>+10,.0f}B")
 
     print()
-    print(f"{'Total net revenue change':<30} ${delta['total_change']/1e9:>+10,.0f}B")
+    print(f"{'Total net revenue change':<40} ${delta['total_change']/1e9:>+10,.0f}B")
+    print(f"{'Identity residual (should ~ 0)':<40} ${delta['_identity_residual']/1e9:>+10,.2f}B")
 
     # --- STCG sanity check ---
     print("\n--- STCG MTR sanity check ---")

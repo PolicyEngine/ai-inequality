@@ -327,8 +327,10 @@ export const references = [
   {
     id: "Ahnetal2025",
     type: "article",
-    author: "Ahn, Hie Joo and Dillender, Marcus and Kim, Jisoo and Saggio, Raffaele and Wentland, Scott",
-    title: "Canaries in the Coal Mine: Early Indicators of AI Labor Market Transformation",
+    author:
+      "Ahn, Hie Joo and Dillender, Marcus and Kim, Jisoo and Saggio, Raffaele and Wentland, Scott",
+    title:
+      "Canaries in the Coal Mine: Early Indicators of AI Labor Market Transformation",
     year: 2025,
     url: "https://digitaleconomy.stanford.edu/publications/canaries-in-the-coal-mine/",
   },
@@ -390,7 +392,8 @@ export const references = [
   {
     id: "Halperinetal2025",
     type: "article",
-    author: "Halperin, Basil and Ho, Benjamin and Srinivasan, Akhil and Tao, Siyuan",
+    author:
+      "Halperin, Basil and Ho, Benjamin and Srinivasan, Akhil and Tao, Siyuan",
     title: "Is Automating AI Research Enough?",
     year: 2025,
     url: "https://www.basilhalperin.com/papers/shs.pdf",
@@ -408,7 +411,8 @@ export const references = [
     id: "Zakeriniaetal2024",
     type: "article",
     author: "Zakerinia, Saeede and Chen, Jingyu and Srinivasan, Suraj",
-    title: "Displacement or Complementarity? The Impact of AI on Occupational Tasks",
+    title:
+      "Displacement or Complementarity? The Impact of AI on Occupational Tasks",
     year: 2024,
     url: "https://www.hbs.edu/faculty/Pages/item.aspx?num=67045",
   },

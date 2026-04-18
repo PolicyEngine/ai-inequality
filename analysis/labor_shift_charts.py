@@ -37,8 +37,8 @@ def _gini_comparison(results, output_dir):
         y=[r["market_gini"] for r in all_rows],
     ))
     fig.add_trace(go.Bar(
-        name="Net Gini", x=scenarios,
-        y=[r["net_gini"] for r in all_rows],
+        name="Resources incl. health", x=scenarios,
+        y=[r["net_gini_including_health_benefits"] for r in all_rows],
     ))
 
     fig.update_layout(
@@ -59,13 +59,15 @@ def _decile_shares(results, output_dir):
     fig = go.Figure()
     for r in all_rows:
         fig.add_trace(go.Bar(
-            name=r["label"], x=labels, y=r["decile_shares"],
+            name=r["label"],
+            x=labels,
+            y=r["decile_shares_including_health_benefits"],
         ))
 
     fig.update_layout(
-        title="Net income shares by decile: labor shift scenarios",
+        title="Household resources incl. health benefits by decile",
         xaxis_title="Income decile",
-        yaxis_title="Share of total net income",
+        yaxis_title="Share of total household resources",
         yaxis_tickformat=".1%",
         barmode="group",
         width=800, height=500,
@@ -81,7 +83,7 @@ def _lorenz(results, output_dir):
         all_rows.append(results["ubi"])
 
     for r in all_rows:
-        series = r["_net_income"]
+        series = r["_net_income_including_health_benefits"]
         x, y = lorenz_curve(np.array(series.values), np.array(series.weights))
         fig.add_trace(go.Scatter(x=x, y=y, name=r["label"], mode="lines"))
 
@@ -91,9 +93,9 @@ def _lorenz(results, output_dir):
     ))
 
     fig.update_layout(
-        title="Lorenz curves: labor shift scenarios",
+        title="Lorenz curves: household resources incl. health benefits",
         xaxis_title="Cumulative population share",
-        yaxis_title="Cumulative income share",
+        yaxis_title="Cumulative resource share",
         width=800, height=600,
     )
     fig.write_html(os.path.join(output_dir, "lorenz_curves.html"))

@@ -12,6 +12,7 @@ import {
 import { IconTrendingDown, IconInfoCircle } from "@tabler/icons-react";
 import cliffData from "../data/cliffData.json";
 import { TOOLTIP_STYLE, fmt } from "../utils/chartStyles";
+import { niceTicks } from "../utils/chartTicks";
 import "./AnalysisSection.css";
 
 const TABS = [
@@ -30,25 +31,6 @@ const SERIES = [
     width: 2,
   },
 ];
-
-function niceTicks(dataMax, targetCount = 5) {
-  if (dataMax <= 0) return [0];
-  const rawStep = dataMax / targetCount;
-  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
-  const normalized = rawStep / magnitude;
-  let niceStep;
-  if (normalized <= 1) niceStep = 1 * magnitude;
-  else if (normalized <= 2) niceStep = 2 * magnitude;
-  else if (normalized <= 2.5) niceStep = 2.5 * magnitude;
-  else if (normalized <= 5) niceStep = 5 * magnitude;
-  else niceStep = 10 * magnitude;
-  const niceMax = Math.ceil(dataMax / niceStep) * niceStep;
-  const ticks = [];
-  for (let v = 0; v <= niceMax; v += niceStep) {
-    ticks.push(Math.round(v * 1e10) / 1e10);
-  }
-  return ticks;
-}
 
 function findCliff(data) {
   let worstIdx = 0;
@@ -76,7 +58,7 @@ function CapitalIncomeCliff() {
   const cliff = useMemo(() => findCliff(data), [data]);
 
   const xMax = Math.max(...data.map((d) => d.capitalIncome));
-  const xTicks = niceTicks(xMax);
+  const xTicks = niceTicks(0, xMax, 6);
 
   const yValues = showComponents
     ? data.flatMap((d) => [d.netIncome, d.eitc, d.snap, d.incomeTax])
@@ -102,8 +84,8 @@ function CapitalIncomeCliff() {
         </div>
         <h2>Capital income cliffs</h2>
         <p className="analysis-subtitle">
-          How benefit eligibility thresholds interact with investment income
-          for low-income households
+          How benefit eligibility thresholds interact with investment income for
+          low-income households
         </p>
       </div>
 

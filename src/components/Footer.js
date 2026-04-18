@@ -36,9 +36,7 @@ function Footer() {
               </a>
             </li>
             <li>
-              <a href="mailto:hello@policyengine.org">
-                hello@policyengine.org
-              </a>
+              <a href="mailto:hello@policyengine.org">hello@policyengine.org</a>
             </li>
           </ul>
         </div>

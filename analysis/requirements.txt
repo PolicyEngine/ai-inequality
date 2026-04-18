@@ -1,4 +1,6 @@
-policyengine-us>=1.398.0
+policyengine>=3.4.4
+policyengine-us>=1.636.2
+policyengine-uk>=2.86.12
 pandas>=2.0.0
 numpy
 plotly>=5.0.0

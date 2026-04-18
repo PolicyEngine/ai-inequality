@@ -1,0 +1,152 @@
+.policy-analysis-hero {
+  padding-top: 6rem;
+}
+
+.policy-analysis-hero-card {
+  background:
+    radial-gradient(circle at top left, var(--pe-teal-100), transparent 32%),
+    linear-gradient(180deg, white 0%, #fbfffe 100%);
+  border: 1px solid var(--pe-gray-200);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-12);
+}
+
+.policy-analysis-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  background: var(--pe-teal-50);
+  color: var(--pe-teal-600);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-4);
+}
+
+.policy-analysis-hero h1 {
+  font-size: clamp(2.6rem, 6vw, 4.6rem);
+  line-height: 1;
+  max-width: 11ch;
+  margin: 0 0 var(--space-4);
+}
+
+.policy-analysis-subtitle {
+  max-width: 820px;
+  font-size: 1.15rem;
+  color: var(--pe-gray-700);
+  margin-bottom: var(--space-8);
+}
+
+.policy-analysis-country-tabs {
+  display: inline-flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.policy-analysis-brief {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.policy-analysis-brief-card,
+.policy-analysis-context-card {
+  background: white;
+  border: 1px solid var(--pe-gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.policy-analysis-brief-card h2,
+.policy-analysis-context-card h2 {
+  text-align: left;
+  font-size: 1rem;
+  margin-bottom: var(--space-3);
+  color: var(--pe-gray-900);
+}
+
+.policy-analysis-brief-card p,
+.policy-analysis-context-card p {
+  margin: 0;
+  color: var(--pe-gray-700);
+  font-size: 0.96rem;
+  line-height: 1.65;
+}
+
+.policy-analysis-brief-card strong {
+  color: var(--pe-gray-900);
+}
+
+.policy-analysis-brief-card a {
+  color: var(--pe-teal-600);
+  text-decoration: none;
+}
+
+.policy-analysis-brief-card a:hover {
+  text-decoration: underline;
+}
+
+.policy-analysis-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.policy-analysis-primary-link,
+.policy-analysis-back-link {
+  align-items: center;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.policy-analysis-primary-link {
+  background: var(--pe-teal-600);
+  color: white;
+  padding: 0.8rem 1.1rem;
+}
+
+.policy-analysis-primary-link:hover {
+  background: var(--pe-teal-700);
+}
+
+.policy-analysis-back-link {
+  color: var(--pe-teal-600);
+  margin-bottom: var(--space-4);
+}
+
+.policy-analysis-back-link:hover {
+  text-decoration: underline;
+}
+
+.policy-analysis-context {
+  padding-top: 0;
+  padding-bottom: var(--space-8);
+}
+
+@media (max-width: 900px) {
+  .policy-analysis-brief {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .policy-analysis-hero-card {
+    padding: var(--space-6);
+  }
+
+  .policy-analysis-hero h1 {
+    max-width: none;
+    font-size: clamp(2.1rem, 10vw, 3rem);
+  }
+
+  .policy-analysis-subtitle {
+    font-size: 1rem;
+  }
+}

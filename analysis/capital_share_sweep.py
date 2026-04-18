@@ -41,6 +41,15 @@ def _apply_multiplier(baseline, branch_name, mult, positive_only=False):
     return branch
 
 
+def _capital_share(sim):
+    """Return capital income as a share of modeled market income."""
+    total_market = float(sim.calculate("household_market_income", period=YEAR).sum())
+    capital_total = 0.0
+    for var in CAPITAL_INCOME_VARS:
+        capital_total += float(sim.calculate(var, period=YEAR).sum())
+    return capital_total / total_market if total_market else 0.0
+
+
 def run_sweep(multipliers=None, positive_only=True):
     """Run capital income sweep across multiplier values.
 
@@ -72,18 +81,7 @@ def run_sweep(multipliers=None, positive_only=True):
             baseline, name, mult, positive_only=positive_only
         )
 
-    # Compute baseline capital share of market income
-    baseline_market = baseline.calculate(
-        "household_market_income", period=YEAR
-    )
-    total_market = float(baseline_market.sum())
-
-    baseline_cap_total = 0.0
-    for var in CAPITAL_INCOME_VARS:
-        vals = baseline.calculate(var, period=YEAR)
-        baseline_cap_total += float(vals.sum())
-
-    baseline_cap_share = baseline_cap_total / total_market if total_market else 0
+    baseline_cap_share = _capital_share(baseline)
     print(f"Baseline capital share of market income: {baseline_cap_share:.1%}")
 
     weights = np.array(baseline.calculate("household_weight", period=YEAR))
@@ -100,12 +98,7 @@ def run_sweep(multipliers=None, positive_only=True):
         r = _extract_results(sim, label)
         r["multiplier"] = mult
 
-        # Compute capital share at this multiplier
-        new_cap_total = baseline_cap_total * mult
-        new_market_total = total_market + (mult - 1) * baseline_cap_total
-        r["capital_share"] = (
-            new_cap_total / new_market_total if new_market_total else 0
-        )
+        r["capital_share"] = _capital_share(sim)
 
         rows.append(r)
 

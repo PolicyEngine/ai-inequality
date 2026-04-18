@@ -1,0 +1,528 @@
+{
+  "year": 2026,
+  "source": {
+    "year": 2026,
+    "dataset_name": "enhanced_cps_2024",
+    "dataset_uri": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@1.73.0",
+    "policyengine_package": "policyengine",
+    "policyengine_version": "3.4.0",
+    "country_model_package": "policyengine-us",
+    "country_model_version": "1.602.0",
+    "policyengine_us_version": "1.602.0",
+    "data_package": "policyengine-us-data",
+    "data_version": "1.73.0",
+    "policyengine_core_version": "3.23.6",
+    "policyengine_bundle": {
+      "bundle_id": "us-3.4.0",
+      "country_id": "us",
+      "policyengine_version": "3.4.0",
+      "model_package": "policyengine-us",
+      "model_version": "1.602.0",
+      "data_package": "policyengine-us-data",
+      "data_version": "1.73.0",
+      "default_dataset": "enhanced_cps_2024",
+      "default_dataset_uri": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@1.73.0",
+      "certified_data_build_id": "policyengine-us-data-1.73.0",
+      "certified_data_artifact_sha256": null,
+      "data_build_model_version": "1.602.0",
+      "data_build_model_git_sha": null,
+      "data_build_fingerprint": null,
+      "compatibility_basis": "exact_build_model_version",
+      "certified_by": "policyengine.py bundled manifest",
+      "runtime_dataset": "enhanced_cps_2024",
+      "runtime_dataset_uri": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@1.73.0",
+      "runtime_dataset_source": "/Users/maxghenis/PolicyEngine/policyengine-us-data/policyengine_us_data/storage/enhanced_cps_2024.h5",
+      "managed_by": "policyengine.py"
+    },
+    "microdata_created_at": "2026-04-16T10:44:36.548445+00:00",
+    "baseline_microdata_file": "baseline.csv.gz",
+    "baseline_microdata_path": "/Users/maxghenis/repos/ai-inequality/analysis/outputs/shift_sweep_microdata/baseline.csv.gz"
+  },
+  "grouping": "Households are ranked by the income concept shown. Records are split across percentile cutoffs when their survey weight spans a boundary.",
+  "views": {
+    "composition": "Each component as a percent of the group's total income.",
+    "absolute": "Aggregate dollars in each group, in billions.",
+    "shareOfTotal": "Each component's contribution as a percent of national total income for the concept."
+  },
+  "market": {
+    "title": "Market income",
+    "rank_variable": "household_market_income",
+    "total_b": 17161.502611491123,
+    "components": [
+      {
+        "key": "labor",
+        "label": "Labor income",
+        "description": "Employment and self-employment income.",
+        "color": "#2C7A7B"
+      },
+      {
+        "key": "capital",
+        "label": "Capital income",
+        "description": "Capital gains, taxable interest, dividends, and rental income.",
+        "color": "#DD6B20"
+      },
+      {
+        "key": "otherMarket",
+        "label": "Other market income",
+        "description": "Residual market income not in labor or the capital-income measure, mostly partnership/S-corp income, pensions, retirement distributions, farm income, and miscellaneous income.",
+        "color": "#718096"
+      }
+    ],
+    "groups": [
+      {
+        "label": "Bottom 10%",
+        "lower_percentile": 0.0,
+        "upper_percentile": 0.1,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "labor": -13.612533812114169,
+          "capital": -188.45435959632565,
+          "otherMarket": -102.69586973383373
+        },
+        "total_b": -304.76276314227357,
+        "mean_per_household": -19992.80079057957
+      },
+      {
+        "label": "P10-20",
+        "lower_percentile": 0.1,
+        "upper_percentile": 0.2,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "labor": 54.03100705115957,
+          "capital": 5.98813426712076,
+          "otherMarket": -12.548806916527436
+        },
+        "total_b": 47.47033440175289,
+        "mean_per_household": 3114.1105605260123
+      },
+      {
+        "label": "P20-30",
+        "lower_percentile": 0.2,
+        "upper_percentile": 0.3,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "labor": 245.40941185944283,
+          "capital": 41.71238561698556,
+          "otherMarket": -36.003779850003355
+        },
+        "total_b": 251.118017626425,
+        "mean_per_household": 16473.641495980926
+      },
+      {
+        "label": "P30-40",
+        "lower_percentile": 0.3,
+        "upper_percentile": 0.4,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "labor": 364.51067783515145,
+          "capital": 6.485548226871975,
+          "otherMarket": 91.20747599488486
+        },
+        "total_b": 462.2037020569083,
+        "mean_per_household": 30321.11418276605
+      },
+      {
+        "label": "P40-50",
+        "lower_percentile": 0.4,
+        "upper_percentile": 0.5,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "labor": 578.6411420685362,
+          "capital": 44.94919397194547,
+          "otherMarket": 86.97423315076968
+        },
+        "total_b": 710.5645691912513,
+        "mean_per_household": 46613.88331767013
+      },
+      {
+        "label": "P50-60",
+        "lower_percentile": 0.5,
+        "upper_percentile": 0.6,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "labor": 767.1459043745879,
+          "capital": 35.137429390421254,
+          "otherMarket": 194.2729515734924
+        },
+        "total_b": 996.5562853385015,
+        "mean_per_household": 65375.28103481415
+      },
+      {
+        "label": "P60-70",
+        "lower_percentile": 0.6,
+        "upper_percentile": 0.7,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "labor": 1022.8356937139114,
+          "capital": 42.73966255784292,
+          "otherMarket": 282.1702656732259
+        },
+        "total_b": 1347.7456219449803,
+        "mean_per_household": 88413.72042339313
+      },
+      {
+        "label": "P70-80",
+        "lower_percentile": 0.7,
+        "upper_percentile": 0.8,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "labor": 1568.2678603563702,
+          "capital": 25.557968604865806,
+          "otherMarket": 247.83814092111064
+        },
+        "total_b": 1841.6639698823467,
+        "mean_per_household": 120815.35320591925
+      },
+      {
+        "label": "P80-90",
+        "lower_percentile": 0.8,
+        "upper_percentile": 0.9,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "labor": 2104.7782580563044,
+          "capital": 99.1207960553213,
+          "otherMarket": 449.0925318054388
+        },
+        "total_b": 2652.991585917064,
+        "mean_per_household": 174039.41258913715
+      },
+      {
+        "label": "P90-99",
+        "lower_percentile": 0.9,
+        "upper_percentile": 0.99,
+        "household_weight": 13719262.733677983,
+        "components_b": {
+          "labor": 3271.8323994976445,
+          "capital": 411.91758662783405,
+          "otherMarket": 910.651626608225
+        },
+        "total_b": 4594.401612733704,
+        "mean_per_household": 334886.91789941356
+      },
+      {
+        "label": "P99-99.9",
+        "lower_percentile": 0.99,
+        "upper_percentile": 0.999,
+        "household_weight": 1371926.2733678222,
+        "components_b": {
+          "labor": 902.7255934835127,
+          "capital": 388.8481120039403,
+          "otherMarket": 815.3564936640851
+        },
+        "total_b": 2106.930199151538,
+        "mean_per_household": 1535745.9362443865
+      },
+      {
+        "label": "Top 0.1%",
+        "lower_percentile": 0.999,
+        "upper_percentile": 1.0,
+        "household_weight": 152436.25259637833,
+        "components_b": {
+          "labor": 576.0442503674664,
+          "capital": 1140.036104861612,
+          "otherMarket": 738.539121159847
+        },
+        "total_b": 2454.6194763889257,
+        "mean_per_household": 16102596.558105392
+      }
+    ]
+  },
+  "net": {
+    "title": "Net income",
+    "rank_variable": "household_net_income",
+    "total_b": 15347.921934078575,
+    "components": [
+      {
+        "key": "market",
+        "label": "Market income",
+        "description": "PolicyEngine household market income.",
+        "color": "#2C7A7B"
+      },
+      {
+        "key": "benefits",
+        "label": "Benefits",
+        "description": "Cash and near-cash benefits included in household net income.",
+        "color": "#68D391"
+      },
+      {
+        "key": "refundableCredits",
+        "label": "Refundable credits",
+        "description": "Refundable federal and state tax credits.",
+        "color": "#63B3ED"
+      },
+      {
+        "key": "taxes",
+        "label": "Taxes before credits",
+        "description": "Payroll, income, flat, and state taxes before refundable credits.",
+        "color": "#C53030"
+      }
+    ],
+    "groups": [
+      {
+        "label": "Bottom 10%",
+        "lower_percentile": 0.0,
+        "upper_percentile": 0.1,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "market": -233.94383990834734,
+          "benefits": 77.60546434195885,
+          "refundableCredits": 4.129590915076454,
+          "taxes": -92.29615134315566
+        },
+        "total_b": -244.5049359944677,
+        "mean_per_household": -16039.815452679695
+      },
+      {
+        "label": "P10-20",
+        "lower_percentile": 0.1,
+        "upper_percentile": 0.2,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "market": 173.4622832500611,
+          "benefits": 165.19778247551056,
+          "refundableCredits": 7.2392295526803165,
+          "taxes": -16.481462117980357
+        },
+        "total_b": 329.41783316027164,
+        "mean_per_household": 21610.20279292824
+      },
+      {
+        "label": "P20-30",
+        "lower_percentile": 0.2,
+        "upper_percentile": 0.3,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "market": 286.9061269904419,
+          "benefits": 232.4873581333398,
+          "refundableCredits": 10.278954955717957,
+          "taxes": -40.226801930692126
+        },
+        "total_b": 489.4456381488075,
+        "mean_per_household": 32108.217685239488
+      },
+      {
+        "label": "P30-40",
+        "lower_percentile": 0.3,
+        "upper_percentile": 0.4,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "market": 514.1826352958382,
+          "benefits": 199.98134639150027,
+          "refundableCredits": 12.495424832695809,
+          "taxes": -56.933415730020926
+        },
+        "total_b": 669.7259907900134,
+        "mean_per_household": 43934.823861297984
+      },
+      {
+        "label": "P40-50",
+        "lower_percentile": 0.4,
+        "upper_percentile": 0.5,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "market": 688.5708638019428,
+          "benefits": 211.41747181760843,
+          "refundableCredits": 28.803890367110245,
+          "taxes": -83.86007709714906
+        },
+        "total_b": 844.9321488895124,
+        "mean_per_household": 55428.55682279768
+      },
+      {
+        "label": "P50-60",
+        "lower_percentile": 0.5,
+        "upper_percentile": 0.6,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "market": 948.4704989220871,
+          "benefits": 254.21527601491132,
+          "refundableCredits": 20.642487509647726,
+          "taxes": -131.21548073272277
+        },
+        "total_b": 1092.1127817139236,
+        "mean_per_household": 71643.90117915801
+      },
+      {
+        "label": "P60-70",
+        "lower_percentile": 0.6,
+        "upper_percentile": 0.7,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "market": 1368.7692715087137,
+          "benefits": 209.50871425813608,
+          "refundableCredits": 9.52454887267416,
+          "taxes": -228.60804344684882
+        },
+        "total_b": 1359.194491192675,
+        "mean_per_household": 89164.779902532
+      },
+      {
+        "label": "P70-80",
+        "lower_percentile": 0.7,
+        "upper_percentile": 0.8,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "market": 1775.9954241383346,
+          "benefits": 228.05106137706014,
+          "refundableCredits": 5.880801489358798,
+          "taxes": -277.5246198366059
+        },
+        "total_b": 1732.4026671681477,
+        "mean_per_household": 113647.68141832485
+      },
+      {
+        "label": "P80-90",
+        "lower_percentile": 0.8,
+        "upper_percentile": 0.9,
+        "household_weight": 15243625.259642214,
+        "components_b": {
+          "market": 2572.4293509410923,
+          "benefits": 179.21810793675198,
+          "refundableCredits": 1.5980312082995471,
+          "taxes": -416.6023896825571
+        },
+        "total_b": 2336.6431004035867,
+        "mean_per_household": 153286.5745912748
+      },
+      {
+        "label": "P90-99",
+        "lower_percentile": 0.9,
+        "upper_percentile": 0.99,
+        "household_weight": 13719262.733677983,
+        "components_b": {
+          "market": 4527.87805900671,
+          "benefits": 151.73044934836298,
+          "refundableCredits": 2.177446697824369,
+          "taxes": -1024.962388284176
+        },
+        "total_b": 3656.8235667687213,
+        "mean_per_household": 266546.6532536014
+      },
+      {
+        "label": "P99-99.9",
+        "lower_percentile": 0.99,
+        "upper_percentile": 0.999,
+        "household_weight": 1371926.2733678222,
+        "components_b": {
+          "market": 2086.9061558471103,
+          "benefits": 7.963194809776827,
+          "refundableCredits": 0.24582053691008648,
+          "taxes": -709.9526240550251
+        },
+        "total_b": 1385.1625471387722,
+        "mean_per_household": 1009647.9483102671
+      },
+      {
+        "label": "Top 0.1%",
+        "lower_percentile": 0.999,
+        "upper_percentile": 1.0,
+        "household_weight": 152436.25259634852,
+        "components_b": {
+          "market": 2451.8757816863645,
+          "benefits": 0.3513866987581347,
+          "refundableCredits": 0.0011253240148192726,
+          "taxes": -755.6621890105266
+        },
+        "total_b": 1696.566104698611,
+        "mean_per_household": 11129676.017365247
+      }
+    ]
+  },
+  "capitalBenchmarks": {
+    "summary": "Capital-income benchmarks are not perfectly apples-to-apples. Our local figures are household-weighted; IRS percentiles are tax returns ranked by AGI; CBO uses households adjusted for size; the Fed benchmark is an asset-holding benchmark rather than an income-flow benchmark.",
+    "local": [
+      {
+        "label": "Net capital income, ranked by market income",
+        "description": "The same net capital-income measure shown in the chart: capital gains, taxable interest, dividends, and rental income, including losses.",
+        "shares": {
+          "top10": {
+            "label": "Top 10%",
+            "share": 0.9448711620371991,
+            "amount_b": 1940.8018034933864,
+            "total_b": 2054.0385625791573
+          },
+          "top1": {
+            "label": "Top 1%",
+            "share": 0.7443308245127617,
+            "amount_b": 1528.884216865552,
+            "total_b": 2054.0385625791573
+          },
+          "top01": {
+            "label": "Top 0.1%",
+            "share": 0.5550217632867238,
+            "amount_b": 1140.0361048616114,
+            "total_b": 2054.0385625791573
+          }
+        }
+      },
+      {
+        "label": "Positive capital income, ranked by market income",
+        "description": "Same sources, but losses are set to zero before summing. This is usually the easier comparison to tax-data benchmarks.",
+        "shares": {
+          "top10": {
+            "label": "Top 10%",
+            "share": 0.8150249571885989,
+            "amount_b": 2088.1816331712835,
+            "total_b": 2562.1075952991623
+          },
+          "top1": {
+            "label": "Top 1%",
+            "share": 0.6261956206246725,
+            "amount_b": 1604.380555745546,
+            "total_b": 2562.1075952991623
+          },
+          "top01": {
+            "label": "Top 0.1%",
+            "share": 0.45958039614449986,
+            "amount_b": 1177.4944236124209,
+            "total_b": 2562.1075952991623
+          }
+        }
+      },
+      {
+        "label": "Positive capital income, ranked by capital income",
+        "description": "Shows how concentrated the positive capital-income dollars are among capital-income recipients themselves.",
+        "shares": {
+          "top10": {
+            "label": "Top 10%",
+            "share": 0.968291845424582,
+            "amount_b": 2480.867891628564,
+            "total_b": 2562.1075952991623
+          },
+          "top1": {
+            "label": "Top 1%",
+            "share": 0.7838580406237948,
+            "amount_b": 2008.328639518544,
+            "total_b": 2562.1075952991623
+          },
+          "top01": {
+            "label": "Top 0.1%",
+            "share": 0.5259557565659694,
+            "amount_b": 1347.5552386889874,
+            "total_b": 2562.1075952991623
+          }
+        }
+      }
+    ],
+    "external": [
+      {
+        "source": "IRS Statistics of Income, Table 4.3, tax year 2022",
+        "url": "https://www.irs.gov/statistics/soi-tax-stats-individual-statistical-tables-by-tax-rate-and-income-percentile",
+        "benchmark": "Top 10% of AGI-ranked individual returns received 92.1% of net capital asset gains, 75.7% of ordinary dividends, and 72.9% of taxable interest. Top 1% received 75.0% of net capital gains.",
+        "comparison": "Closest tax-data check for realized capital income, but it ranks tax returns by AGI rather than households by market income."
+      },
+      {
+        "source": "CBO, The Distribution of Household Income in 2022",
+        "url": "https://www.cbo.gov/system/files/2026-01/61911-Household-Income-2022.pdf",
+        "benchmark": "CBO includes realized capital gains in market income and notes that capital-gains swings are concentrated among high-income households.",
+        "comparison": "Best conceptual benchmark for household distribution, though CBO's public report does not mirror our exact capital-income bucket."
+      },
+      {
+        "source": "Federal Reserve, 2022 Survey of Consumer Finances",
+        "url": "https://www.federalreserve.gov/publications/files/scf23.pdf",
+        "benchmark": "58% of families held stock directly or indirectly, but 95% of top-decile families held stock versus 34% in the bottom half.",
+        "comparison": "Useful holdings benchmark: broad participation does not imply broad dollar ownership or broad capital-income flows."
+      }
+    ]
+  }
+}

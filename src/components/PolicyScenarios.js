@@ -124,7 +124,9 @@ function PolicyScenarios() {
       </div>
 
       <div className="analysis-note">
-        <div className="note-icon"><IconChartBar size={24} stroke={1.5} /></div>
+        <div className="note-icon">
+          <IconChartBar size={24} stroke={1.5} />
+        </div>
         <div className="note-content">
           <h4>Comparative distributional analysis</h4>
           <p>
