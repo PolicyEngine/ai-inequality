@@ -22,10 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -38,7 +38,7 @@ jobs:
         run: pytest analysis/tests -q
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: "npm"
@@ -59,7 +59,7 @@ jobs:
         run: npx playwright test tests/e2e/images.spec.js --project=chromium
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         if: always()
         with:
           files: ./coverage/lcov.info
@@ -71,10 +71,10 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: "npm"
@@ -88,18 +88,18 @@ jobs:
           PUBLIC_URL: /${{ github.event.repository.name }}
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v6
         with:
           enablement: true
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: "./build"
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       - name: Smoke test deployed site
         run: |
