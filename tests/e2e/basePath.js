@@ -1,4 +1,4 @@
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/us/ai-inequality";
 
 export function appUrl(path = "/") {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
