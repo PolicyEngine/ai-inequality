@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { appUrl } from "./basePath";
 
 test.describe("Image Loading", () => {
   test("should load all project card images", async ({ page }) => {
-    await page.goto("/");
+    await page.goto(appUrl());
 
     // Wait for example projects section
     await page.locator("#examples").waitFor();
@@ -30,7 +31,7 @@ test.describe("Image Loading", () => {
   });
 
   test("should have no broken images on page", async ({ page }) => {
-    await page.goto("/");
+    await page.goto(appUrl());
 
     // Wait for page to fully load
     await page.waitForLoadState("networkidle");
@@ -58,7 +59,7 @@ test.describe("Image Loading", () => {
   });
 
   test("should have correct PUBLIC_URL paths", async ({ page }) => {
-    await page.goto("/");
+    await page.goto(appUrl());
 
     // Check project images use correct base path
     const firstProjectImg = page.locator(".project-image").first();

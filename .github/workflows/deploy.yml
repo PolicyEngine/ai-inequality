@@ -41,29 +41,24 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: "24"
-          cache: "npm"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: npm install
+        run: bun install --frozen-lockfile
 
       - name: Run linter
-        run: npm run lint -- --max-warnings=0
+        run: bun run lint -- --max-warnings=0
 
       - name: Run tests
-        run: npm test -- --watchAll=false --passWithNoTests --coverage
+        run: bun run test:run
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium
+        run: bunx playwright install chromium
 
       - name: Run E2E image tests
-        run: npx playwright test tests/e2e/images.spec.js --project=chromium
-
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v6
-        if: always()
-        with:
-          files: ./coverage/lcov.info
-          fail_ci_if_error: false
+        run: bunx playwright test tests/e2e/images.spec.js --project=chromium
 
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -77,15 +72,17 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: "24"
-          cache: "npm"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: npm install
+        run: bun install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: bun run build
         env:
-          PUBLIC_URL: /${{ github.event.repository.name }}
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
@@ -95,7 +92,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: "./build"
+          path: "./out"
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -110,7 +107,7 @@ jobs:
             echo "ERROR: Site returned $STATUS"
             exit 1
           fi
-          if ! grep -q "/${{ github.event.repository.name }}/static/" /tmp/page.html; then
+          if ! grep -q "/${{ github.event.repository.name }}/_next/static/" /tmp/page.html; then
             echo "ERROR: Asset paths don't match repo name"
             cat /tmp/page.html
             exit 1

@@ -1,8 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { appUrl } from "./basePath";
 
 test.describe("AI Growth Research Homepage", () => {
   test("should load homepage and display all sections", async ({ page }) => {
-    await page.goto("/");
+    await page.goto(appUrl());
 
     // Check header
     await expect(page.locator("header")).toBeVisible();
@@ -35,7 +36,7 @@ test.describe("AI Growth Research Homepage", () => {
   });
 
   test("should have working external links", async ({ page }) => {
-    await page.goto("/");
+    await page.goto(appUrl());
 
     // Check PolicyEngine main site link
     const policyEngineLink = page.locator('a[href="https://policyengine.org"]');
@@ -43,7 +44,7 @@ test.describe("AI Growth Research Homepage", () => {
   });
 
   test("should have interactive research cards", async ({ page }) => {
-    await page.goto("/");
+    await page.goto(appUrl());
 
     // Find and click a research topic card
     const firstCard = page.locator(".card").first();
@@ -54,7 +55,7 @@ test.describe("AI Growth Research Homepage", () => {
   });
 
   test("should have filterable stakeholder section", async ({ page }) => {
-    await page.goto("/");
+    await page.goto(appUrl());
 
     // Scroll to stakeholders
     await page
@@ -77,7 +78,7 @@ test.describe("AI Growth Research Homepage", () => {
   test("should have responsive design", async ({ page }) => {
     // Test desktop
     await page.setViewportSize({ width: 1200, height: 800 });
-    await page.goto("/");
+    await page.goto(appUrl());
     await expect(page.locator(".hero")).toBeVisible();
 
     // Test mobile
@@ -86,7 +87,7 @@ test.describe("AI Growth Research Homepage", () => {
   });
 
   test("should have all policy scenario cards", async ({ page }) => {
-    await page.goto("/");
+    await page.goto(appUrl());
 
     await page
       .locator('h2:has-text("Policy Scenarios")')
