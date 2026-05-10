@@ -1,0 +1,194 @@
+import React, { useState, useMemo } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
+import { IconTrendingDown, IconInfoCircle } from "@tabler/icons-react";
+import cliffData from "../data/cliffData.json";
+import { TOOLTIP_STYLE, fmt } from "../utils/chartStyles";
+import { niceTicks } from "../utils/chartTicks";
+
+const TABS = [
+  { key: "dividends", label: "Qualified dividends" },
+  { key: "ltcg", label: "Long-term capital gains" },
+];
+
+const SERIES = [
+  { key: "netIncome", label: "Net income", color: "#319795", width: 3 },
+  { key: "eitc", label: "EITC", color: "#e53e3e", width: 2 },
+  { key: "snap", label: "SNAP", color: "#38a169", width: 2 },
+  {
+    key: "incomeTax",
+    label: "Federal income tax",
+    color: "#2C6496",
+    width: 2,
+  },
+];
+
+function findCliff(data) {
+  let worstIdx = 0;
+  let worstDrop = 0;
+  for (let i = 1; i < data.length; i++) {
+    const drop = data[i].netIncome - data[i - 1].netIncome;
+    if (drop < worstDrop) {
+      worstDrop = drop;
+      worstIdx = i;
+    }
+  }
+  return {
+    capitalIncome: data[worstIdx].capitalIncome,
+    drop: worstDrop,
+    beforeNet: data[worstIdx - 1]?.netIncome,
+    afterNet: data[worstIdx].netIncome,
+  };
+}
+
+function CapitalIncomeCliff() {
+  const [activeTab, setActiveTab] = useState("dividends");
+  const [showComponents, setShowComponents] = useState(false);
+
+  const data = cliffData[activeTab];
+  const cliff = useMemo(() => findCliff(data), [data]);
+
+  const xMax = Math.max(...data.map((d) => d.capitalIncome));
+  const xTicks = niceTicks(0, xMax, 6);
+
+  const yValues = showComponents
+    ? data.flatMap((d) => [d.netIncome, d.eitc, d.snap, d.incomeTax])
+    : data.map((d) => d.netIncome);
+  const yMin = Math.min(...yValues);
+  const yMax = Math.max(...yValues);
+  const yRange = yMax - yMin;
+  const yDomainMin = Math.floor((yMin - yRange * 0.05) / 1000) * 1000;
+  const yDomainMax = Math.ceil((yMax + yRange * 0.05) / 1000) * 1000;
+
+  const visibleSeries = showComponents
+    ? SERIES
+    : SERIES.filter((s) => s.key === "netIncome");
+
+  const tabLabel =
+    TABS.find((t) => t.key === activeTab)?.label || "capital income";
+
+  return (
+    <div id="capital-income-cliff" className="analysis-section">
+      <div className="analysis-header">
+        <div className="analysis-icon-wrapper">
+          <IconTrendingDown size={28} stroke={1.5} />
+        </div>
+        <h2>Capital income cliffs</h2>
+        <p className="analysis-subtitle">
+          How benefit eligibility thresholds interact with investment income for
+          low-income households
+        </p>
+      </div>
+
+      <div className="analysis-card">
+        <div className="analysis-controls">
+          <div className="analysis-tabs">
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                className={`analysis-tab ${activeTab === tab.key ? "active" : ""}`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <label className="analysis-toggle">
+            <input
+              type="checkbox"
+              checked={showComponents}
+              onChange={(e) => setShowComponents(e.target.checked)}
+            />
+            <span>Show components</span>
+          </label>
+        </div>
+
+        <ResponsiveContainer width="100%" height={400}>
+          <LineChart
+            data={data}
+            margin={{ left: 20, right: 30, top: 10, bottom: 20 }}
+          >
+            <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="capitalIncome"
+              type="number"
+              domain={[0, xTicks[xTicks.length - 1]]}
+              ticks={xTicks}
+              tickFormatter={fmt}
+              tick={{ fontSize: 12 }}
+              label={{
+                value: tabLabel + " ($)",
+                position: "bottom",
+                offset: 0,
+                style: { fontSize: 13 },
+              }}
+            />
+            <YAxis
+              domain={[yDomainMin, yDomainMax]}
+              tickFormatter={fmt}
+              tick={{ fontSize: 12 }}
+              label={{
+                value: "Annual amount ($)",
+                angle: -90,
+                position: "insideLeft",
+                offset: -5,
+                style: { fontSize: 13 },
+              }}
+            />
+            <Tooltip
+              contentStyle={TOOLTIP_STYLE}
+              separator=": "
+              formatter={(value, name) => {
+                const series = SERIES.find((s) => s.key === name);
+                return [fmt(value), series?.label || name];
+              }}
+              labelFormatter={(v) => `${tabLabel}: ${fmt(v)}`}
+            />
+            <ReferenceLine
+              x={cliff.capitalIncome}
+              stroke="#e53e3e"
+              strokeDasharray="4 4"
+              strokeWidth={1.5}
+            />
+            {visibleSeries.map((s) => (
+              <Line
+                key={s.key}
+                type="monotone"
+                dataKey={s.key}
+                stroke={s.color}
+                strokeWidth={s.width}
+                dot={false}
+                name={s.key}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+
+        <div className="analysis-callout">
+          <IconInfoCircle size={20} stroke={1.5} />
+          <div>
+            <strong>EITC investment income threshold</strong>: At{" "}
+            {fmt(cliff.capitalIncome)} in {tabLabel.toLowerCase()}, this
+            household's net income drops by {fmt(Math.abs(cliff.drop))}. The
+            EITC has a hard eligibility cutoff based on investment income
+            (~$12,000 in 2026), beyond which the entire credit is lost.
+          </div>
+        </div>
+
+        <p className="analysis-metadata">
+          {cliffData.household.description} ({cliffData.household.year})
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default CapitalIncomeCliff;

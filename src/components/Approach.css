@@ -36,8 +36,8 @@
 /* Pipeline Flow */
 .approach-pipeline {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-2);
+  grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+  gap: 0;
   margin-bottom: var(--space-16);
   align-items: stretch;
 }
@@ -234,12 +234,12 @@
 /* Responsive */
 @media (max-width: 1024px) {
   .approach-pipeline {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: var(--space-4);
   }
 
   .pipeline-arrow {
-    display: none;
+    transform: rotate(90deg);
   }
 
   .capability-grid {
@@ -259,7 +259,12 @@
 
   .approach-pipeline {
     grid-template-columns: 1fr;
-    gap: var(--space-4);
+    gap: var(--space-3);
+  }
+
+  .pipeline-arrow {
+    transform: rotate(90deg);
+    font-size: 1.2rem;
   }
 
   .pipeline-step {

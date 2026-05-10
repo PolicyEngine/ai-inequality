@@ -1,5 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const basePath =
+  process.env.NEXT_PUBLIC_BASE_PATH !== undefined
+    ? process.env.NEXT_PUBLIC_BASE_PATH
+    : "/us/ai-inequality";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
@@ -19,8 +24,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm start",
-    url: "http://localhost:3000",
+    command: `NEXT_PUBLIC_BASE_PATH=${basePath} npm run dev`,
+    url: `http://localhost:3000${basePath}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },
