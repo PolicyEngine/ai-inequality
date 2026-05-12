@@ -1,5 +1,4 @@
 import "./globals.css";
-import PolicyEngineHeader from "./PolicyEngineHeader";
 
 export const metadata = {
   title:
@@ -27,10 +26,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>
-        <PolicyEngineHeader />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
