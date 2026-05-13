@@ -1,6 +1,8 @@
-policyengine>=3.4.4
-policyengine-us>=1.636.2
-policyengine-uk>=2.86.12
+# Pinned to the generated website exports in src/data/*.json.
+policyengine==4.4.4
+policyengine-us==1.691.3
+policyengine-uk==2.88.14
+policyengine-us-data==1.113.1
 pandas>=2.0.0
 numpy
 plotly>=5.0.0

@@ -257,6 +257,9 @@ function LaborShift() {
 
         <p className="analysis-metadata">
           {shiftData.metadata.description} ({shiftData.metadata.year})
+          {shiftData.metadata.version_note
+            ? ` ${shiftData.metadata.version_note}`
+            : ""}
         </p>
       </div>
     </div>

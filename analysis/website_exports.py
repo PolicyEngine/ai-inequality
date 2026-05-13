@@ -1,11 +1,20 @@
 """Serialization helpers for website data files."""
 
+from importlib.metadata import PackageNotFoundError, version
+
 LABOR_SHIFT_DESCRIPTION = (
     "Employment and self-employment income reduced by X%, redistributed to "
     "capital income proportional to existing holdings while modeled market "
     "income stays constant. Website resource metrics count the cash-equivalent "
     "value of Medicaid, CHIP, and ACA premium support in household resources."
 )
+
+
+def _package_version(package_name):
+    try:
+        return version(package_name)
+    except PackageNotFoundError:
+        return None
 
 
 def _to_billions(amount):
@@ -72,5 +81,10 @@ def labor_shift_website_payload(results):
             "year": results["meta"]["year"],
             "description": LABOR_SHIFT_DESCRIPTION,
             "ubiScenarioAvailable": ubi is not None,
+            "policyengine_version": _package_version("policyengine"),
+            "version_note": (
+                "Generated with PolicyEngine "
+                f"{_package_version('policyengine') or 'version unavailable'}."
+            ),
         },
     }

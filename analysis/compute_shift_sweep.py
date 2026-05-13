@@ -396,6 +396,7 @@ def run_shift_sweep(
     microsim_factory=managed_us_microsimulation,
     verbose=False,
     microdata_output_dir=MICRODATA_OUTPUT_DIR,
+    include_mtrs=False,
 ):
     """Run the labor→capital shift sweep and return website/export-ready rows.
 
@@ -412,7 +413,11 @@ def run_shift_sweep(
     # Compute MTRs FIRST on fresh sim — PE memoizes downstream variables
     # on the parent, and once they're cached the MTR sub-branches return
     # the parent value instead of recomputing against the bumped input.
-    baseline_mtrs = _federal_mtrs(baseline, branch_prefix="mtr_base")
+    baseline_mtrs = (
+        _federal_mtrs(baseline, branch_prefix="mtr_base")
+        if include_mtrs
+        else []
+    )
     base_metrics = _extract_results(baseline, "Baseline")
     base_rev = revenue_components(baseline)
     base_states = state_revenue_components(baseline)
@@ -466,8 +471,10 @@ def run_shift_sweep(
         branch, _ = _apply_shift(sim, f"sweep_{int(pct * 100)}", pct)
         # Compute MTRs on a freshly-shifted branch before any downstream
         # metrics populate PE's memoization cache.
-        scenario_mtrs = _federal_mtrs(
-            branch, branch_prefix=f"mtr_{int(pct * 100)}"
+        scenario_mtrs = (
+            _federal_mtrs(branch, branch_prefix=f"mtr_{int(pct * 100)}")
+            if include_mtrs
+            else []
         )
         metrics = _extract_results(branch, label)
         rev = revenue_components(branch)

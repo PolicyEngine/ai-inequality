@@ -3,38 +3,38 @@
   "source": {
     "year": 2026,
     "dataset_name": "enhanced_cps_2024",
-    "dataset_uri": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@1.73.0",
+    "dataset_uri": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@99e0ec7e784cdba43dd21ff1d80a081599a7a537",
     "policyengine_package": "policyengine",
-    "policyengine_version": "3.4.0",
+    "policyengine_version": "4.4.4",
     "country_model_package": "policyengine-us",
-    "country_model_version": "1.602.0",
-    "policyengine_us_version": "1.602.0",
+    "country_model_version": "1.691.3",
+    "policyengine_us_version": "1.691.3",
     "data_package": "policyengine-us-data",
-    "data_version": "1.73.0",
-    "policyengine_core_version": "3.23.6",
+    "data_version": "1.113.1",
+    "policyengine_core_version": "3.26.1",
     "policyengine_bundle": {
-      "bundle_id": "us-3.4.0",
+      "bundle_id": "us-4.4.4",
       "country_id": "us",
-      "policyengine_version": "3.4.0",
+      "policyengine_version": "4.4.4",
       "model_package": "policyengine-us",
-      "model_version": "1.602.0",
+      "model_version": "1.691.3",
       "data_package": "policyengine-us-data",
-      "data_version": "1.73.0",
+      "data_version": "1.113.1",
       "default_dataset": "enhanced_cps_2024",
-      "default_dataset_uri": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@1.73.0",
-      "certified_data_build_id": "policyengine-us-data-1.73.0",
-      "certified_data_artifact_sha256": null,
-      "data_build_model_version": "1.602.0",
+      "default_dataset_uri": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@99e0ec7e784cdba43dd21ff1d80a081599a7a537",
+      "certified_data_build_id": "policyengine-us-data-1.113.1",
+      "certified_data_artifact_sha256": "0ce549af18753287c097718362b8cd5cdccfc47953acf7f282709d604cf314d2",
+      "data_build_model_version": "1.691.3",
       "data_build_model_git_sha": null,
-      "data_build_fingerprint": null,
+      "data_build_fingerprint": "sha256:d891044ece8ec3338904771c879b98ec11a12f1090c074e5b8cee846825d8056",
       "compatibility_basis": "exact_build_model_version",
-      "certified_by": "policyengine.py bundled manifest",
+      "certified_by": null,
       "runtime_dataset": "enhanced_cps_2024",
-      "runtime_dataset_uri": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@1.73.0",
-      "runtime_dataset_source": "/Users/maxghenis/PolicyEngine/policyengine-us-data/policyengine_us_data/storage/enhanced_cps_2024.h5",
+      "runtime_dataset_uri": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@99e0ec7e784cdba43dd21ff1d80a081599a7a537",
+      "runtime_dataset_source": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@99e0ec7e784cdba43dd21ff1d80a081599a7a537",
       "managed_by": "policyengine.py"
     },
-    "microdata_created_at": "2026-04-16T10:44:36.548445+00:00",
+    "microdata_created_at": "2026-05-13T21:32:36.020503+00:00",
     "baseline_microdata_file": "baseline.csv.gz",
     "baseline_microdata_path": "/Users/maxghenis/repos/ai-inequality/analysis/outputs/shift_sweep_microdata/baseline.csv.gz"
   },
@@ -47,7 +47,7 @@
   "market": {
     "title": "Market income",
     "rank_variable": "household_market_income",
-    "total_b": 17161.502611491123,
+    "total_b": 15830.695511000551,
     "components": [
       {
         "key": "labor",
@@ -73,164 +73,164 @@
         "label": "Bottom 10%",
         "lower_percentile": 0.0,
         "upper_percentile": 0.1,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "labor": -13.612533812114169,
-          "capital": -188.45435959632565,
-          "otherMarket": -102.69586973383373
+          "labor": 42.231416524372264,
+          "capital": 11.566696292123382,
+          "otherMarket": -214.23160767613268
         },
-        "total_b": -304.76276314227357,
-        "mean_per_household": -19992.80079057957
+        "total_b": -160.43349485963705,
+        "mean_per_household": -10203.503465881924
       },
       {
         "label": "P10-20",
         "lower_percentile": 0.1,
         "upper_percentile": 0.2,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "labor": 54.03100705115957,
-          "capital": 5.98813426712076,
-          "otherMarket": -12.548806916527436
+          "labor": 16.984758690634408,
+          "capital": 8.970168169024435,
+          "otherMarket": 3.397934717862432
         },
-        "total_b": 47.47033440175289,
-        "mean_per_household": 3114.1105605260123
+        "total_b": 29.352861577521274,
+        "mean_per_household": 1866.8297733077773
       },
       {
         "label": "P20-30",
         "lower_percentile": 0.2,
         "upper_percentile": 0.3,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "labor": 245.40941185944283,
-          "capital": 41.71238561698556,
-          "otherMarket": -36.003779850003355
+          "labor": 169.4313027452065,
+          "capital": 35.411005299304065,
+          "otherMarket": 12.393290721636925
         },
-        "total_b": 251.118017626425,
-        "mean_per_household": 16473.641495980926
+        "total_b": 217.2355987661475,
+        "mean_per_household": 13816.093620989735
       },
       {
         "label": "P30-40",
         "lower_percentile": 0.3,
         "upper_percentile": 0.4,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "labor": 364.51067783515145,
-          "capital": 6.485548226871975,
-          "otherMarket": 91.20747599488486
+          "labor": 364.73432356917925,
+          "capital": 35.21654221056235,
+          "otherMarket": 25.29539610863526
         },
-        "total_b": 462.2037020569083,
-        "mean_per_household": 30321.11418276605
+        "total_b": 425.24626188837686,
+        "mean_per_household": 27045.485176443795
       },
       {
         "label": "P40-50",
         "lower_percentile": 0.4,
         "upper_percentile": 0.5,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "labor": 578.6411420685362,
-          "capital": 44.94919397194547,
-          "otherMarket": 86.97423315076968
+          "labor": 564.032767296289,
+          "capital": 54.84578253296679,
+          "otherMarket": 47.15589212862611
         },
-        "total_b": 710.5645691912513,
-        "mean_per_household": 46613.88331767013
+        "total_b": 666.0344419578819,
+        "mean_per_household": 42359.51316063822
       },
       {
         "label": "P50-60",
         "lower_percentile": 0.5,
         "upper_percentile": 0.6,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "labor": 767.1459043745879,
-          "capital": 35.137429390421254,
-          "otherMarket": 194.2729515734924
+          "labor": 805.7289376718343,
+          "capital": 55.06583059662667,
+          "otherMarket": 106.42953409019121
         },
-        "total_b": 996.5562853385015,
-        "mean_per_household": 65375.28103481415
+        "total_b": 967.2243023586522,
+        "mean_per_household": 61515.062861631035
       },
       {
         "label": "P60-70",
         "lower_percentile": 0.6,
         "upper_percentile": 0.7,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "labor": 1022.8356937139114,
-          "capital": 42.73966255784292,
-          "otherMarket": 282.1702656732259
+          "labor": 1244.7164168114148,
+          "capital": 52.726317008228705,
+          "otherMarket": 93.80709704181285
         },
-        "total_b": 1347.7456219449803,
-        "mean_per_household": 88413.72042339313
+        "total_b": 1391.2498308614563,
+        "mean_per_household": 88482.90990308621
       },
       {
         "label": "P70-80",
         "lower_percentile": 0.7,
         "upper_percentile": 0.8,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "labor": 1568.2678603563702,
-          "capital": 25.557968604865806,
-          "otherMarket": 247.83814092111064
+          "labor": 1672.5460791620362,
+          "capital": 112.2815659411085,
+          "otherMarket": 162.33944398297962
         },
-        "total_b": 1841.6639698823467,
-        "mean_per_household": 120815.35320591925
+        "total_b": 1947.1670890861244,
+        "mean_per_household": 123839.0160329294
       },
       {
         "label": "P80-90",
         "lower_percentile": 0.8,
         "upper_percentile": 0.9,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "labor": 2104.7782580563044,
-          "capital": 99.1207960553213,
-          "otherMarket": 449.0925318054388
+          "labor": 2355.620440332303,
+          "capital": 134.02531182718033,
+          "otherMarket": 290.51573302330627
         },
-        "total_b": 2652.991585917064,
-        "mean_per_household": 174039.41258913715
+        "total_b": 2780.16148518279,
+        "mean_per_household": 176817.11275187644
       },
       {
         "label": "P90-99",
         "lower_percentile": 0.9,
         "upper_percentile": 0.99,
-        "household_weight": 13719262.733677983,
+        "household_weight": 14151036.049184412,
         "components_b": {
-          "labor": 3271.8323994976445,
-          "capital": 411.91758662783405,
-          "otherMarket": 910.651626608225
+          "labor": 3559.1894275501736,
+          "capital": 597.767010485125,
+          "otherMarket": 753.4828184597607
         },
-        "total_b": 4594.401612733704,
-        "mean_per_household": 334886.91789941356
+        "total_b": 4910.439256495059,
+        "mean_per_household": 347002.1021378198
       },
       {
         "label": "P99-99.9",
         "lower_percentile": 0.99,
         "upper_percentile": 0.999,
-        "household_weight": 1371926.2733678222,
+        "household_weight": 1415103.6049184501,
         "components_b": {
-          "labor": 902.7255934835127,
-          "capital": 388.8481120039403,
-          "otherMarket": 815.3564936640851
+          "labor": 1141.0787074811797,
+          "capital": 429.5872495237758,
+          "otherMarket": 154.82409155600504
         },
-        "total_b": 2106.930199151538,
-        "mean_per_household": 1535745.9362443865
+        "total_b": 1725.4900485609605,
+        "mean_per_household": 1219338.3173950696
       },
       {
         "label": "Top 0.1%",
         "lower_percentile": 0.999,
         "upper_percentile": 1.0,
-        "household_weight": 152436.25259637833,
+        "household_weight": 157233.7338798046,
         "components_b": {
-          "labor": 576.0442503674664,
-          "capital": 1140.036104861612,
-          "otherMarket": 738.539121159847
+          "labor": 264.6446518856624,
+          "capital": 626.5375686652087,
+          "otherMarket": 40.34560857434734
         },
-        "total_b": 2454.6194763889257,
-        "mean_per_household": 16102596.558105392
+        "total_b": 931.5278291252184,
+        "mean_per_household": 5924478.202860165
       }
     ]
   },
   "net": {
     "title": "Net income",
     "rank_variable": "household_net_income",
-    "total_b": 15347.921934078575,
+    "total_b": 14577.52989341935,
     "components": [
       {
         "key": "market",
@@ -262,169 +262,169 @@
         "label": "Bottom 10%",
         "lower_percentile": 0.0,
         "upper_percentile": 0.1,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "market": -233.94383990834734,
-          "benefits": 77.60546434195885,
-          "refundableCredits": 4.129590915076454,
-          "taxes": -92.29615134315566
+          "market": -110.004439456095,
+          "benefits": 96.24622389250186,
+          "refundableCredits": 3.528110254447194,
+          "taxes": -6.7402699350821225
         },
-        "total_b": -244.5049359944677,
-        "mean_per_household": -16039.815452679695
+        "total_b": -16.97037524422807,
+        "mean_per_household": -1079.308798784773
       },
       {
         "label": "P10-20",
         "lower_percentile": 0.1,
         "upper_percentile": 0.2,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "market": 173.4622832500611,
-          "benefits": 165.19778247551056,
-          "refundableCredits": 7.2392295526803165,
-          "taxes": -16.481462117980357
+          "market": 180.98512029508015,
+          "benefits": 190.45132005937575,
+          "refundableCredits": 12.06730518745815,
+          "taxes": -21.609040961932166
         },
-        "total_b": 329.41783316027164,
-        "mean_per_household": 21610.20279292824
+        "total_b": 361.89470457998186,
+        "mean_per_household": 23016.35251227808
       },
       {
         "label": "P20-30",
         "lower_percentile": 0.2,
         "upper_percentile": 0.3,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "market": 286.9061269904419,
-          "benefits": 232.4873581333398,
-          "refundableCredits": 10.278954955717957,
-          "taxes": -40.226801930692126
+          "market": 298.37854573113503,
+          "benefits": 235.72186646572715,
+          "refundableCredits": 21.73858328400996,
+          "taxes": -38.349827106509636
         },
-        "total_b": 489.4456381488075,
-        "mean_per_household": 32108.217685239488
+        "total_b": 517.4891683743624,
+        "mean_per_household": 32912.09561746318
       },
       {
         "label": "P30-40",
         "lower_percentile": 0.3,
         "upper_percentile": 0.4,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "market": 514.1826352958382,
-          "benefits": 199.98134639150027,
-          "refundableCredits": 12.495424832695809,
-          "taxes": -56.933415730020926
+          "market": 421.5024971511364,
+          "benefits": 271.277995593255,
+          "refundableCredits": 21.325872647211852,
+          "taxes": -57.4046198064061
         },
-        "total_b": 669.7259907900134,
-        "mean_per_household": 43934.823861297984
+        "total_b": 656.7017455851973,
+        "mean_per_household": 41765.957557626374
       },
       {
         "label": "P40-50",
         "lower_percentile": 0.4,
         "upper_percentile": 0.5,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "market": 688.5708638019428,
-          "benefits": 211.41747181760843,
-          "refundableCredits": 28.803890367110245,
-          "taxes": -83.86007709714906
+          "market": 703.5270565852679,
+          "benefits": 206.98483365832104,
+          "refundableCredits": 27.65540773128152,
+          "taxes": -93.86608584329366
         },
-        "total_b": 844.9321488895124,
-        "mean_per_household": 55428.55682279768
+        "total_b": 844.3012121315769,
+        "mean_per_household": 53697.205510420084
       },
       {
         "label": "P50-60",
         "lower_percentile": 0.5,
         "upper_percentile": 0.6,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "market": 948.4704989220871,
-          "benefits": 254.21527601491132,
-          "refundableCredits": 20.642487509647726,
-          "taxes": -131.21548073272277
+          "market": 880.1812715255504,
+          "benefits": 320.7820483059446,
+          "refundableCredits": 20.08765276190208,
+          "taxes": -138.03693515617778
         },
-        "total_b": 1092.1127817139236,
-        "mean_per_household": 71643.90117915801
+        "total_b": 1083.0140374372193,
+        "mean_per_household": 68879.24179584529
       },
       {
         "label": "P60-70",
         "lower_percentile": 0.6,
         "upper_percentile": 0.7,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "market": 1368.7692715087137,
-          "benefits": 209.50871425813608,
-          "refundableCredits": 9.52454887267416,
-          "taxes": -228.60804344684882
+          "market": 1340.6217078544128,
+          "benefits": 244.87723911753795,
+          "refundableCredits": 12.625768630151745,
+          "taxes": -226.82376831591603
         },
-        "total_b": 1359.194491192675,
-        "mean_per_household": 89164.779902532
+        "total_b": 1371.3009472861863,
+        "mean_per_household": 87214.16921474786
       },
       {
         "label": "P70-80",
         "lower_percentile": 0.7,
         "upper_percentile": 0.8,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "market": 1775.9954241383346,
-          "benefits": 228.05106137706014,
-          "refundableCredits": 5.880801489358798,
-          "taxes": -277.5246198366059
+          "market": 1949.9389546885816,
+          "benefits": 217.510727705328,
+          "refundableCredits": 3.663890639225877,
+          "taxes": -359.3464006303402
         },
-        "total_b": 1732.4026671681477,
-        "mean_per_household": 113647.68141832485
+        "total_b": 1811.7671724027955,
+        "mean_per_household": 115227.63771465994
       },
       {
         "label": "P80-90",
         "lower_percentile": 0.8,
         "upper_percentile": 0.9,
-        "household_weight": 15243625.259642214,
+        "household_weight": 15723373.387982696,
         "components_b": {
-          "market": 2572.4293509410923,
-          "benefits": 179.21810793675198,
-          "refundableCredits": 1.5980312082995471,
-          "taxes": -416.6023896825571
+          "market": 2655.0990295209867,
+          "benefits": 247.69618409622646,
+          "refundableCredits": 3.095920772714027,
+          "taxes": -533.5048412362522
         },
-        "total_b": 2336.6431004035867,
-        "mean_per_household": 153286.5745912748
+        "total_b": 2372.386293153675,
+        "mean_per_household": 150882.780343236
       },
       {
         "label": "P90-99",
         "lower_percentile": 0.9,
         "upper_percentile": 0.99,
-        "household_weight": 13719262.733677983,
+        "household_weight": 14151036.049184412,
         "components_b": {
-          "market": 4527.87805900671,
-          "benefits": 151.73044934836298,
-          "refundableCredits": 2.177446697824369,
-          "taxes": -1024.962388284176
+          "market": 4861.9855604604045,
+          "benefits": 240.9059545444656,
+          "refundableCredits": 0.44269731850035654,
+          "taxes": -1256.8962364814859
         },
-        "total_b": 3656.8235667687213,
-        "mean_per_household": 266546.6532536014
+        "total_b": 3846.4379758418836,
+        "mean_per_household": 271813.1706026974
       },
       {
         "label": "P99-99.9",
         "lower_percentile": 0.99,
         "upper_percentile": 0.999,
-        "household_weight": 1371926.2733678222,
+        "household_weight": 1415103.6049184501,
         "components_b": {
-          "market": 2086.9061558471103,
-          "benefits": 7.963194809776827,
-          "refundableCredits": 0.24582053691008648,
-          "taxes": -709.9526240550251
+          "market": 1733.084128086637,
+          "benefits": 22.05223096083502,
+          "refundableCredits": 0.0424270108136508,
+          "taxes": -609.7983370544132
         },
-        "total_b": 1385.1625471387722,
-        "mean_per_household": 1009647.9483102671
+        "total_b": 1145.3804490038726,
+        "mean_per_household": 809396.8844563002
       },
       {
         "label": "Top 0.1%",
         "lower_percentile": 0.999,
         "upper_percentile": 1.0,
-        "household_weight": 152436.25259634852,
+        "household_weight": 157233.7338798046,
         "components_b": {
-          "market": 2451.8757816863645,
-          "benefits": 0.3513866987581347,
-          "refundableCredits": 0.0011253240148192726,
-          "taxes": -755.6621890105266
+          "market": 915.3960785574549,
+          "benefits": 3.4609106289072122,
+          "refundableCredits": 0.00011586032064123655,
+          "taxes": -335.0305421798538
         },
-        "total_b": 1696.566104698611,
-        "mean_per_household": 11129676.017365247
+        "total_b": 583.8265628668289,
+        "mean_per_household": 3713112.628318856
       }
     ]
   },
@@ -437,21 +437,21 @@
         "shares": {
           "top10": {
             "label": "Top 10%",
-            "share": 0.9448711620371991,
-            "amount_b": 1940.8018034933864,
-            "total_b": 2054.0385625791573
+            "share": 0.76782313033572,
+            "amount_b": 1653.8918286741095,
+            "total_b": 2154.001049631011
           },
           "top1": {
             "label": "Top 1%",
-            "share": 0.7443308245127617,
-            "amount_b": 1528.884216865552,
-            "total_b": 2054.0385625791573
+            "share": 0.49030840461749214,
+            "amount_b": 1056.1248181889846,
+            "total_b": 2154.001049631011
           },
           "top01": {
             "label": "Top 0.1%",
-            "share": 0.5550217632867238,
-            "amount_b": 1140.0361048616114,
-            "total_b": 2054.0385625791573
+            "share": 0.2908715243070736,
+            "amount_b": 626.5375686652087,
+            "total_b": 2154.001049631011
           }
         }
       },
@@ -461,21 +461,21 @@
         "shares": {
           "top10": {
             "label": "Top 10%",
-            "share": 0.8150249571885989,
-            "amount_b": 2088.1816331712835,
-            "total_b": 2562.1075952991623
+            "share": 0.7616366111159485,
+            "amount_b": 1663.6877571152386,
+            "total_b": 2184.3589617857347
           },
           "top1": {
             "label": "Top 1%",
-            "share": 0.6261956206246725,
-            "amount_b": 1604.380555745546,
-            "total_b": 2562.1075952991623
+            "share": 0.483494167701078,
+            "amount_b": 1056.1248181889846,
+            "total_b": 2184.3589617857347
           },
           "top01": {
             "label": "Top 0.1%",
-            "share": 0.45958039614449986,
-            "amount_b": 1177.4944236124209,
-            "total_b": 2562.1075952991623
+            "share": 0.28682903296855944,
+            "amount_b": 626.5375686652087,
+            "total_b": 2184.3589617857347
           }
         }
       },
@@ -485,21 +485,21 @@
         "shares": {
           "top10": {
             "label": "Top 10%",
-            "share": 0.968291845424582,
-            "amount_b": 2480.867891628564,
-            "total_b": 2562.1075952991623
+            "share": 0.9334185984163078,
+            "amount_b": 2038.9212805481416,
+            "total_b": 2184.3589617857347
           },
           "top1": {
             "label": "Top 1%",
-            "share": 0.7838580406237948,
-            "amount_b": 2008.328639518544,
-            "total_b": 2562.1075952991623
+            "share": 0.5817737926316244,
+            "amount_b": 1270.8027976669644,
+            "total_b": 2184.3589617857347
           },
           "top01": {
             "label": "Top 0.1%",
-            "share": 0.5259557565659694,
-            "amount_b": 1347.5552386889874,
-            "total_b": 2562.1075952991623
+            "share": 0.34033640707204454,
+            "amount_b": 743.4168808097784,
+            "total_b": 2184.3589617857347
           }
         }
       }
