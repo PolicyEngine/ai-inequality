@@ -4,7 +4,7 @@
   "description": "PolicyEngine research on how economic policies mediate AI's distributional impacts",
   "private": true,
   "dependencies": {
-    "@policyengine/ui-kit": "^0.9.0",
+    "@policyengine/ui-kit": "^0.12.0",
     "@tabler/icons-react": "^3.36.1",
     "next": "^16.2.6",
     "papaparse": "^5.5.3",
