@@ -1,10 +1,14 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Research from "../components/Research";
 import StochasticForecasting from "../components/StochasticForecasting";
 import TechnicalRequirements from "../components/TechnicalRequirements";
+import { countryFromSearchParams } from "../utils/countryConfig";
 
 function ResearchPage() {
+  const [searchParams] = useSearchParams();
+  const countryKey = countryFromSearchParams(searchParams);
+  const homePath = countryKey === "us" ? "/" : `/?country=${countryKey}`;
   return (
     <>
       <div
@@ -12,7 +16,7 @@ function ResearchPage() {
         style={{ paddingTop: "2rem", paddingBottom: "0" }}
       >
         <Link
-          to="/"
+          to={homePath}
           style={{
             color: "var(--pe-teal-600)",
             fontSize: "0.95rem",
@@ -52,7 +56,7 @@ function ResearchPage() {
           forecasting for microsimulation
         </p>
       </div>
-      <Research />
+      <Research countryKey={countryKey} />
       <StochasticForecasting />
       <TechnicalRequirements />
       <div
@@ -60,7 +64,7 @@ function ResearchPage() {
         style={{ textAlign: "center", padding: "3rem 2rem" }}
       >
         <Link
-          to="/"
+          to={homePath}
           style={{
             color: "var(--pe-teal-600)",
             fontSize: "1.05rem",
