@@ -4,13 +4,27 @@ import {
   IconBuildingBank,
   IconUsers,
 } from "@tabler/icons-react";
+import { cite } from "../data/references";
 
-const Source = ({ href, children }) => (
+// A citation: the link resolves through the references database.
+const Cite = ({ id, children }) => (
+  <a
+    href={cite(id).url}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-source"
+  >
+    {children}
+  </a>
+);
+
+// An organisation's own page, which is not a citation.
+const Org = ({ href, children }) => (
   <a
     href={href}
     target="_blank"
     rel="noopener noreferrer"
-    className="inline-source"
+    className="inline-source inline-org"
   >
     {children}
   </a>
@@ -26,12 +40,10 @@ function Challenge({ countryKey = "us" }) {
           description: (
             <>
               UK evidence is still emerging, but{" "}
-              <Source href="https://www.pwc.co.uk/press-room/press-releases/research-commentary/2024/ai-exposed-sectors-see-pay-and-productivity-uplift--but-job-open.html">
-                PwC's 2025 AI Jobs Barometer
-              </Source>{" "}
-              finds an 11% UK wage premium for roles requiring AI skills, while
-              vacancies in AI-exposed occupations grew more slowly than less
-              exposed roles from 2019 to 2024.
+              <Cite id="PwC2025">PwC's 2025 AI Jobs Barometer</Cite> finds an
+              11% UK wage premium for roles requiring AI skills, while vacancies
+              in AI-exposed occupations grew more slowly than less exposed roles
+              from 2019 to 2024.
             </>
           ),
         },
@@ -43,12 +55,9 @@ function Challenge({ countryKey = "us" }) {
               We do not yet have a strong UK-specific forecast for AI shifting
               income from labour to capital. The prototype therefore
               stress-tests that mechanism directly in the UK tax-benefit system,
-              while global{" "}
-              <Source href="https://www.imf.org/en/Publications/WP/Issues/2025/04/04/AI-Adoption-and-Inequality-565729">
-                IMF research
-              </Source>{" "}
-              suggests AI adoption can raise capital-income and wealth
-              inequality.
+              while global <Cite id="Rockalletal2025">IMF research</Cite>{" "}
+              suggests AI can raise wealth inequality even where it narrows wage
+              gaps.
             </>
           ),
         },
@@ -57,13 +66,10 @@ function Challenge({ countryKey = "us" }) {
           title: "Labour displacement",
           description: (
             <>
-              <Source href="https://www.ippr.org/media-office/up-to-8-million-uk-jobs-at-risk-from-ai-unless-government-acts-finds-ippr">
-                IPPR
-              </Source>{" "}
-              estimates 11% of UK tasks are exposed to existing generative AI,
-              rising to 59% under deeper integration; its adverse scenario has
-              7.9 million jobs displaced, while its augmentation scenario has no
-              net job loss.
+              <Cite id="IPPR2024">IPPR</Cite> estimates 11% of UK tasks are
+              exposed to existing generative AI, rising to 59% under deeper
+              integration; its adverse scenario has 7.9 million jobs displaced,
+              while its augmentation scenario has no net job loss.
             </>
           ),
         },
@@ -76,11 +82,13 @@ function Challenge({ countryKey = "us" }) {
             <>
               AI may widen or narrow wage gaps depending on which tasks are
               complemented vs. automated.{" "}
-              <Source href="https://digitaleconomy.stanford.edu/publications/canaries-in-the-coal-mine/">
-                Stanford DEL (2025)
-              </Source>{" "}
-              finds early-career workers in AI-exposed jobs saw a 16% employment
-              decline, while senior workers gained 6-12%.
+              <Cite id="BrynjolfssonChandarandChen2026">
+                Stanford DEL (2026)
+              </Cite>{" "}
+              finds employment of workers aged 22-25 in AI-exposed occupations
+              19% below where it would be had it kept pace with less-exposed
+              peers, with no comparable gap for experienced workers and the
+              adjustment running through hiring rather than pay.
             </>
           ),
         },
@@ -89,17 +97,16 @@ function Challenge({ countryKey = "us" }) {
           title: "Capital-labor shift",
           description: (
             <>
-              As AI increases returns to capital, the labor share of income
-              could decline{" "}
-              <Source href="https://www.nber.org/papers/w28453">
-                0.5-1.6 percentage points per doubling of AI innovation
-              </Source>
-              . The{" "}
-              <Source href="https://www.imf.org/en/Publications/WP/Issues/2025/04/04/AI-Adoption-and-Inequality-565729">
-                IMF (2025)
-              </Source>{" "}
-              finds capital income and wealth inequality always increase with AI
-              adoption.
+              As AI raises returns to capital, the labor share of income can
+              fall: across European regions, each doubling of AI innovation
+              lowers it by{" "}
+              <Cite id="MinnitiPrettnerandVenturini2025">
+                0.5-1.6%, or 0.09-0.31 percentage points from a 52% average
+              </Cite>
+              . The <Cite id="Rockalletal2025">IMF (2025)</Cite> finds AI could
+              narrow wage inequality by displacing high-income workers, but
+              those workers gain most from higher capital returns, so wealth
+              inequality rises most when firms choose how much AI to adopt.
             </>
           ),
         },
@@ -108,16 +115,11 @@ function Challenge({ countryKey = "us" }) {
           title: "Labor displacement",
           description: (
             <>
-              <Source href="https://iceberg.mit.edu">
-                MIT's Iceberg Index
-              </Source>{" "}
-              estimates AI can currently automate 11.7% of the US labor market
-              (~$1.2 trillion in wage value).{" "}
-              <Source href="https://www.metaculus.com/questions/">
-                Metaculus forecasters
-              </Source>{" "}
-              project labor force participation dropping from 83.5% to 78% by
-              2030.
+              The <Cite id="Chopraetal2025">Iceberg Index</Cite> finds AI
+              systems can already perform skills worth 11.7% of US wage value,
+              about $1.2 trillion. It measures technical exposure, not
+              displacement or adoption timelines, and visible adoption in
+              computing covers only 2.2%.
             </>
           ),
         },
@@ -125,22 +127,19 @@ function Challenge({ countryKey = "us" }) {
   const callout = isUK ? (
     <>
       UK-specific research is thinner than the US evidence base. The
-      government's{" "}
-      <Source href="https://www.gov.uk/government/publications/ai-opportunities-action-plan-one-year-on/ai-opportunities-action-plan-one-year-on">
-        Future of Work Unit
-      </Source>{" "}
-      is explicitly being built to improve evidence on AI's labour-market
-      effects; this prototype shows how that evidence can be translated into
+      government's <Cite id="DSITActionPlan2026">Future of Work Unit</Cite> is
+      explicitly being built to improve evidence on AI's labour-market effects;
+      this prototype shows how that evidence can be translated into
       distributional policy analysis.
     </>
   ) : (
     <>
       Current policy scoring institutions like{" "}
-      <Source href="https://www.cbo.gov/">CBO</Source> operate under a single
-      baseline economic scenario. AI amplifies the need for{" "}
-      <Source href="https://www.nber.org/papers/w34256">
+      <Org href="https://www.cbo.gov/">CBO</Org> operate under a single baseline
+      economic scenario. AI amplifies the need for{" "}
+      <Cite id="BrynjolfssonKorinekAgrawal2025">
         probabilistic policy analysis
-      </Source>{" "}
+      </Cite>{" "}
       across multiple growth trajectories.
     </>
   );
@@ -157,8 +156,8 @@ function Challenge({ countryKey = "us" }) {
       </div>
 
       <div className="challenge-cards">
-        {mechanisms.map((item, idx) => (
-          <div key={idx} className="mechanism-card">
+        {mechanisms.map((item) => (
+          <div key={item.title} className="mechanism-card">
             <div className="mechanism-icon">{item.icon}</div>
             <h3>{item.title}</h3>
             <p>{item.description}</p>

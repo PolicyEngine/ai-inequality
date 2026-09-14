@@ -1,4 +1,5 @@
 import React from "react";
+import { cite } from "../data/references";
 
 function Ecosystem({ countryKey = "us" }) {
   const isUK = countryKey === "uk";
@@ -20,7 +21,7 @@ function Ecosystem({ countryKey = "us" }) {
         {
           name: "MIT Media Lab Camera Culture (Project Iceberg)",
           desc: "Led by Ayush Chopra. Iceberg Index of skills-based AI exposure, built on Large Population Models that simulate 151 million US workers.",
-          url: "https://iceberg.mit.edu",
+          url: cite("Chopraetal2025").url,
         },
         {
           name: "Seth Benzell (Chapman)",
