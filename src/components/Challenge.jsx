@@ -108,7 +108,7 @@ function Challenge({ countryKey = "us" }) {
           title: "Labor displacement",
           description: (
             <>
-              <Source href="https://futuretech.mit.edu/research">
+              <Source href="https://iceberg.mit.edu">
                 MIT's Iceberg Index
               </Source>{" "}
               estimates AI can currently automate 11.7% of the US labor market

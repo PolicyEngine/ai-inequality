@@ -337,10 +337,12 @@ export const references = [
   {
     id: "MITIcebergIndex2025",
     type: "techreport",
-    author: "MIT and Oak Ridge National Lab",
-    title: "Iceberg Index: Measuring AI's Impact on the Labor Market",
+    author:
+      "Chopra, Ayush and Bhattacharya, Santanu and Salvador, DeAndrea and Paul, Ayan and Wright, Teddy and Garg, Aditi and Ahmad, Feroz and Schwarze, Alice C. and Raskar, Ramesh and Balaprakash, Prasanna",
+    title:
+      "The Iceberg Index: Measuring Skills-centered Exposure in the AI Economy",
     year: 2025,
-    institution: "MIT",
+    institution: "MIT and Oak Ridge National Laboratory",
     url: "https://iceberg.mit.edu/report.pdf",
   },
   {

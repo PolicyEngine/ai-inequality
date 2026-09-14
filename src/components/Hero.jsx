@@ -9,7 +9,7 @@ const HERO_CONTENT = {
         value: "11.7%",
         label: "of US labor market automatable today",
         source: "MIT Iceberg Index",
-        url: "https://futuretech.mit.edu/research",
+        url: "https://iceberg.mit.edu",
       },
       {
         value: "16%",
@@ -21,7 +21,7 @@ const HERO_CONTENT = {
         value: "$1.2T",
         label: "in wage value at stake",
         source: "MIT Iceberg Index",
-        url: "https://futuretech.mit.edu/research",
+        url: "https://iceberg.mit.edu",
       },
     ],
   },

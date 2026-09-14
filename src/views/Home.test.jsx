@@ -25,3 +25,24 @@ test("renders the UK overview with UK-specific evidence", () => {
   );
   expect(screen.queryByText(/MIT Iceberg Index/i)).not.toBeInTheDocument();
 });
+
+test("sources the Iceberg Index to iceberg.mit.edu on the US overview", () => {
+  renderHome("/");
+
+  const links = screen.getAllByRole("link");
+  const icebergLinks = links.filter((link) =>
+    /iceberg/i.test(link.textContent ?? ""),
+  );
+  expect(icebergLinks.length).toBeGreaterThanOrEqual(4);
+  icebergLinks.forEach((link) => {
+    expect(link.getAttribute("href")).toMatch(/^https:\/\/iceberg\.mit\.edu/);
+  });
+  expect(
+    screen.getByRole("link", { name: /MIT Media Lab Camera Culture/i }),
+  ).toHaveAttribute("href", "https://iceberg.mit.edu");
+  expect(
+    links.filter((link) =>
+      (link.getAttribute("href") ?? "").includes("futuretech.mit.edu"),
+    ),
+  ).toHaveLength(0);
+});
