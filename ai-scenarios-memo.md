@@ -284,8 +284,10 @@ the levels are context, the deltas are the result.
 **Stability across data builds.** These results were first computed on the
 prior populace build (build o, 22 July) and rerun on build p (28 July, with
 revised capital gains calibration) under the identical model version — a
-data-only change. Every revenue figure moved by less than 3%, every poverty
-change by less than 0.11pp, and no conclusion changed. The recalibration's
+data-only change. No scenario's revenue estimate moved by more than $5.9B:
+Moderate and Rapid by at most 2.8%, and the Slow cells, whose revenue changes
+are as small as $3B, by up to 12%. No poverty change moved by more than 0.11pp,
+and no conclusion changed. The recalibration's
 visible effect is distributional: the baseline top-1% net income share rises
 from 8.77% to 9.00%, and New York's state take under Rapid rises from $3.8B to
 $5.8B as more of the gains land where they are taxed.
