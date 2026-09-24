@@ -24,9 +24,11 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import gc
 import json
 import os
+import warnings
 from importlib.metadata import PackageNotFoundError, version
 
 from .ai_scenarios import (
@@ -46,7 +48,11 @@ from .fiscal import (
     state_revenue_components,
 )
 from .metrics import extract_results
-from .policyengine_runtime import managed_us_microsimulation, policyengine_bundle
+from .policyengine_runtime import (
+    managed_us_microsimulation,
+    policyengine_bundle,
+    runtime_fingerprint,
+)
 from .website_exports import ai_scenarios_website_payload
 
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "outputs", "ai_scenarios.json")
@@ -248,20 +254,28 @@ def _metadata(baseline, year, capital_income_vars):
         "dataset_uri": bundle.get("runtime_dataset_uri"),
         "certified_data_build_id": bundle.get("certified_data_build_id"),
         "certified_data_artifact_sha256": bundle.get("certified_data_artifact_sha256"),
+        "legacy_input_renames": bundle.get("legacy_input_renames", {}),
+        "runtime_fingerprint": runtime_fingerprint(),
         "policyengine_bundle": bundle or None,
     }
 
 
-def load_checkpoint(path):
+def load_checkpoint(path, fingerprint=None):
     """Read completed units from a checkpoint file, keyed by unit name.
 
     A run of this length should not be all-or-nothing, so each finished unit is
     appended as one JSON line. A process killed mid-write leaves a torn final
     line; that line is discarded rather than failing the resume.
+
+    With ``fingerprint`` (``runtime_fingerprint()["digest"]``), only units that
+    the same runtime wrote are returned. A unit from another engine, dataset
+    or runtime revision, or one written before units carried a fingerprint, is
+    skipped with a warning: resuming it would pass old numbers off as new.
     """
     if not path or not os.path.exists(path):
         return {}
     records = {}
+    skipped = 0
     with open(path) as handle:
         for line in handle:
             line = line.strip()
@@ -271,19 +285,31 @@ def load_checkpoint(path):
                 record = json.loads(line)
             except json.JSONDecodeError:
                 continue
+            if fingerprint is not None and record.get("fingerprint") != fingerprint:
+                skipped += 1
+                continue
             records[record["key"]] = record["payload"]
+    if skipped:
+        warnings.warn(
+            f"{path}: skipped {skipped} checkpoint unit(s) written by another "
+            f"runtime (current fingerprint {fingerprint}); they will be recomputed.",
+            stacklevel=2,
+        )
     return records
 
 
-def append_checkpoint(path, key, payload):
+def append_checkpoint(path, key, payload, fingerprint=None):
     """Append one completed unit, flushed to disk before returning."""
     if not path:
         return
     directory = os.path.dirname(path)
     if directory:
         os.makedirs(directory, exist_ok=True)
+    record = {"key": key, "payload": payload}
+    if fingerprint is not None:
+        record["fingerprint"] = fingerprint
     with open(path, "a") as handle:
-        handle.write(json.dumps({"key": key, "payload": payload}, default=float))
+        handle.write(json.dumps(record, default=float))
         handle.write("\n")
         handle.flush()
         os.fsync(handle.fileno())
@@ -300,6 +326,7 @@ def _run_one(
     checkpoint_path=None,
     checkpoint=None,
     checkpoint_key=None,
+    checkpoint_fingerprint=None,
 ):
     """Run a single scenario from a fresh microsimulation."""
     key = checkpoint_key or scenario.label
@@ -346,7 +373,7 @@ def _run_one(
 
     del branch, sim
     gc.collect()
-    append_checkpoint(checkpoint_path, key, row)
+    append_checkpoint(checkpoint_path, key, row, checkpoint_fingerprint)
     return row
 
 
@@ -363,13 +390,18 @@ def run_ai_scenarios(
     """Run the scenario grid plus sensitivities and return an export payload.
 
     Completed units are appended to `checkpoint_path` as they finish, and a
-    rerun with the same path skips them. Pass `checkpoint_path=None` to
+    rerun with the same path skips them. Each unit carries the runtime
+    fingerprint (package versions and runtime revision), and only units the
+    same runtime wrote are resumed, so an engine or dataset change recomputes
+    everything instead of mixing vintages. Pass `checkpoint_path=None` to
     disable. Delete the file to force a clean run.
     """
     if scenarios is None:
         scenarios = default_scenario_grid()
 
-    checkpoint = load_checkpoint(checkpoint_path)
+    fingerprint = runtime_fingerprint()
+    checkpoint_fingerprint = fingerprint["digest"] if checkpoint_path else None
+    checkpoint = load_checkpoint(checkpoint_path, checkpoint_fingerprint)
     if checkpoint and verbose:
         print(f"Resuming: {len(checkpoint)} unit(s) already in the checkpoint.")
 
@@ -406,6 +438,7 @@ def run_ai_scenarios(
                 "states": baseline_states,
                 "metadata": metadata,
             },
+            checkpoint_fingerprint,
         )
 
     if verbose:
@@ -435,6 +468,7 @@ def run_ai_scenarios(
             verbose,
             checkpoint_path=checkpoint_path,
             checkpoint=checkpoint,
+            checkpoint_fingerprint=checkpoint_fingerprint,
             checkpoint_key=f"grid:{scenario.label}",
         )
         for scenario in scenarios
@@ -458,6 +492,7 @@ def run_ai_scenarios(
                 verbose,
                 checkpoint_path=checkpoint_path,
                 checkpoint=checkpoint,
+                checkpoint_fingerprint=checkpoint_fingerprint,
                 checkpoint_key=f"realization:{rate}",
             )
             for rate in realization_sweep
@@ -477,6 +512,7 @@ def run_ai_scenarios(
                 verbose,
                 checkpoint_path=checkpoint_path,
                 checkpoint=checkpoint,
+                checkpoint_fingerprint=checkpoint_fingerprint,
                 checkpoint_key=f"capital_scope:{name}",
             )
             for name in ("Slow", "Moderate", "Rapid")
@@ -514,22 +550,51 @@ def summary_table(result):
     return lines
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--output",
+        default=OUTPUT_PATH,
+        help="Full run output (default: the committed analysis/outputs file).",
+    )
+    parser.add_argument(
+        "--website-output",
+        default=WEBSITE_OUTPUT_PATH,
+        help="Site payload path (default: the checked-in src/data file).",
+    )
+    parser.add_argument(
+        "--no-website",
+        action="store_true",
+        help="Do not write the site payload, e.g. for a comparison run.",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        default=CHECKPOINT_PATH,
+        help="Resume store; 'none' disables resuming.",
+    )
+    args = parser.parse_args(argv)
+    checkpoint_path = None if args.checkpoint == "none" else args.checkpoint
+
     print("=" * 78)
     print("AI SCENARIOS (Budget Lab calibration, PolicyEngine-US)")
     print("=" * 78)
 
-    result = run_ai_scenarios(verbose=True)
+    result = run_ai_scenarios(verbose=True, checkpoint_path=checkpoint_path)
 
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    with open(OUTPUT_PATH, "w") as handle:
+    output_dir = os.path.dirname(args.output)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+    with open(args.output, "w") as handle:
         json.dump(result, handle, indent=2, default=float)
-    print(f"\nSaved to {OUTPUT_PATH}")
+    print(f"\nSaved to {args.output}")
 
-    os.makedirs(os.path.dirname(WEBSITE_OUTPUT_PATH), exist_ok=True)
-    with open(WEBSITE_OUTPUT_PATH, "w") as handle:
-        json.dump(ai_scenarios_website_payload(result), handle, indent=2, default=float)
-    print(f"Saved website payload to {WEBSITE_OUTPUT_PATH}")
+    if not args.no_website:
+        os.makedirs(os.path.dirname(args.website_output), exist_ok=True)
+        with open(args.website_output, "w") as handle:
+            json.dump(
+                ai_scenarios_website_payload(result), handle, indent=2, default=float
+            )
+        print(f"Saved website payload to {args.website_output}")
 
     print()
     for line in summary_table(result):

@@ -33,10 +33,11 @@ from __future__ import annotations
 
 import json
 import os
+import warnings
 
 from .ai_scenarios import TARGET_YEAR
 from .fiscal import state_revenue_components
-from .policyengine_runtime import managed_us_microsimulation
+from .policyengine_runtime import managed_us_microsimulation, runtime_fingerprint
 
 SCENARIOS_PATH = os.path.join(
     os.path.dirname(__file__), "outputs", "ai_scenarios.json"
@@ -74,22 +75,59 @@ SCOPE_NOTE = (
 )
 
 
-def baseline_state_levels(year=TARGET_YEAR, verbose=True):
-    """Per-state baseline own-source levels, cached so this runs once."""
-    if os.path.exists(BASELINE_CACHE):
-        if verbose:
-            print("baseline state levels ... (cached)", flush=True)
-        with open(BASELINE_CACHE) as handle:
-            return json.load(handle)
+def _verify_capital_only_states(sim):
+    """Re-check, on the running engine, that each capital-only state's income
+    tax adds only capital-income taxes; the constant was read at 1.764.6."""
+    expected = {"WA": {"wa_capital_gains_tax", "wa_millionaires_tax"}}
+    variables = sim.tax_benefit_system.variables
+    for state in CAPITAL_ONLY_INCOME_TAX_STATES:
+        name = f"{state.lower()}_income_tax_before_refundable_credits"
+        adds = set(getattr(variables.get(name), "adds", None) or ())
+        if adds != expected[state]:
+            raise ValueError(
+                f"{name} adds {sorted(adds)} on this engine, not the capital-only "
+                f"{sorted(expected[state])}; revisit CAPITAL_ONLY_INCOME_TAX_STATES."
+            )
+
+
+def baseline_state_levels(year=TARGET_YEAR, verbose=True, cache_path=None):
+    """Per-state baseline own-source levels, cached so this runs once.
+
+    The cache records the runtime fingerprint and year, and is reused only by
+    the same runtime; a cache from another engine or dataset is recomputed.
+    """
+    cache_path = BASELINE_CACHE if cache_path is None else cache_path
+    fingerprint = runtime_fingerprint()["digest"]
+    if cache_path and os.path.exists(cache_path):
+        with open(cache_path) as handle:
+            cached = json.load(handle)
+        if (
+            isinstance(cached, dict)
+            and cached.get("fingerprint") == fingerprint
+            and cached.get("year") == year
+        ):
+            if verbose:
+                print("baseline state levels ... (cached)", flush=True)
+            return cached["per_state"]
+        warnings.warn(
+            f"{cache_path} was written by another runtime or year; recomputing.",
+            stacklevel=2,
+        )
 
     if verbose:
         print("baseline state levels ... (running simulation)", flush=True)
     sim = managed_us_microsimulation()
+    _verify_capital_only_states(sim)
     per_state = state_revenue_components(sim, year=year)
 
-    os.makedirs(os.path.dirname(BASELINE_CACHE), exist_ok=True)
-    with open(BASELINE_CACHE, "w") as handle:
-        json.dump(per_state, handle, default=float)
+    if cache_path:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "w") as handle:
+            json.dump(
+                {"fingerprint": fingerprint, "year": year, "per_state": per_state},
+                handle,
+                default=float,
+            )
     return per_state
 
 
@@ -102,12 +140,38 @@ def _baseline_net(state_totals):
     ) / 1e9
 
 
-def build(year=TARGET_YEAR, verbose=True):
-    with open(SCENARIOS_PATH) as handle:
+def build(
+    year=TARGET_YEAR,
+    verbose=True,
+    scenarios_path=None,
+    output_path=None,
+    website_output_path=None,
+    cache_path=None,
+):
+    with open(scenarios_path or SCENARIOS_PATH) as handle:
         scenarios = json.load(handle)
 
+    # The deltas come from the scenarios file and the denominators from this
+    # runtime's baseline; both must be the same runtime or the percentages mix
+    # vintages.
+    scenario_fingerprint = (
+        scenarios.get("metadata", {}).get("runtime_fingerprint") or {}
+    ).get("digest")
+    current_fingerprint = runtime_fingerprint()["digest"]
+    if scenario_fingerprint is None:
+        warnings.warn(
+            "The scenarios file carries no runtime fingerprint; its deltas may "
+            "come from another runtime than this baseline.",
+            stacklevel=2,
+        )
+    elif scenario_fingerprint != current_fingerprint:
+        raise ValueError(
+            f"The scenarios file was computed by runtime {scenario_fingerprint}, "
+            f"this baseline by {current_fingerprint}; rerun one of them."
+        )
+
     rows_by_label = {r["scenario"]["label"]: r for r in scenarios["scenarios"]}
-    baseline = baseline_state_levels(year=year, verbose=verbose)
+    baseline = baseline_state_levels(year=year, verbose=verbose, cache_path=cache_path)
 
     states = {}
     for variant in VARIANTS:
@@ -184,12 +248,13 @@ def build(year=TARGET_YEAR, verbose=True):
         "states": ranked,
     }
 
-    with open(OUTPUT_PATH, "w") as handle:
+    with open(output_path or OUTPUT_PATH, "w") as handle:
         json.dump(payload, handle, indent=2, default=float)
 
     # Trimmed payload for the site: drop nothing, it is already small.
-    with open(WEBSITE_OUTPUT_PATH, "w") as handle:
-        json.dump(payload, handle, indent=2, default=float)
+    if website_output_path != "none":
+        with open(website_output_path or WEBSITE_OUTPUT_PATH, "w") as handle:
+            json.dump(payload, handle, indent=2, default=float)
 
     if verbose:
         _report(payload)
@@ -241,5 +306,30 @@ def _report(payload):
     )
 
 
+def main(argv=None):
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--scenarios", default=SCENARIOS_PATH)
+    parser.add_argument("--output", default=OUTPUT_PATH)
+    parser.add_argument(
+        "--website-output",
+        default=WEBSITE_OUTPUT_PATH,
+        help="Site payload path; 'none' skips it.",
+    )
+    parser.add_argument(
+        "--cache",
+        default=BASELINE_CACHE,
+        help="Baseline cache; 'none' disables it.",
+    )
+    args = parser.parse_args(argv)
+    build(
+        scenarios_path=args.scenarios,
+        output_path=args.output,
+        website_output_path=args.website_output,
+        cache_path="" if args.cache == "none" else args.cache,
+    )
+
+
 if __name__ == "__main__":
-    build()
+    main()

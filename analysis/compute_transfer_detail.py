@@ -31,6 +31,7 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import gc
 import json
 import os
@@ -46,7 +47,11 @@ from .compute_ai_scenarios import (
     append_checkpoint,
     load_checkpoint,
 )
-from .policyengine_runtime import managed_us_microsimulation, policyengine_bundle
+from .policyengine_runtime import (
+    managed_us_microsimulation,
+    policyengine_bundle,
+    runtime_fingerprint,
+)
 
 OUTPUT_PATH = os.path.join(
     os.path.dirname(__file__), "outputs", "transfer_detail.json"
@@ -60,12 +65,16 @@ CHECKPOINT_PATH = os.path.join(
     "ai-inequality-transfer-detail.jsonl",
 )
 
-#: Every entity-level program in `gov.household.household_benefits` at
-#: policyengine-us 1.764.6, so the decomposition sums back to the total rather
-#: than leaving a residual. Inputs that the shock cannot move (Social Security,
-#: unemployment compensation, workers' compensation, child support) are
-#: included precisely so that invariance is visible rather than assumed.
-BENEFIT_PROGRAMS = [
+#: The programs `household_benefits` adds at policyengine-us 1.764.6, kept as
+#: the record of what the published run decomposed. Runs read the live list
+#: from the engine instead (`benefit_programs`), because it changes across
+#: versions: 2.x folds `head_start` and `early_head_start` into
+#: `household_head_start_benefits`, counts `housing_assistance` instead of
+#: `spm_unit_capped_housing_subsidy`, and adds `trump_dividend`. Inputs the
+#: shock cannot move (Social Security, unemployment compensation, workers'
+#: compensation, child support) stay in the decomposition so their invariance
+#: is visible rather than assumed.
+BENEFIT_PROGRAMS_1_764_6 = [
     "social_security",
     "ssi",
     "snap",
@@ -90,6 +99,18 @@ BENEFIT_PROGRAMS = [
     "household_state_benefits",
     "commodity_supplemental_food_program",
 ]
+
+
+def benefit_programs(sim, year):
+    """Every program the running engine's `household_benefits` adds.
+
+    Read from `gov.household.household_benefits`, so the decomposition sums
+    back to the total on whichever engine version runs.
+    """
+    return list(
+        sim.tax_benefit_system.parameters(f"{year}-01-01").gov.household.household_benefits
+    )
+
 
 #: Components of `healthcare_benefit_value`, which is unconditional.
 HEALTH_PROGRAMS = [
@@ -118,10 +139,10 @@ def _sum(sim, variable, year):
     return float(sim.calculate(variable, year).sum())
 
 
-def program_totals(sim, year):
+def program_totals(sim, year, programs):
     """Every benefit program, the health components, and the aggregates."""
     totals = {}
-    for variable in BENEFIT_PROGRAMS + HEALTH_PROGRAMS + AGGREGATES:
+    for variable in list(programs) + HEALTH_PROGRAMS + AGGREGATES:
         try:
             totals[variable] = _sum(sim, variable, year)
         except Exception as error:  # noqa: BLE001 - report, do not abort the run
@@ -141,25 +162,33 @@ def _deltas(scenario_totals, baseline_totals):
     }
 
 
-def run(year=TARGET_YEAR, verbose=True):
-    checkpoint = load_checkpoint(CHECKPOINT_PATH)
+def run(year=TARGET_YEAR, verbose=True, output_path=None, checkpoint_path=None):
+    output_path = output_path or OUTPUT_PATH
+    checkpoint_path = CHECKPOINT_PATH if checkpoint_path is None else checkpoint_path
+    if checkpoint_path == "none":
+        checkpoint_path = None
+    fingerprint = runtime_fingerprint()
+    stamp = fingerprint["digest"] if checkpoint_path else None
+    checkpoint = load_checkpoint(checkpoint_path, stamp)
 
-    if "baseline" in checkpoint:
+    if "baseline" in checkpoint and "programs" in checkpoint:
         baseline_totals = checkpoint["baseline"]
+        programs = checkpoint["programs"]
+        bundle = checkpoint.get("bundle") or {}
         if verbose:
             print("baseline ... (from checkpoint)", flush=True)
     else:
         if verbose:
             print("baseline ...", flush=True)
         sim = managed_us_microsimulation()
-        baseline_totals = program_totals(sim, year)
+        programs = benefit_programs(sim, year)
+        baseline_totals = program_totals(sim, year, programs)
         bundle = policyengine_bundle(sim)
-        append_checkpoint(CHECKPOINT_PATH, "baseline", baseline_totals)
-        append_checkpoint(CHECKPOINT_PATH, "bundle", bundle or {})
+        append_checkpoint(checkpoint_path, "baseline", baseline_totals, stamp)
+        append_checkpoint(checkpoint_path, "programs", programs, stamp)
+        append_checkpoint(checkpoint_path, "bundle", bundle or {}, stamp)
         del sim
         gc.collect()
-
-    bundle = checkpoint.get("bundle") or {}
 
     rows = {}
     for variant in VARIANTS:
@@ -181,9 +210,9 @@ def run(year=TARGET_YEAR, verbose=True):
             year=year,
             capital_income_vars=CAPITAL_INCOME_VARS,
         )
-        totals = program_totals(branch, year)
+        totals = program_totals(branch, year, programs)
         rows[variant] = totals
-        append_checkpoint(CHECKPOINT_PATH, key, totals)
+        append_checkpoint(checkpoint_path, key, totals, stamp)
 
         if verbose:
             d = _deltas(totals, baseline_totals)
@@ -206,6 +235,12 @@ def run(year=TARGET_YEAR, verbose=True):
                 bundle.get("model_version") or _package_version("policyengine-us")
             ),
             "certified_data_build_id": bundle.get("certified_data_build_id"),
+            "legacy_input_renames": bundle.get("legacy_input_renames", {}),
+            "runtime_fingerprint": fingerprint,
+            "benefit_programs": programs,
+            "benefit_programs_sum_residual_b": _sum_residual_b(
+                baseline_totals, programs
+            ),
             "note": (
                 "healthcare_benefit_value is unconditional; household_health_benefits "
                 "is gated on gov.simulation.include_health_benefits_in_net_income and "
@@ -223,13 +258,22 @@ def run(year=TARGET_YEAR, verbose=True):
         },
     }
 
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    with open(OUTPUT_PATH, "w") as handle:
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    with open(output_path, "w") as handle:
         json.dump(payload, handle, indent=2, default=float)
 
     if verbose:
         _report(payload)
     return payload
+
+
+def _sum_residual_b(totals, programs):
+    """household_benefits minus the sum of its programs, $B; None if unscored."""
+    values = [totals.get(name) for name in programs]
+    total = totals.get("household_benefits")
+    if total is None or any(value is None for value in values):
+        return None
+    return (total - sum(values)) / 1e9
 
 
 def _report(payload):
@@ -240,7 +284,7 @@ def _report(payload):
     header = f"{'program':44s} {'compress':>9s} {'prop':>8s} {'expand':>9s} {'swing':>8s}"
     print(header)
     print("-" * len(header))
-    ordered = BENEFIT_PROGRAMS + ["household_benefits"] + HEALTH_PROGRAMS + [
+    ordered = payload["metadata"]["benefit_programs"] + ["household_benefits"] + HEALTH_PROGRAMS + [
         "healthcare_benefit_value"
     ]
     for name in ordered:
@@ -257,5 +301,17 @@ def _report(payload):
         )
 
 
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--output", default=OUTPUT_PATH)
+    parser.add_argument(
+        "--checkpoint",
+        default=CHECKPOINT_PATH,
+        help="Resume store; 'none' disables resuming.",
+    )
+    args = parser.parse_args(argv)
+    run(output_path=args.output, checkpoint_path=args.checkpoint)
+
+
 if __name__ == "__main__":
-    run()
+    main()
