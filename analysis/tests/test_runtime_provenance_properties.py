@@ -153,12 +153,18 @@ COMPONENT = st.one_of(
     st.tuples(
         st.just("us_version"), st.sampled_from(["1.764.6", "2.2.1", "2.13.0", None])
     ),
+    st.tuples(
+        st.just("spm_version"), st.sampled_from(["0.3.1", "1.0.0", "1.1.0", None])
+    ),
 )
 
+#: The engine package each version component varies.
+_PACKAGES = {"us_version": "policyengine-us", "spm_version": "spm-calculator"}
 
-def _installed_us_version():
+
+def _installed_version(package):
     try:
-        return runtime.importlib.metadata.version("policyengine-us")
+        return runtime.importlib.metadata.version(package)
     except runtime.importlib.metadata.PackageNotFoundError:
         return None
 
@@ -168,7 +174,8 @@ def _intended_state(component):
     state = {
         "revision": runtime.RUNTIME_REVISION,
         "renames": dict(sorted(runtime.LEGACY_INPUT_RENAMES.items())),
-        "us_version": _installed_us_version(),
+        "us_version": _installed_version("policyengine-us"),
+        "spm_version": _installed_version("spm-calculator"),
     }
     kind, value = component
     state[kind] = dict(sorted(value.items())) if kind == "renames" else value
@@ -185,7 +192,7 @@ def _fingerprint_with(component):
         real = runtime.importlib.metadata.version
 
         def version(package):
-            if package == "policyengine-us":
+            if package == _PACKAGES[kind]:
                 if value is None:
                     raise runtime.importlib.metadata.PackageNotFoundError(package)
                 return value
@@ -208,5 +215,6 @@ def test_fingerprint_digest_tracks_every_component(first, second):
         assert fingerprint["runtime_revision"] == state["revision"]
         assert fingerprint["legacy_input_renames"] == state["renames"]
         assert fingerprint["packages"]["policyengine-us"] == state["us_version"]
+        assert fingerprint["packages"]["spm-calculator"] == state["spm_version"]
     # The digest changes exactly when the runtime changes.
     assert (a["digest"] == b["digest"]) == (state_a == state_b)

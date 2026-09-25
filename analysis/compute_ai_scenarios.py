@@ -589,7 +589,9 @@ def main(argv=None):
     print(f"\nSaved to {args.output}")
 
     if not args.no_website:
-        os.makedirs(os.path.dirname(args.website_output), exist_ok=True)
+        website_dir = os.path.dirname(args.website_output)
+        if website_dir:
+            os.makedirs(website_dir, exist_ok=True)
         with open(args.website_output, "w") as handle:
             json.dump(
                 ai_scenarios_website_payload(result), handle, indent=2, default=float

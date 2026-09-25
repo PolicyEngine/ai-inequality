@@ -53,9 +53,10 @@ def apply_legacy_input_renames(sim) -> dict[str, str]:
         for year, person in periods_by_year.items():
             stored_ids = person["person_id"].to_numpy()
             simulated_ids = sim.calculate("person_id", period=year).values
-            if len(stored_ids) != len(simulated_ids) or (
-                stored_ids != simulated_ids
-            ).any():
+            if (
+                len(stored_ids) != len(simulated_ids)
+                or (stored_ids != simulated_ids).any()
+            ):
                 raise ValueError(
                     f"Cannot map {legacy!r} onto {live!r} for {year}: the "
                     "stored person table is not in the simulation's person order."
@@ -79,7 +80,14 @@ def runtime_fingerprint() -> dict:
     """
 
     packages = {}
-    for package in ("policyengine", "policyengine-us", "policyengine-core"):
+    # spm-calculator owns the SPM threshold formulas under policyengine-us
+    # 2.x, and policyengine-us accepts more than one version of it.
+    for package in (
+        "policyengine",
+        "policyengine-us",
+        "policyengine-core",
+        "spm-calculator",
+    ):
         try:
             packages[package] = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:

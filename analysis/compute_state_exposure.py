@@ -39,12 +39,8 @@ from .ai_scenarios import TARGET_YEAR
 from .fiscal import state_revenue_components
 from .policyengine_runtime import managed_us_microsimulation, runtime_fingerprint
 
-SCENARIOS_PATH = os.path.join(
-    os.path.dirname(__file__), "outputs", "ai_scenarios.json"
-)
-OUTPUT_PATH = os.path.join(
-    os.path.dirname(__file__), "outputs", "state_exposure.json"
-)
+SCENARIOS_PATH = os.path.join(os.path.dirname(__file__), "outputs", "ai_scenarios.json")
+OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "outputs", "state_exposure.json")
 WEBSITE_OUTPUT_PATH = os.path.join(
     os.path.dirname(__file__), "..", "src", "data", "stateExposureData.json"
 )
@@ -121,7 +117,7 @@ def baseline_state_levels(year=TARGET_YEAR, verbose=True, cache_path=None):
     per_state = state_revenue_components(sim, year=year)
 
     if cache_path:
-        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        _ensure_parent_dir(cache_path)
         with open(cache_path, "w") as handle:
             json.dump(
                 {"fingerprint": fingerprint, "year": year, "per_state": per_state},
@@ -129,6 +125,13 @@ def baseline_state_levels(year=TARGET_YEAR, verbose=True, cache_path=None):
                 default=float,
             )
     return per_state
+
+
+def _ensure_parent_dir(path):
+    """Create the directory a file will be written to; a bare filename needs none."""
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
 
 
 def _baseline_net(state_totals):
@@ -186,9 +189,7 @@ def build(
                 {
                     "state": code,
                     "baseline_net_revenue_b": _baseline_net(baseline.get(code, {})),
-                    "_households": baseline.get(code, {}).get(
-                        "household_weight", 0.0
-                    ),
+                    "_households": baseline.get(code, {}).get("household_weight", 0.0),
                     "deltas_b": {},
                     "exposure_pct": {},
                 },
@@ -248,11 +249,13 @@ def build(
         "states": ranked,
     }
 
+    _ensure_parent_dir(output_path or OUTPUT_PATH)
     with open(output_path or OUTPUT_PATH, "w") as handle:
         json.dump(payload, handle, indent=2, default=float)
 
     # Trimmed payload for the site: drop nothing, it is already small.
     if website_output_path != "none":
+        _ensure_parent_dir(website_output_path or WEBSITE_OUTPUT_PATH)
         with open(website_output_path or WEBSITE_OUTPUT_PATH, "w") as handle:
             json.dump(payload, handle, indent=2, default=float)
 
@@ -284,9 +287,7 @@ def _report(payload):
             f"{e['exposure_pct_min']:>8.2f}% – {e['exposure_pct_max']:.2f}%"
         )
 
-    narrow = [
-        e for e in payload["states"] if e["modelled_base_kind"] == "capital_only"
-    ]
+    narrow = [e for e in payload["states"] if e["modelled_base_kind"] == "capital_only"]
     if narrow:
         print("\nCapital-only modelled income tax — percentage NOT comparable:")
         for e in narrow:

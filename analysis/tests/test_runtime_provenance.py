@@ -110,9 +110,7 @@ class TestLegacyInputRenames:
         assert list(sim.inputs) == [("takes_up_wic_if_eligible", "2024")]
 
     def test_managed_simulation_records_the_renames_in_its_bundle(self, monkeypatch):
-        sim = _FakeSim(
-            _variables("takes_up_wic_if_eligible"), {2024: _person([True])}
-        )
+        sim = _FakeSim(_variables("takes_up_wic_if_eligible"), {2024: _person([True])})
         sim.policyengine_bundle = {"model_version": "2.2.1"}
         fake = types.ModuleType("policyengine.tax_benefit_models.us")
         fake.managed_microsimulation = lambda **kwargs: sim
@@ -192,9 +190,7 @@ class TestTransferDetailPrograms:
         parameters = lambda instant: SimpleNamespace(  # noqa: E731
             gov=SimpleNamespace(household=SimpleNamespace(household_benefits=programs))
         )
-        sim = SimpleNamespace(
-            tax_benefit_system=SimpleNamespace(parameters=parameters)
-        )
+        sim = SimpleNamespace(tax_benefit_system=SimpleNamespace(parameters=parameters))
         assert benefit_programs(sim, 2030) == programs
 
     def test_sum_residual_is_the_total_less_its_programs(self):
@@ -275,7 +271,10 @@ class TestStateExposureProvenance:
         scenarios = tmp_path / "scenarios.json"
         scenarios.write_text(
             json.dumps(
-                {"metadata": {"runtime_fingerprint": {"digest": "other"}}, "scenarios": []}
+                {
+                    "metadata": {"runtime_fingerprint": {"digest": "other"}},
+                    "scenarios": [],
+                }
             )
         )
         with pytest.raises(ValueError, match="rerun one of them"):
@@ -286,3 +285,69 @@ class TestStateExposureProvenance:
                 website_output_path="none",
                 cache_path="",
             )
+
+
+RESULT = {"scenarios": [], "metadata": {"corporate_tax_scope_note": "note"}}
+
+
+class TestOutputPaths:
+    """A bare filename needs no directory; a nested one is created."""
+
+    def test_scenarios_cli_writes_bare_and_nested_filenames(
+        self, monkeypatch, tmp_path
+    ):
+        from analysis import compute_ai_scenarios as scenarios
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(
+            scenarios, "run_ai_scenarios", lambda **kwargs: dict(RESULT)
+        )
+        monkeypatch.setattr(
+            scenarios, "ai_scenarios_website_payload", lambda result: {"site": True}
+        )
+        monkeypatch.setattr(scenarios, "summary_table", lambda result: [])
+
+        scenarios.main(
+            [
+                "--output",
+                "scen.json",
+                "--website-output",
+                "site.json",
+                "--checkpoint",
+                "none",
+            ]
+        )
+        scenarios.main(
+            [
+                "--output",
+                "out/scen.json",
+                "--website-output",
+                "web/data/site.json",
+                "--checkpoint",
+                "none",
+            ]
+        )
+
+        for name in ("scen.json", "out/scen.json"):
+            assert json.loads((tmp_path / name).read_text()) == RESULT
+        for name in ("site.json", "web/data/site.json"):
+            assert json.loads((tmp_path / name).read_text()) == {"site": True}
+
+    def test_state_baseline_cache_accepts_a_bare_filename(self, monkeypatch, tmp_path):
+        monkeypatch.chdir(tmp_path)
+        exposure = TestStateExposureProvenance()._patch(monkeypatch, "aaa", [])
+
+        exposure.baseline_state_levels(
+            year=2030, verbose=False, cache_path="baseline.json"
+        )
+
+        cached = json.loads((tmp_path / "baseline.json").read_text())
+        assert cached["fingerprint"] == "aaa" and cached["year"] == 2030
+
+    def test_parent_dir_helper(self, tmp_path, monkeypatch):
+        from analysis.compute_state_exposure import _ensure_parent_dir
+
+        monkeypatch.chdir(tmp_path)
+        _ensure_parent_dir("bare.json")  # no directory to make, no error
+        _ensure_parent_dir("a/b/c.json")
+        assert (tmp_path / "a" / "b").is_dir()
