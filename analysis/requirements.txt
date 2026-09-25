@@ -7,3 +7,4 @@ pandas>=2.0.0
 numpy
 plotly>=5.0.0
 pytest
+hypothesis
