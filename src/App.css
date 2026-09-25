@@ -165,18 +165,45 @@ main {
 @keyframes expandContent {
   from {
     opacity: 0;
-    max-height: 0;
     transform: translateY(-10px);
   }
   to {
     opacity: 1;
-    max-height: 500px;
     transform: translateY(0);
   }
 }
 
+.card.expanded {
+  grid-column: 1 / -1;
+}
+
 .card.expanded ul {
   animation: expandContent 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  columns: 2;
+  column-gap: var(--space-8, 2rem);
+}
+
+.card.expanded ul li {
+  break-inside: avoid;
+  margin-bottom: var(--space-4, 1rem);
+}
+
+.research-reference a {
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.research-reference-summary {
+  margin-top: 0.4rem;
+  font-size: 0.92rem;
+  color: var(--pe-gray-500, #4a5568);
+  line-height: 1.55;
+}
+
+@media (max-width: 768px) {
+  .card.expanded ul {
+    columns: 1;
+  }
 }
 
 /* Responsive */

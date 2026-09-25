@@ -108,16 +108,16 @@ function Challenge({ countryKey = "us" }) {
           title: "Labor displacement",
           description: (
             <>
-              <Source href="https://futuretech.mit.edu/research">
+              <Source href="https://iceberg.mit.edu/">
                 MIT's Iceberg Index
               </Source>{" "}
               estimates AI can currently automate 11.7% of the US labor market
               (~$1.2 trillion in wage value).{" "}
-              <Source href="https://www.metaculus.com/questions/">
-                Metaculus forecasters
+              <Source href="https://www.imf.org/en/Publications/Staff-Discussion-Notes/Issues/2024/01/14/Gen-AI-Artificial-Intelligence-and-the-Future-of-Work-542379">
+                IMF (2024)
               </Source>{" "}
-              project labor force participation dropping from 83.5% to 78% by
-              2030.
+              estimates ~40% of jobs globally — and ~60% in advanced economies —
+              are exposed to AI, with roughly half facing displacement risk.
             </>
           ),
         },
