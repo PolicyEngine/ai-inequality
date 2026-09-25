@@ -156,6 +156,14 @@ COMPONENT = st.one_of(
     st.tuples(
         st.just("spm_version"), st.sampled_from(["0.3.1", "1.0.0", "1.1.0", None])
     ),
+    st.tuples(
+        st.just("exclusions"),
+        st.lists(
+            st.sampled_from(["head_start", "early_head_start", "wic"]),
+            unique=True,
+            max_size=3,
+        ).map(tuple),
+    ),
 )
 
 #: The engine package each version component varies.
@@ -176,9 +184,14 @@ def _intended_state(component):
         "renames": dict(sorted(runtime.LEGACY_INPUT_RENAMES.items())),
         "us_version": _installed_version("policyengine-us"),
         "spm_version": _installed_version("spm-calculator"),
+        "exclusions": sorted(runtime.NET_INCOME_EXCLUDED_BENEFITS),
     }
     kind, value = component
-    state[kind] = dict(sorted(value.items())) if kind == "renames" else value
+    if kind == "renames":
+        value = dict(sorted(value.items()))
+    elif kind == "exclusions":
+        value = sorted(value)
+    state[kind] = value
     return state
 
 
@@ -188,6 +201,8 @@ def _fingerprint_with(component):
         patch = mock.patch.object(runtime, "RUNTIME_REVISION", value)
     elif kind == "renames":
         patch = mock.patch.object(runtime, "LEGACY_INPUT_RENAMES", value)
+    elif kind == "exclusions":
+        patch = mock.patch.object(runtime, "NET_INCOME_EXCLUDED_BENEFITS", value)
     else:
         real = runtime.importlib.metadata.version
 
@@ -216,5 +231,6 @@ def test_fingerprint_digest_tracks_every_component(first, second):
         assert fingerprint["legacy_input_renames"] == state["renames"]
         assert fingerprint["packages"]["policyengine-us"] == state["us_version"]
         assert fingerprint["packages"]["spm-calculator"] == state["spm_version"]
+        assert fingerprint["net_income_excluded_benefits"] == state["exclusions"]
     # The digest changes exactly when the runtime changes.
     assert (a["digest"] == b["digest"]) == (state_a == state_b)

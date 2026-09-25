@@ -115,6 +115,9 @@ class TestLegacyInputRenames:
         fake = types.ModuleType("policyengine.tax_benefit_models.us")
         fake.managed_microsimulation = lambda **kwargs: sim
         monkeypatch.setitem(sys.modules, "policyengine.tax_benefit_models.us", fake)
+        reforms = types.ModuleType("policyengine_core.reforms")
+        reforms.Reform = object
+        monkeypatch.setitem(sys.modules, "policyengine_core.reforms", reforms)
 
         result = runtime.managed_us_microsimulation()
 

@@ -17,10 +17,63 @@ import json
 #: carries the new one, so it retires itself once the data is re-cut.
 LEGACY_INPUT_RENAMES = {"would_claim_wic": "takes_up_wic_if_eligible"}
 
+#: Programs kept out of household net income. policyengine-us 1.764.x lists
+#: ``head_start`` and ``early_head_start`` in ``gov.household.household_benefits``
+#: and values each enrollee at per-enrollee program cost; Early Head Start
+#: take-up is not seeded, so it defaults to every eligible child. That put
+#: $129B of Head Start and Early Head Start into the 2030 baseline's net income
+#: and let it respond to the wage shocks. policyengine-us 2.x lists only
+#: ``household_head_start_benefits``, which is zero unless
+#: ``gov.simulation.include_head_start_benefits_in_net_income`` is set (default
+#: false). Dropping these names from the list counts Head Start the 2.x way on
+#: either engine, and is a no-op on 2.x. Neither engine counts Head Start in SPM
+#: resources, so poverty rates do not change.
+NET_INCOME_EXCLUDED_BENEFITS = ("head_start", "early_head_start")
+
 #: Bump when anything that changes computed values without changing a package
 #: version is added here (for example a new legacy rename), so resume stores
-#: written before the change are not reused after it.
-RUNTIME_REVISION = 1
+#: written before the change are not reused after it. Revision 2 excludes
+#: ``NET_INCOME_EXCLUDED_BENEFITS`` from household benefits.
+RUNTIME_REVISION = 2
+
+
+def drop_excluded_benefits(parameters, removed: set[str]):
+    """Drop ``NET_INCOME_EXCLUDED_BENEFITS`` from every dated benefits list.
+
+    Filters each dated value of ``gov.household.household_benefits`` in place,
+    keeping the order of the other names, and adds each name it removed to
+    ``removed``. A tree without that parameter is returned unchanged.
+    """
+
+    household = getattr(getattr(parameters, "gov", None), "household", None)
+    node = getattr(household, "household_benefits", None)
+    for at_instant in getattr(node, "values_list", ()):
+        kept = [
+            name for name in at_instant.value if name not in NET_INCOME_EXCLUDED_BENEFITS
+        ]
+        removed.update(set(at_instant.value) - set(kept))
+        at_instant.value = kept
+    return parameters
+
+
+def net_income_exclusion_reform(removed: set[str] | None = None):
+    """Return a reform class that applies ``drop_excluded_benefits``.
+
+    Each name the loaded engine actually listed and the reform removed is added
+    to ``removed``, so a caller can record what was excluded.
+    """
+
+    from policyengine_core.reforms import Reform
+
+    removed = set() if removed is None else removed
+
+    class ExcludeFromHouseholdBenefits(Reform):
+        def apply(self):
+            self.modify_parameters(
+                lambda parameters: drop_excluded_benefits(parameters, removed)
+            )
+
+    return ExcludeFromHouseholdBenefits
 
 
 def apply_legacy_input_renames(sim) -> dict[str, str]:
@@ -95,6 +148,7 @@ def runtime_fingerprint() -> dict:
     fingerprint = {
         "packages": packages,
         "legacy_input_renames": dict(sorted(LEGACY_INPUT_RENAMES.items())),
+        "net_income_excluded_benefits": sorted(NET_INCOME_EXCLUDED_BENEFITS),
         "runtime_revision": RUNTIME_REVISION,
     }
     fingerprint["digest"] = hashlib.sha256(
@@ -112,21 +166,30 @@ def managed_us_microsimulation(
     """Construct a US Microsimulation pinned to the current PolicyEngine bundle.
 
     Stored inputs the engine has renamed are mapped onto their live names (see
-    ``LEGACY_INPUT_RENAMES``); the renames applied are recorded in the bundle
-    metadata that every output carries.
+    ``LEGACY_INPUT_RENAMES``), and household benefits leave out
+    ``NET_INCOME_EXCLUDED_BENEFITS``. The bundle metadata that every output
+    carries records the renames applied and the benefit names removed.
     """
 
     from policyengine.tax_benefit_models.us import managed_microsimulation
 
+    if "reform" in kwargs:
+        raise ValueError(
+            "managed_us_microsimulation applies its own net-income reform; "
+            "compose any other reform with net_income_exclusion_reform()."
+        )
+    removed: set[str] = set()
     sim = managed_microsimulation(
         dataset=dataset,
         allow_unmanaged=allow_unmanaged,
+        reform=net_income_exclusion_reform(removed),
         **kwargs,
     )
     applied = apply_legacy_input_renames(sim)
     bundle = getattr(sim, "policyengine_bundle", None)
     if isinstance(bundle, dict):
         bundle["legacy_input_renames"] = applied
+        bundle["net_income_excluded_benefits"] = sorted(removed)
     return sim
 
 

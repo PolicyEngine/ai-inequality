@@ -255,6 +255,9 @@ def _metadata(baseline, year, capital_income_vars):
         "certified_data_build_id": bundle.get("certified_data_build_id"),
         "certified_data_artifact_sha256": bundle.get("certified_data_artifact_sha256"),
         "legacy_input_renames": bundle.get("legacy_input_renames", {}),
+        "net_income_excluded_benefits": bundle.get(
+            "net_income_excluded_benefits", []
+        ),
         "runtime_fingerprint": runtime_fingerprint(),
         "policyengine_bundle": bundle or None,
     }
