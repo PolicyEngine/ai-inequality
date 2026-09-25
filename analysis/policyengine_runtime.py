@@ -20,21 +20,26 @@ LEGACY_INPUT_RENAMES = {"would_claim_wic": "takes_up_wic_if_eligible"}
 #: Programs kept out of household net income. policyengine-us 1.764.x lists
 #: ``head_start`` and ``early_head_start`` in ``gov.household.household_benefits``
 #: and values each enrollee at per-enrollee program cost; Early Head Start
-#: take-up is not seeded, so it defaults to every eligible child. That put
+#: take-up is not seeded, so it defaults to every eligible person (children
+#: under the age limit and pregnant people). That put
 #: $129B of Head Start and Early Head Start into the 2030 baseline's net income
 #: and let it respond to the wage shocks. policyengine-us 2.x lists only
 #: ``household_head_start_benefits``, which is zero unless
 #: ``gov.simulation.include_head_start_benefits_in_net_income`` is set (default
 #: false). Dropping these names from the list counts Head Start the 2.x way on
-#: either engine, and is a no-op on 2.x. Neither engine counts Head Start in SPM
-#: resources, so poverty rates do not change.
+#: either engine; on 2.x the names are not listed and nothing is applied.
+#: Neither engine counts Head Start in SPM resources, so poverty rates do not
+#: change.
 NET_INCOME_EXCLUDED_BENEFITS = ("head_start", "early_head_start")
 
 #: Bump when anything that changes computed values without changing a package
 #: version is added here (for example a new legacy rename), so resume stores
-#: written before the change are not reused after it. Revision 2 excludes
-#: ``NET_INCOME_EXCLUDED_BENEFITS`` from household benefits.
-RUNTIME_REVISION = 2
+#: written before the change are not reused after it. Revision 2 excluded
+#: ``NET_INCOME_EXCLUDED_BENEFITS`` from household benefits through ``reform=``,
+#: which also put simulations into reform mode (see
+#: ``net_income_exclusion_system``); revision 3 applies it through the
+#: tax-benefit system instead.
+RUNTIME_REVISION = 3
 
 
 def drop_excluded_benefits(parameters, removed: set[str]):
@@ -49,7 +54,9 @@ def drop_excluded_benefits(parameters, removed: set[str]):
     node = getattr(household, "household_benefits", None)
     for at_instant in getattr(node, "values_list", ()):
         kept = [
-            name for name in at_instant.value if name not in NET_INCOME_EXCLUDED_BENEFITS
+            name
+            for name in at_instant.value
+            if name not in NET_INCOME_EXCLUDED_BENEFITS
         ]
         removed.update(set(at_instant.value) - set(kept))
         at_instant.value = kept
@@ -74,6 +81,48 @@ def net_income_exclusion_reform(removed: set[str] | None = None):
             )
 
     return ExcludeFromHouseholdBenefits
+
+
+def listed_excluded_benefits(system) -> set[str]:
+    """The ``NET_INCOME_EXCLUDED_BENEFITS`` names a tax-benefit system lists.
+
+    Reads every dated value of ``gov.household.household_benefits``; a system
+    without that parameter lists none.
+    """
+
+    parameters = getattr(system, "parameters", None)
+    household = getattr(getattr(parameters, "gov", None), "household", None)
+    node = getattr(household, "household_benefits", None)
+    listed = {
+        name
+        for at_instant in getattr(node, "values_list", ())
+        for name in at_instant.value
+    }
+    return listed & set(NET_INCOME_EXCLUDED_BENEFITS)
+
+
+def net_income_exclusion_system(removed: set[str] | None = None):
+    """A policyengine-us tax-benefit system with the exclusion applied.
+
+    Returns None when the installed engine lists none of
+    ``NET_INCOME_EXCLUDED_BENEFITS`` (policyengine-us 2.x), so nothing is
+    applied there. Otherwise the system is built with the reform and passed to
+    the simulation as ``tax_benefit_system``, never as ``reform=``:
+    policyengine-core's ``Simulation.__init__`` puts a simulation given
+    ``reform=`` into reform mode (``simulation.baseline`` is a cloned baseline
+    branch), every branch cloned from it inherits that, and policyengine-us's
+    ``medicaid_slcsp_state_denominator`` then reads each scenario branch's
+    denominator from the unshocked baseline branch. That would change Medicaid
+    valuation in every scenario, which has nothing to do with Head Start.
+    """
+
+    from policyengine_us.system import system as default_system
+
+    if not listed_excluded_benefits(default_system):
+        return None
+    from policyengine_us import CountryTaxBenefitSystem
+
+    return CountryTaxBenefitSystem(reform=net_income_exclusion_reform(removed))
 
 
 def apply_legacy_input_renames(sim) -> dict[str, str]:
@@ -173,18 +222,28 @@ def managed_us_microsimulation(
 
     from policyengine.tax_benefit_models.us import managed_microsimulation
 
-    if "reform" in kwargs:
+    if "reform" in kwargs or "tax_benefit_system" in kwargs:
         raise ValueError(
-            "managed_us_microsimulation applies its own net-income reform; "
-            "compose any other reform with net_income_exclusion_reform()."
+            "managed_us_microsimulation builds its own tax-benefit system for "
+            "the net-income exclusion; compose any other reform into "
+            "net_income_exclusion_system() instead of passing reform= or "
+            "tax_benefit_system=."
         )
     removed: set[str] = set()
+    system = net_income_exclusion_system(removed)
+    if system is not None:
+        kwargs["tax_benefit_system"] = system
     sim = managed_microsimulation(
         dataset=dataset,
         allow_unmanaged=allow_unmanaged,
-        reform=net_income_exclusion_reform(removed),
         **kwargs,
     )
+    if getattr(sim, "baseline", None) is not None:
+        raise RuntimeError(
+            "managed_us_microsimulation built a simulation in reform mode "
+            "(simulation.baseline is set); scenario branches would read the "
+            "unshocked baseline's Medicaid denominator."
+        )
     applied = apply_legacy_input_renames(sim)
     bundle = getattr(sim, "policyengine_bundle", None)
     if isinstance(bundle, dict):

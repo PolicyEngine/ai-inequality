@@ -115,9 +115,13 @@ class TestLegacyInputRenames:
         fake = types.ModuleType("policyengine.tax_benefit_models.us")
         fake.managed_microsimulation = lambda **kwargs: sim
         monkeypatch.setitem(sys.modules, "policyengine.tax_benefit_models.us", fake)
-        reforms = types.ModuleType("policyengine_core.reforms")
-        reforms.Reform = object
-        monkeypatch.setitem(sys.modules, "policyengine_core.reforms", reforms)
+        # An engine that lists none of NET_INCOME_EXCLUDED_BENEFITS, so the
+        # wrapper builds no tax-benefit system.
+        us = types.ModuleType("policyengine_us")
+        us_system = types.ModuleType("policyengine_us.system")
+        us_system.system = SimpleNamespace(parameters=None)
+        monkeypatch.setitem(sys.modules, "policyengine_us", us)
+        monkeypatch.setitem(sys.modules, "policyengine_us.system", us_system)
 
         result = runtime.managed_us_microsimulation()
 
