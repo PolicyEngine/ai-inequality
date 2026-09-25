@@ -154,12 +154,16 @@ def test_fingerprint_tracks_the_exclusion_list(monkeypatch):
     assert runtime.runtime_fingerprint()["digest"] != before["digest"]
 
 
-def test_engine_moves_net_income_but_not_spm_resources():
+def test_engine_moves_net_income_but_not_spm_resources(monkeypatch):
     """On a real engine, one low-income California household with an infant
     and a four-year-old in 2030: household benefits and net income fall by
     exactly the Head Start and Early Head Start value the engine counted, and
     SPM net income and poverty status do not move."""
 
+    # Other test modules install a stub ``policyengine_us`` in sys.modules at
+    # collection; set it aside for this test so the real engine loads (or the
+    # test skips where none is installed), and restore it afterwards.
+    monkeypatch.delitem(sys.modules, "policyengine_us", raising=False)
     policyengine_us = pytest.importorskip("policyengine_us")
     people = {
         "parent": {"age": {2030: 25}, "employment_income": {2030: 12_000}},
