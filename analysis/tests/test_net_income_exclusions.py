@@ -160,10 +160,16 @@ def test_engine_moves_net_income_but_not_spm_resources(monkeypatch):
     exactly the Head Start and Early Head Start value the engine counted, and
     SPM net income and poverty status do not move."""
 
-    # Other test modules install a stub ``policyengine_us`` in sys.modules at
-    # collection; set it aside for this test so the real engine loads (or the
-    # test skips where none is installed), and restore it afterwards.
-    monkeypatch.delitem(sys.modules, "policyengine_us", raising=False)
+    # Other test modules install stub ``policyengine_us`` and
+    # ``policyengine_core`` modules in sys.modules at collection. Set every
+    # stub (a module with no ``__file__``) aside for this test so the real
+    # engine loads, or the test skips where none is installed; monkeypatch
+    # restores them afterwards.
+    for name, module in list(sys.modules.items()):
+        if name.split(".")[0] in {"policyengine_us", "policyengine_core"} and (
+            getattr(module, "__file__", None) is None
+        ):
+            monkeypatch.delitem(sys.modules, name)
     policyengine_us = pytest.importorskip("policyengine_us")
     people = {
         "parent": {"age": {2030: 25}, "employment_income": {2030: 12_000}},
