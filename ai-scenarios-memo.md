@@ -7,8 +7,8 @@
 **Correction, 26 September 2026.** Earlier versions of this memo counted Head
 Start and Early Head Start in household net income. The model version they ran
 on, policyengine-us 1.764.6, values both programs at their per-enrollee cost.
-The microdata record who takes up Head Start but not Early Head Start, so every
-eligible child under three and every eligible pregnant person counted as
+The microdata carry a modeled Head Start take-up flag but none for Early Head
+Start, so every eligible child under three and every eligible pregnant person counted as
 enrolled in Early Head Start. That put $124B of Early Head Start and $5B of
 Head Start into 2030 baseline net income, and because eligibility is
 income-tested, the amount rose and fell with the wage shocks. We reran every
