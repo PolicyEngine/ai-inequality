@@ -868,46 +868,6 @@
       "comparable_percentage": true
     },
     {
-      "state": "NV",
-      "baseline_net_revenue_b": 0.0,
-      "deltas_b": {
-        "compressive": 0.0,
-        "proportional": 0.0,
-        "expansive": 0.0
-      },
-      "exposure_pct": {
-        "compressive": null,
-        "proportional": null,
-        "expansive": null
-      },
-      "exposure_pct_proportional": null,
-      "exposure_pct_min": null,
-      "exposure_pct_max": null,
-      "modelled_base_per_household": 0.0,
-      "modelled_base_kind": "none",
-      "comparable_percentage": false
-    },
-    {
-      "state": "WY",
-      "baseline_net_revenue_b": 0.0,
-      "deltas_b": {
-        "compressive": 0.0,
-        "proportional": 0.0,
-        "expansive": 0.0
-      },
-      "exposure_pct": {
-        "compressive": null,
-        "proportional": null,
-        "expansive": null
-      },
-      "exposure_pct_proportional": null,
-      "exposure_pct_min": null,
-      "exposure_pct_max": null,
-      "modelled_base_per_household": 0.0,
-      "modelled_base_kind": "none",
-      "comparable_percentage": false
-    },
-    {
       "state": "AK",
       "baseline_net_revenue_b": -0.04684004586697613,
       "deltas_b": {
@@ -928,7 +888,7 @@
       "comparable_percentage": false
     },
     {
-      "state": "SD",
+      "state": "FL",
       "baseline_net_revenue_b": 0.0,
       "deltas_b": {
         "compressive": 0.0,
@@ -948,7 +908,47 @@
       "comparable_percentage": false
     },
     {
-      "state": "FL",
+      "state": "NH",
+      "baseline_net_revenue_b": 0.0,
+      "deltas_b": {
+        "compressive": 0.0,
+        "proportional": 0.0,
+        "expansive": 0.0
+      },
+      "exposure_pct": {
+        "compressive": null,
+        "proportional": null,
+        "expansive": null
+      },
+      "exposure_pct_proportional": null,
+      "exposure_pct_min": null,
+      "exposure_pct_max": null,
+      "modelled_base_per_household": 0.0,
+      "modelled_base_kind": "none",
+      "comparable_percentage": false
+    },
+    {
+      "state": "NV",
+      "baseline_net_revenue_b": 0.0,
+      "deltas_b": {
+        "compressive": 0.0,
+        "proportional": 0.0,
+        "expansive": 0.0
+      },
+      "exposure_pct": {
+        "compressive": null,
+        "proportional": null,
+        "expansive": null
+      },
+      "exposure_pct_proportional": null,
+      "exposure_pct_min": null,
+      "exposure_pct_max": null,
+      "modelled_base_per_household": 0.0,
+      "modelled_base_kind": "none",
+      "comparable_percentage": false
+    },
+    {
+      "state": "SD",
       "baseline_net_revenue_b": 0.0,
       "deltas_b": {
         "compressive": 0.0,
@@ -1008,7 +1008,7 @@
       "comparable_percentage": false
     },
     {
-      "state": "NH",
+      "state": "WY",
       "baseline_net_revenue_b": 0.0,
       "deltas_b": {
         "compressive": 0.0,

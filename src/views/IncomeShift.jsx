@@ -1,5 +1,5 @@
 import React from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import AIScenarios from "../components/AIScenarios";
 import BaselineDistributionSummary from "../components/BaselineDistributionSummary";
 import ShiftSweep from "../components/ShiftSweep";
@@ -10,7 +10,10 @@ import {
   countryFromSearchParams,
 } from "../utils/countryConfig";
 import { forecastBand } from "../utils/forecastEquivalence";
-import { policyEngineLabel } from "../utils/modelMetadata";
+import {
+  policyEngineLabel,
+  predatesHeadStartCorrection,
+} from "../utils/modelMetadata";
 import { useRovingRadioGroup } from "../utils/useRovingRadioGroup";
 
 // The scenario calibration is US-specific (Karger et al. survey via The
@@ -199,6 +202,17 @@ function IncomeShift() {
                   PolicyEngine model documentation
                 </a>
                 .
+                {predatesHeadStartCorrection(metadata) && (
+                  <>
+                    {" "}
+                    The shift experiment predates the{" "}
+                    <Link to="/budget-lab">
+                      September 2026 Head Start correction
+                    </Link>
+                    : its benefits and net income still include Head Start and
+                    Early Head Start, which the AI scenarios leave out.
+                  </>
+                )}
               </p>
             </div>
           </div>

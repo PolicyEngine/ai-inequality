@@ -228,10 +228,14 @@ def build(
         entry["comparable_percentage"] = kind == "broad"
         ranked.append(entry)
 
+    # The state code breaks ties (every state without a modelled base ties on
+    # the first two keys), so the order does not depend on the scenarios
+    # file's key order, which older runs took from set iteration.
     ranked.sort(
         key=lambda e: (
             e["exposure_pct_proportional"] is None,
             -(e["exposure_pct_proportional"] or 0.0),
+            e["state"],
         )
     )
 
