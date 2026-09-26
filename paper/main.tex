@@ -75,6 +75,23 @@ microsimulation, taxation, transfers, poverty, inequality, state taxes
 \noindent\textbf{JEL codes:} H24, H53, H71, D31, I32, O33, C63
 
 \newpage
+\noindent\textbf{Correction (September 2026).} Earlier versions of this paper
+counted Head Start and Early Head Start in household net income.
+policyengine-us \genModelVersion{} values both programs at their per-enrollee
+cost, and the microdata do not record who takes up Early Head Start, so every
+eligible child under three and every eligible pregnant person counted as
+enrolled: \$124B of Early Head Start in 2030 baseline net income, rising and
+falling with the wage shocks because eligibility is income-tested. This
+version reruns every scenario on the same model and data with both programs
+kept out of net income, as current PolicyEngine does. Neither program counts
+toward SPM resources, so the poverty results and every tax cell are
+unchanged. Net revenue cells move by at most \$\genCorrMaxRevMoveB B, net Gini
+levels rise by about 0.005 (baseline \genPubBaselineGini{} to
+\genBaselineGini{}), and transfers absorb \genTransferAbsorbPct\% of the Rapid
+gross-tax swing (\$\genTransferSwing B), where earlier versions reported
+\genPubTransferAbsorbPct\% (\$\genPubTransferSwing B).
+
+\medskip
 \input{sections/intro}
 \input{sections/literature}
 \input{sections/methodology}

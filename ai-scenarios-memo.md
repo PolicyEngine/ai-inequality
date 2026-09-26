@@ -4,6 +4,20 @@
 
 *PolicyEngine · prepared with the AV Tax Policy Roundtable of 30 July 2026 in mind*
 
+**Correction, 26 September 2026.** Earlier versions of this memo counted Head
+Start and Early Head Start in household net income. The model version they ran
+on, policyengine-us 1.764.6, values both programs at their per-enrollee cost,
+and the microdata do not record who takes up Early Head Start, so every
+eligible child under three and every eligible pregnant person counted as
+enrolled. That put $124B of Early Head Start into 2030 baseline net income, and
+because eligibility is income-tested, the amount rose and fell with the wage
+shocks. We reran every scenario on the same model and data with both programs
+kept out of net income, as current PolicyEngine does. Neither program counts
+toward SPM resources, so every poverty figure is unchanged, and so is every tax
+cell. Six of the twelve revenue cells move, by $2B to $8B; net Gini levels rise
+by about 0.005; and the transfer system absorbs $43B of the Rapid gross-tax
+swing, about a third, where we had reported $57B, nearly half.
+
 The Budget Lab's [How potential AI futures would play out in the current tax
 system](https://budgetlab.yale.edu/research/how-potential-ai-futures-would-play-out-current-tax-system)
 (Iselin and Nunn, 20 July) asks what AI-driven growth does to federal receipts,
@@ -31,32 +45,32 @@ distribution-neutral wage spread.
 **2. The assumption with the least evidence behind it decides the household
 outcome.** The Budget Lab is explicit that nobody knows whether AI compresses or
 widens the wage distribution, so they span the range. Across that span in Rapid,
-revenue moves 36% while poverty moves **3.26 points**, from 10.59% to 13.85%.
+revenue moves 46% while poverty moves **3.26 points**, from 10.59% to 13.85%.
 
 **3. Two definitional choices about the tax base matter more than the choice
 between Slow, Moderate and Rapid.** How much AI capital income is realized, and
 whether taxable retirement distributions count as capital, together range the
-Rapid revenue estimate from −$61B to +$211B.
+Rapid revenue estimate from −$60B to +$211B.
 
 ## Scenario results
 
 Change against the same-year current-law baseline, 2030, $B. Baseline SPM
-poverty 12.13%, net Gini 0.4625.
+poverty 12.13%, net Gini 0.4678.
 
 | Scenario | Revenue | Income tax | Payroll | State | Poverty | Δ pp | Net Gini |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Slow / shares fixed | +47 | +29 | +10 | +6 | 11.99% | −0.14 | 0.4627 |
-| Slow / compressive | +3 | +3 | −1 | +1 | 12.01% | −0.12 | 0.4622 |
-| Slow / proportional | +6 | +11 | −5 | +2 | 12.17% | +0.04 | 0.4632 |
-| Slow / expansive | +10 | +19 | −10 | +3 | 12.33% | +0.20 | 0.4643 |
-| Moderate / shares fixed | +289 | +178 | +61 | +35 | 11.46% | −0.67 | 0.4640 |
-| Moderate / compressive | +128 | +65 | +33 | +15 | 11.18% | −0.95 | 0.4596 |
-| Moderate / proportional | +144 | +114 | +7 | +21 | 12.00% | −0.13 | 0.4656 |
-| Moderate / expansive | +163 | +164 | −20 | +28 | 12.84% | +0.71 | 0.4718 |
-| Rapid / shares fixed | +581 | +358 | +121 | +71 | 11.04% | −1.09 | 0.4654 |
-| Rapid / compressive | +179 | +98 | +34 | +24 | 10.59% | −1.54 | 0.4581 |
-| Rapid / proportional | +211 | +193 | −16 | +36 | 12.24% | +0.11 | 0.4699 |
-| Rapid / expansive | +244 | +294 | −70 | +48 | 13.85% | +1.72 | 0.4820 |
+| Slow / shares fixed | +47 | +29 | +10 | +6 | 11.99% | −0.14 | 0.4680 |
+| Slow / compressive | +3 | +3 | −1 | +1 | 12.01% | −0.12 | 0.4675 |
+| Slow / proportional | +6 | +11 | −5 | +2 | 12.17% | +0.04 | 0.4685 |
+| Slow / expansive | +10 | +19 | −10 | +3 | 12.33% | +0.20 | 0.4695 |
+| Moderate / shares fixed | +287 | +178 | +61 | +35 | 11.46% | −0.67 | 0.4690 |
+| Moderate / compressive | +125 | +65 | +33 | +15 | 11.18% | −0.95 | 0.4646 |
+| Moderate / proportional | +144 | +114 | +7 | +21 | 12.00% | −0.13 | 0.4709 |
+| Moderate / expansive | +165 | +164 | −20 | +28 | 12.84% | +0.71 | 0.4771 |
+| Rapid / shares fixed | +576 | +358 | +121 | +71 | 11.04% | −1.09 | 0.4703 |
+| Rapid / compressive | +173 | +98 | +34 | +24 | 10.59% | −1.54 | 0.4630 |
+| Rapid / proportional | +211 | +193 | −16 | +36 | 12.24% | +0.11 | 0.4750 |
+| Rapid / expansive | +252 | +294 | −70 | +48 | 13.85% | +1.72 | 0.4875 |
 
 "Shares fixed" grows both factors at the scenario's GDP rate — the counterfactual
 behind their finding that revenue gains would be roughly twice as large with
@@ -77,8 +91,8 @@ from above the cap to below it.
 | Scenario | Shares fixed | As forecast | Share kept |
 | --- | --- | --- | --- |
 | Slow | +$47B | +$6B | 14% |
-| Moderate | +$289B | +$144B | 50% |
-| Rapid | +$581B | +$211B | 36% |
+| Moderate | +$287B | +$144B | 50% |
+| Rapid | +$576B | +$211B | 37% |
 
 Their "roughly twice as large" claim is specifically about Rapid; their grid
 puts it at exactly 2.11×. Our 2.7× above is not directly comparable — it is an
@@ -107,7 +121,7 @@ and varying only how much of the incremental capital flow lands on a tax return:
 
 | Realized share | Revenue |
 | --- | --- |
-| 0% | −$61B |
+| 0% | −$60B |
 | 25% | +$7B |
 | 50% | +$74B |
 | 75% | +$142B |
@@ -119,7 +133,7 @@ income still falls, and there is not enough taxable capital income reaching
 returns to offset it. One important counterweight sits outside our model:
 corporate tax is levied upstream of household realization, so the Budget Lab's
 corporate wedge would still collect about $84B on the same shock regardless of
-realization — enough to keep the all-in federal total positive (about +$23B)
+realization — enough to keep the all-in federal total positive (about +$24B)
 even at the 0% floor. Low realization shifts the entire fiscal burden of an AI
 boom onto the corporate side; it does not eliminate it.
 
@@ -151,7 +165,7 @@ a crossover wage: below it workers lose, above it they gain.
 | Expansive | 1.072 | $168,205 — workers below this lose |
 
 Under Rapid / expansive, that puts the great majority of workers on the losing
-side of a scenario that adds $244B to government net revenue.
+side of a scenario that adds $252B to government net revenue.
 
 ## The transfer system
 
@@ -159,16 +173,16 @@ The Revenue column above nets transfers out; pulling them apart shows the
 safety net doing exactly what it is built to do. Across the Rapid wage-spread
 variants — identical aggregate labor income, only its distribution varies —
 gross tax collections swing $122B, and automatic transfer responses absorb
-$57B of that swing, nearly half. Non-credit transfers alone swing **$42B**:
-−$20B under compressive, as rising low-end wages pull households off
-means-tested programs, to +$22B under expansive, as falling ones push them on.
+$43B of that swing, about a third. Non-credit transfers alone swing **$28B**:
+−$14B under compressive, as rising low-end wages pull households off
+means-tested programs, to +$14B under expansive, as falling ones push them on.
 SNAP carries $19B of the swing (−$9B to +$10B) and SSI $3B; Moderate shows the
-same shape at −$11B to +$8B. Refundable credits contribute the remaining $15B
+same shape at −$8B to +$6B. Refundable credits contribute the remaining $15B
 — a response their accounting does capture, through its tax-credit outlays
-line. The $42B of program spending is the piece outside their model's
+line. The $28B of program spending is the piece outside their model's
 coverage.
 
-This is the outlay half of the 3.26-point poverty span: the variant
+This is the outlay side of the 3.26-point poverty span: the variant
 uncertainty their report scores as a revenue question arrives at households as
 a benefits question, and transfers expand exactly when workers lose. One scope
 note: these totals carry no health-program response in either direction — the
@@ -211,8 +225,9 @@ formulas, reproducing all nine of their Table 1 derived values to within
 0.005pp.
 
 **We model and they do not:** SPM poverty, the transfer system (SNAP, SSI, TANF,
-WIC — health programs are valued in the model but excluded from these runs'
-net-income accounting), and state tax and benefit codes.
+WIC — health programs, Head Start and Early Head Start are valued in the model
+but excluded from these runs' net-income accounting), and state tax and benefit
+codes.
 
 **They model and we cannot:** the corporate income tax. Their microsimulation
 covers federal individual income tax plus payroll; the corporate effect is a
@@ -250,7 +265,7 @@ top-concentrated choice; and our ordinary-rate retirement routing.
 Their grid quantifies their "roughly twice as large" tilt claim at exactly
 2.11× for Rapid; on the same federal-plus-corporate basis ours is 2.00×
 (Slow 3.13× vs their 3.62×, Moderate 1.65× vs 1.71×) — agreement, not
-divergence, with the same ordering across scenarios. Our household-total 2.75×
+divergence, with the same ordering across scenarios. Our household-total 2.72×
 runs higher because states and transfers amplify the tilt's cost. One basis caveat: their "82%
 lower" figure for Slow/compressive uses a shares-fixed *compressive*
 counterfactual; ours uses shares-fixed proportional, so our 93% is not exactly
@@ -284,13 +299,16 @@ the levels are context, the deltas are the result.
 **Stability across data builds.** These results were first computed on the
 prior populace build (build o, 22 July) and rerun on build p (28 July, with
 revised capital gains calibration) under the identical model version — a
-data-only change. No scenario's revenue estimate moved by more than $5.9B:
+data-only change. Both runs predate the Head Start correction, so this
+comparison uses the net-income accounting they shared. No scenario's revenue
+estimate moved by more than $5.9B:
 Moderate and Rapid by at most 2.8%, and the Slow cells, whose revenue changes
 are as small as $3B, by up to 12%. No poverty change moved by more than 0.11pp,
 and no conclusion changed. The recalibration's
 visible effect is distributional: the baseline top-1% net income share rises
-from 8.77% to 9.00%, and New York's state take under Rapid rises from $3.8B to
-$5.8B as more of the gains land where they are taxed.
+from 8.77% to 9.00% (9.06% after the correction), and New York's state take
+under Rapid rises from $3.8B to $5.8B as more of the gains land where they are
+taxed.
 
 **Diagnostics.** The net-income identity closes to $0.000B in every scenario,
 and the labor shock hits its target aggregate to within 2e-16.
@@ -299,7 +317,8 @@ and the labor shock hits its target aggregate to within 2e-16.
 
 Everything above runs from open source against openly published microdata:
 policyengine-us 1.764.6, policyengine.py 5.0.1, populace-us `populace_us_2024`
-(certified build `populace-us-2024-buildp-sparse-rmloss100-cae8640`). The
+(certified build `populace-us-2024-buildp-sparse-rmloss100-cae8640`), with
+Head Start and Early Head Start kept out of household net income. The
 Budget Lab notes their PUF-based data cannot be released publicly, so this is a
 complement rather than a competitor: anyone can rerun these scenarios, or score
 a different reform against them.
