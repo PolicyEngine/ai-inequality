@@ -3,9 +3,12 @@
 The headline run (`compute_ai_scenarios.py`) stores four named benefit
 components plus a total, which leaves two gaps this script closes:
 
-  1. About half of the non-credit benefit swing across the Rapid
-     wage-inequality variants sits in programs the headline run never
-     separated (school meals, housing, Head Start, broadband and others).
+  1. Part of the non-credit benefit swing across the Rapid wage-inequality
+     variants sits in programs the headline run never separated (school
+     meals, housing, the commodity food program and others): $4.3B of the
+     $27.8B swing once Head Start and Early Head Start are out of net income
+     (`NET_INCOME_EXCLUDED_BENEFITS`), against $18.6B of $42.1B when the
+     published run still counted them.
 
   2. Health programs are absent from `household_benefits` entirely: the
      registry routes them through `household_health_benefits`, which returns
