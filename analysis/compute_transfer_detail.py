@@ -236,6 +236,9 @@ def run(year=TARGET_YEAR, verbose=True, output_path=None, checkpoint_path=None):
             ),
             "certified_data_build_id": bundle.get("certified_data_build_id"),
             "legacy_input_renames": bundle.get("legacy_input_renames", {}),
+            "net_income_excluded_benefits": bundle.get(
+                "net_income_excluded_benefits", []
+            ),
             "runtime_fingerprint": fingerprint,
             "benefit_programs": programs,
             "benefit_programs_sum_residual_b": _sum_residual_b(
