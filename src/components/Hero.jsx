@@ -1,4 +1,5 @@
 import React from "react";
+import { cite } from "../data/references";
 
 const HERO_CONTENT = {
   us: {
@@ -7,21 +8,19 @@ const HERO_CONTENT = {
     stats: [
       {
         value: "11.7%",
-        label: "of US labor market automatable today",
-        source: "MIT Iceberg Index",
-        url: "https://futuretech.mit.edu/research",
+        label: "of US wage value is in skills AI can already perform",
+        source: "Chopraetal2025",
       },
       {
-        value: "16%",
-        label: "decline in early-career tech employment",
-        source: "Stanford DEL 2025",
-        url: "https://digitaleconomy.stanford.edu/publications/canaries-in-the-coal-mine/",
+        value: "19%",
+        label: "employment gap for workers aged 22-25 in AI-exposed jobs",
+        source: "BrynjolfssonChandarandChen2026",
       },
       {
-        value: "$1.2T",
-        label: "in wage value at stake",
-        source: "MIT Iceberg Index",
-        url: "https://futuretech.mit.edu/research",
+        value: "49%",
+        label:
+          "of jobs have at least a quarter of their tasks done with Claude",
+        source: "AnthropicEconomicIndex2026",
       },
     ],
   },
@@ -32,20 +31,17 @@ const HERO_CONTENT = {
       {
         value: "59%",
         label: "of UK work tasks exposed in deeper GenAI adoption",
-        source: "IPPR",
-        url: "https://www.ippr.org/media-office/up-to-8-million-uk-jobs-at-risk-from-ai-unless-government-acts-finds-ippr",
+        source: "IPPR2024",
       },
       {
         value: "£144bn",
         label: "annual GDP gain in IPPR's central second-wave scenario",
-        source: "IPPR",
-        url: "https://www.ippr.org/media-office/up-to-8-million-uk-jobs-at-risk-from-ai-unless-government-acts-finds-ippr",
+        source: "IPPR2024",
       },
       {
         value: "3.9m",
         label: "UK jobs directly involving AI activities by 2035",
-        source: "GOV.UK AI skills projections",
-        url: "https://www.gov.uk/government/publications/ai-skills-for-life-and-work-labour-market-and-skills-projections/ai-skills-for-life-and-work-labour-market-and-skills-projections",
+        source: "AISkillsProjections2026",
       },
     ],
   },
@@ -74,19 +70,22 @@ function Hero({ countryKey = "us" }) {
       </div>
 
       <div className="hero-stats">
-        {stats.map((stat, idx) => (
-          <a
-            key={idx}
-            href={stat.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="stat-box"
-          >
-            <div className="stat-value">{stat.value}</div>
-            <div className="stat-label">{stat.label}</div>
-            <div className="stat-source">{stat.source} →</div>
-          </a>
-        ))}
+        {stats.map((stat) => {
+          const { label, url } = cite(stat.source);
+          return (
+            <a
+              key={`${stat.source}-${stat.value}`}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hero-stat"
+            >
+              <div className="hero-stat-value">{stat.value}</div>
+              <div className="hero-stat-label">{stat.label}</div>
+              <div className="hero-stat-source">{label} →</div>
+            </a>
+          );
+        })}
       </div>
     </div>
   );

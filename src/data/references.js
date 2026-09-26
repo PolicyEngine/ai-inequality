@@ -8,6 +8,17 @@
  * - type: article, book, inproceedings, techreport, misc, etc.
  * - Standard BibTeX fields: author, title, year, journal, etc.
  * - Optional: url, doi, abstract
+ *
+ * Corporate authors whose names contain commas are wrapped in braces, as in
+ * BibTeX: "{Department for Science, Innovation and Technology}".
+ *
+ * Entries the overview page cites also carry two display fields that never
+ * reach the BibTeX export:
+ * - label: the short name the page shows next to a figure ("MIT Iceberg Index")
+ * - site: the landing page to link when it differs from the document url
+ *
+ * Components cite an entry through cite(id) so every link, label, and year on
+ * the site resolves to one record here.
  */
 
 export const references = [
@@ -87,13 +98,16 @@ export const references = [
     url: "https://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID4826800_code1213723.pdf?abstractid=4807516&mirid=1",
   },
   {
-    id: "BrynjolfssonChandarandChen2025",
-    type: "article",
-    author: "Brynjolfsson, Erik and Chandar, Bharat and Chen, Sida",
+    id: "BrynjolfssonChandarandChen2026",
+    type: "techreport",
+    author: "Brynjolfsson, Erik and Chandar, Bharat and Chen, Ruyu",
     title:
-      "Canaries in the Coal Mine: Early Indicators of Labor Market Transformation",
-    year: 2025,
-    url: "https://digitaleconomy.stanford.edu/wp-content/uploads/2025/08/Canaries_BrynjolfssonChandarChen.pdf",
+      "Canaries in the Coal Mine? Six Facts about the Recent Employment Effects of Artificial Intelligence",
+    year: 2026,
+    institution: "Stanford Digital Economy Lab",
+    note: "Working paper, revised August 12, 2026; first version August 2025",
+    url: "https://digitaleconomy.stanford.edu/publications/canaries-in-the-coal-mine/",
+    label: "Stanford DEL",
   },
   {
     id: "Liuetal2025",
@@ -256,15 +270,15 @@ export const references = [
     url: "https://www.nber.org/system/files/working_papers/w10433/w10433.pdf",
   },
   {
-    id: "KorinekandStiglitz2021",
+    id: "KorinekandStiglitz2018",
     type: "techreport",
     author: "Korinek, Anton and Stiglitz, Joseph E.",
     title:
       "Artificial Intelligence and Its Implications for Income Distribution and Unemployment",
-    year: 2021,
+    year: 2018,
     institution: "NBER",
-    number: "28453",
-    url: "https://www.nber.org/system/files/working_papers/w28453/w28453.pdf",
+    number: "24174",
+    url: "https://www.nber.org/papers/w24174",
   },
   {
     id: "Bostrom2003",
@@ -325,23 +339,29 @@ export const references = [
     url: "https://economics.mit.edu/sites/default/files/2024-10/Regulating%20Transformative%20Technologies.pdf",
   },
   {
-    id: "Ahnetal2025",
-    type: "article",
+    id: "Chopraetal2025",
+    type: "techreport",
     author:
-      "Ahn, Hie Joo and Dillender, Marcus and Kim, Jisoo and Saggio, Raffaele and Wentland, Scott",
+      "Chopra, Ayush and Bhattacharya, Santanu and Salvador, DeAndrea and Paul, Ayan and Wright, Teddy and Garg, Aditi and Ahmad, Feroz and Schwarze, Alice C. and Raskar, Ramesh and Balaprakash, Prasanna",
     title:
-      "Canaries in the Coal Mine: Early Indicators of AI Labor Market Transformation",
+      "The Iceberg Index: Measuring Skills-centered Exposure in the AI Economy",
     year: 2025,
-    url: "https://digitaleconomy.stanford.edu/publications/canaries-in-the-coal-mine/",
+    institution: "MIT and Oak Ridge National Laboratory",
+    url: "https://iceberg.mit.edu/report.pdf",
+    label: "MIT Iceberg Index",
+    site: "https://iceberg.mit.edu",
   },
   {
-    id: "MITIcebergIndex2025",
-    type: "techreport",
-    author: "MIT and Oak Ridge National Lab",
-    title: "Iceberg Index: Measuring AI's Impact on the Labor Market",
+    id: "MinnitiPrettnerandVenturini2025",
+    type: "article",
+    author: "Minniti, Antonio and Prettner, Klaus and Venturini, Francesco",
+    title: "AI Innovation and the Labor Share in European Regions",
     year: 2025,
-    institution: "MIT",
-    url: "https://iceberg.mit.edu/report.pdf",
+    journal: "European Economic Review",
+    volume: 177,
+    pages: "105043",
+    url: "https://www.sciencedirect.com/science/article/pii/S0014292125000935",
+    label: "Minniti, Prettner & Venturini",
   },
   {
     id: "Rockalletal2025",
@@ -351,39 +371,50 @@ export const references = [
     year: 2025,
     institution: "IMF",
     number: "WP/25/68",
-    url: "https://www.imf.org/en/publications/wp/issues/2025/04/04/ai-adoption-and-inequality-565729",
+    url: "https://www.imf.org/en/Publications/WP/Issues/2025/04/04/AI-Adoption-and-Inequality-565729",
+    label: "IMF",
   },
   {
     id: "AnthropicEconomicIndex2026",
     type: "techreport",
     author: "Anthropic",
-    title: "Anthropic Economic Index",
+    title:
+      "Anthropic Economic Index: New Building Blocks for Understanding AI Use",
     year: 2026,
     institution: "Anthropic",
-    url: "https://www.anthropic.com/economic-index",
+    note: "January 15, 2026",
+    url: "https://www.anthropic.com/research/economic-index-primitives",
+    label: "Anthropic Economic Index",
   },
   {
     id: "PWBM2025",
     type: "techreport",
     author: "Penn Wharton Budget Model",
-    title: "Projected Impact of Generative AI on Future Productivity Growth",
+    title:
+      "The Projected Impact of Generative AI on Future Productivity Growth",
     year: 2025,
     institution: "Penn Wharton Budget Model",
+    note: "September 8, 2025",
     url: "https://budgetmodel.wharton.upenn.edu/issues/2025/9/8/projected-impact-of-generative-ai-on-future-productivity-growth",
+    label: "Penn Wharton Budget Model",
   },
   {
-    id: "BrookingsTaxPolicy2026",
-    type: "article",
-    author: "Brookings Institution",
-    title: "Future of Tax Policy: A Public Finance Framework for the Age of AI",
+    id: "KorinekandLockwood2026",
+    type: "misc",
+    author: "Korinek, Anton and Lockwood, Lee M.",
+    title:
+      "The Future of Tax Policy: A Public Finance Framework for the Age of AI",
     year: 2026,
+    note: "Brookings Institution, January 8, 2026",
     url: "https://www.brookings.edu/articles/future-tax-policy-a-public-finance-framework-for-the-age-of-ai/",
+    label: "Brookings",
   },
   {
     id: "BrynjolfssonKorinekAgrawal2025",
+    label: "Brynjolfsson, Korinek & Agrawal",
     type: "techreport",
     author: "Brynjolfsson, Erik and Korinek, Anton and Agrawal, Ajay",
-    title: "Nine Grand Challenges for the Economics of Artificial Intelligence",
+    title: "A Research Agenda for the Economics of Transformative AI",
     year: 2025,
     institution: "NBER",
     number: "34256",
@@ -443,6 +474,64 @@ export const references = [
     institution: "Convergence Analysis",
     url: "https://www.convergenceanalysis.org/threshold-2030/comprehensive-summary",
   },
+  {
+    id: "IPPR2024",
+    type: "techreport",
+    author: "IPPR",
+    title:
+      "Up to 8 Million UK Jobs at Risk from AI Unless Government Acts, Finds IPPR",
+    year: 2024,
+    institution: "Institute for Public Policy Research",
+    note: "Press release, March 27, 2024",
+    url: "https://www.ippr.org/media-office/up-to-8-million-uk-jobs-at-risk-from-ai-unless-government-acts-finds-ippr",
+    label: "IPPR",
+  },
+  {
+    id: "PwC2025",
+    type: "techreport",
+    author: "PwC UK",
+    title:
+      "AI-Exposed Sectors See Pay and Productivity Uplift, but Job Openings Rise at Slower Pace",
+    year: 2025,
+    institution: "PwC UK",
+    note: "Press release, June 3, 2025, on the 2025 Global AI Jobs Barometer",
+    url: "https://www.pwc.co.uk/press-room/press-releases/research-commentary/2024/ai-exposed-sectors-see-pay-and-productivity-uplift--but-job-open.html",
+    label: "PwC UK",
+  },
+  {
+    id: "DfE2023",
+    type: "techreport",
+    author: "Department for Education",
+    title: "The Impact of AI on UK Jobs and Training",
+    year: 2023,
+    institution: "GOV.UK",
+    note: "Published November 28, 2023",
+    url: "https://assets.publishing.service.gov.uk/media/656856b8cc1ec500138eef49/Gov.UK_Impact_of_AI_on_UK_Jobs_and_Training.pdf",
+    label: "GOV.UK / DfE",
+  },
+  {
+    id: "DSITActionPlan2026",
+    type: "techreport",
+    author: "{Department for Science, Innovation and Technology}",
+    title: "AI Opportunities Action Plan: One Year On",
+    year: 2026,
+    institution: "GOV.UK",
+    note: "Published January 29, 2026",
+    url: "https://www.gov.uk/government/publications/ai-opportunities-action-plan-one-year-on/ai-opportunities-action-plan-one-year-on",
+    label: "GOV.UK AI Opportunities Action Plan",
+  },
+  {
+    id: "AISkillsProjections2026",
+    type: "techreport",
+    author:
+      "{Department for Science, Innovation and Technology} and {Department for Digital, Culture, Media and Sport}",
+    title: "AI Skills for Life and Work: Labour Market and Skills Projections",
+    year: 2026,
+    institution: "GOV.UK",
+    note: "Published January 28, 2026",
+    url: "https://www.gov.uk/government/publications/ai-skills-for-life-and-work-labour-market-and-skills-projections/ai-skills-for-life-and-work-labour-market-and-skills-projections",
+    label: "GOV.UK AI skills projections",
+  },
 ];
 
 /**
@@ -460,7 +549,9 @@ export function getAllReferences() {
     if (b.year !== a.year) {
       return b.year - a.year;
     }
-    return a.author.localeCompare(b.author);
+    return a.author
+      .replace(/[{}]/g, "")
+      .localeCompare(b.author.replace(/[{}]/g, ""));
   });
 }
 
@@ -472,10 +563,107 @@ export function getReferencesByType(type) {
 }
 
 /**
- * Format author names for display
+ * Split a BibTeX author string ("Last, First and Last, First") into names.
+ * An " and " inside braces belongs to a corporate name and does not split.
+ */
+export function splitAuthors(authorString) {
+  const names = [];
+  let depth = 0;
+  let current = "";
+  for (let i = 0; i < authorString.length; i += 1) {
+    const char = authorString[i];
+    if (char === "{") depth += 1;
+    if (char === "}") depth -= 1;
+    if (
+      depth === 0 &&
+      /\s/.test(char) &&
+      /^and\s/.test(authorString.slice(i + 1))
+    ) {
+      names.push(current);
+      current = "";
+      i += 4;
+      continue;
+    }
+    current += char;
+  }
+  names.push(current);
+  return names.map((name) => name.trim()).filter(Boolean);
+}
+
+function parseAuthor(name) {
+  if (name.startsWith("{") && name.endsWith("}")) {
+    return { family: name.slice(1, -1), initials: "" };
+  }
+  const comma = name.indexOf(",");
+  if (comma === -1) {
+    return { family: name, initials: "" };
+  }
+  const family = name.slice(0, comma).trim();
+  const initials = name
+    .slice(comma + 1)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) =>
+      part
+        .split("-")
+        .map((piece) => `${piece[0]}.`)
+        .join("-"),
+    )
+    .join(" ");
+  return { family, initials };
+}
+
+/**
+ * Format author names APA-style: "Korinek, A., & Stiglitz, J. E."
+ * Institutional authors (no comma) pass through unchanged. Lists longer than
+ * 20 names show the first 19, an ellipsis, and the last.
  */
 export function formatAuthors(authorString) {
-  return authorString;
+  const names = splitAuthors(authorString).map((name) => {
+    const { family, initials } = parseAuthor(name);
+    return initials ? `${family}, ${initials}` : family;
+  });
+  if (names.length === 1) {
+    return names[0];
+  }
+  if (names.length > 20) {
+    return `${names.slice(0, 19).join(", ")}, ... ${names[names.length - 1]}`;
+  }
+  return `${names.slice(0, -1).join(", ")}, & ${names[names.length - 1]}`;
+}
+
+/**
+ * Narrative in-text form: "Chopra et al. (2025)", "Korinek and Stiglitz (2018)".
+ */
+export function formatInTextCitation(reference) {
+  const families = splitAuthors(reference.author).map(
+    (name) => parseAuthor(name).family,
+  );
+  let who = families[0];
+  if (families.length === 2) {
+    who = `${families[0]} and ${families[1]}`;
+  } else if (families.length > 2) {
+    who = `${families[0]} et al.`;
+  }
+  return `${who} (${reference.year})`;
+}
+
+/**
+ * Resolve a reference for display on the site: the label to show, the page to
+ * link, and the record itself. Throws on an unknown id so a typo fails tests
+ * instead of shipping a dead link.
+ */
+export function cite(id) {
+  const ref = getReferenceById(id);
+  if (!ref) {
+    throw new Error(`Unknown reference id: ${id}`);
+  }
+  return {
+    ref,
+    label: ref.label ?? formatInTextCitation(ref),
+    url: ref.site ?? ref.url,
+  };
 }
 
 /**
@@ -494,10 +682,10 @@ export function formatAPACitation(reference) {
     note,
   } = reference;
 
-  let citation = `${author} (${year}).`;
+  let citation = `${formatAuthors(author)} (${year}).`;
 
   if (title) {
-    citation += ` ${title}.`;
+    citation += /[.?!]$/.test(title) ? ` ${title}` : ` ${title}.`;
   }
 
   if (journal) {
@@ -508,7 +696,11 @@ export function formatAPACitation(reference) {
     citation += ".";
   }
 
-  if (institution && reference.type === "techreport") {
+  if (
+    institution &&
+    reference.type === "techreport" &&
+    institution !== author.replace(/[{}]/g, "")
+  ) {
     citation += ` ${institution}`;
     if (reference.number) citation += ` Working Paper ${reference.number}`;
     citation += ".";
