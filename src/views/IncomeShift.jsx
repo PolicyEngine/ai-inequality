@@ -1,5 +1,5 @@
 import React from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import AIScenarios from "../components/AIScenarios";
 import BaselineDistributionSummary from "../components/BaselineDistributionSummary";
 import ShiftSweep from "../components/ShiftSweep";
@@ -205,10 +205,12 @@ function IncomeShift() {
                 {predatesHeadStartCorrection(metadata) && (
                   <>
                     {" "}
-                    The shift experiment predates the September 2026 Head Start
-                    correction: its benefits and net income still include Head
-                    Start and Early Head Start, which the AI scenarios leave
-                    out.
+                    The shift experiment predates the{" "}
+                    <Link to="/budget-lab">
+                      September 2026 Head Start correction
+                    </Link>
+                    : its benefits and net income still include Head Start and
+                    Early Head Start, which the AI scenarios leave out.
                   </>
                 )}
               </p>

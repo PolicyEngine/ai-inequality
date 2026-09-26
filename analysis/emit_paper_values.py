@@ -7,13 +7,16 @@ analysis/outputs/yale_publishable_2030.xlsx (The Budget Lab's committed result
 grid) — so the text cannot drift from the results. Mirrors the
 emit-values pattern of the UK sister paper (PolicyEngine/uk-ai-study).
 
-Two committed comparison files feed the stability and correction values:
-analysis/outputs/ai_scenarios_buildo.json (build o) and
+Three committed comparison files feed the stability and correction values:
+analysis/outputs/ai_scenarios_buildo.json (build o),
 analysis/outputs/ai_scenarios_buildp_published.json (build p as first
 published, with Head Start and Early Head Start still counted in household net
-income). The data-build comparison uses that pair, because both count net
-income the same way; the correction values compare the published build-p run
-with the corrected one.
+income) and analysis/outputs/transfer_detail_buildp_published.json
+(compute_transfer_detail.py on that published runtime: program-by-program
+benefit totals, including the two Head Start programs). The data-build
+comparison pairs the first two, because both count net income the same way;
+the correction values compare the published build-p run with the corrected
+one and take the Head Start amounts from the transfer detail.
 
 Usage:
     python analysis/emit_paper_values.py
@@ -524,6 +527,24 @@ def main():
         0,
     )
     V["PubBaselineGini"] = fmt(pbase["net_gini"], 4)
+
+    # The Head Start amounts the published run counted, from the transfer
+    # detail on the same runtime and data. Its benefit changes must equal the
+    # published scenario file's, so it cannot come from a different run.
+    with open(os.path.join(OUT, "transfer_detail_buildp_published.json")) as fh:
+        pub_detail = json.load(fh)
+    assert net_income_accounting(pub_detail["metadata"]) == net_income_accounting(
+        pub["metadata"]
+    ), "published transfer detail counts net income differently"
+    assert pub_detail["metadata"]["certified_data_build_id"] == V["DataBuild"]
+    for variant, detail in pub_detail["scenarios"].items():
+        published_benefits = prows[("Rapid", variant, False)]["benefits_change_b"]
+        assert (
+            abs(detail["deltas_b"]["household_benefits"] - published_benefits) < 1e-6
+        ), f"transfer detail and published run differ on Rapid / {variant}"
+    pub_totals = pub_detail["baseline_totals"]
+    V["PubEarlyHeadStartB"] = fmt(pub_totals["early_head_start"] / 1e9, 0)
+    V["PubHeadStartB"] = fmt(pub_totals["head_start"] / 1e9, 0)
 
     # ---------------- values_generated.tex ----------------
     lines = [

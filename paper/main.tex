@@ -79,11 +79,12 @@ microsimulation, taxation, transfers, poverty, inequality, state taxes
 \noindent\textbf{Correction (September 2026).} Earlier versions of this paper
 counted Head Start and Early Head Start in household net income.
 policyengine-us \genModelVersion{} values both programs at their per-enrollee
-cost, and the microdata do not record who takes up Early Head Start, so every
-eligible child under three and every eligible pregnant person counted as
-enrolled: \$124B of Early Head Start and \$5B of Head Start in 2030 baseline
-net income, rising and falling with the wage shocks because eligibility is
-income-tested. This version reruns every calibrated scenario on the same model
+cost. The microdata record who takes up Head Start but not Early Head Start,
+so every eligible child under three and every eligible pregnant person counted
+as enrolled in Early Head Start. That put \$\genPubEarlyHeadStartB B of Early
+Head Start and \$\genPubHeadStartB B of Head Start in 2030 baseline net income,
+rising and falling with the wage shocks because eligibility is income-tested.
+This version reruns every calibrated scenario on the same model
 and data with both programs kept out of net income, as current PolicyEngine
 does. Neither program counts toward SPM resources, so the poverty results are
 unchanged. Every tax cell is also unchanged. Net revenue cells move by at most

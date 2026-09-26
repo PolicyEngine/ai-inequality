@@ -6,22 +6,22 @@
 
 **Correction, 26 September 2026.** Earlier versions of this memo counted Head
 Start and Early Head Start in household net income. The model version they ran
-on, policyengine-us 1.764.6, values both programs at their per-enrollee cost,
-and the microdata do not record who takes up Early Head Start, so every
+on, policyengine-us 1.764.6, values both programs at their per-enrollee cost.
+The microdata record who takes up Head Start but not Early Head Start, so every
 eligible child under three and every eligible pregnant person counted as
-enrolled. That put $124B of Early Head Start and $5B of Head Start into 2030
-baseline net income, and because eligibility is income-tested, the amount rose
-and fell with the wage shocks. We reran every scenario on the same model and
-data with both programs kept out of net income, as current PolicyEngine does.
-Neither program counts toward SPM resources, so every poverty figure is
-unchanged. Every tax cell is also unchanged. Six of the twelve revenue cells
-move, by $2B to $8B; net Gini levels rise by about 0.005; across the Rapid
-wage-spread variants, revenue now moves 46%, not 36%; and the transfer system
-absorbs $43B of the Rapid gross-tax swing, about a third, where we had reported
-$57B, nearly half. This version also corrects one explanation: our
-household-total tilt ratio (2.72×) exceeds our federal one (2.00×) mainly
-because the federal basis carries the Budget Lab's corporate wedge, not because
-of state taxes and transfers.
+enrolled in Early Head Start. That put $124B of Early Head Start and $5B of
+Head Start into 2030 baseline net income, and because eligibility is
+income-tested, the amount rose and fell with the wage shocks. We reran every
+scenario on the same model and data with both programs kept out of net income,
+as current PolicyEngine does. Neither program counts toward SPM resources, so
+every poverty figure is unchanged. Every tax cell is also unchanged. Six of the
+twelve revenue cells move, by $2B to $8B; net Gini levels rise by about 0.005;
+across the Rapid wage-spread variants, revenue now moves 46%, not 36%; and the
+transfer system absorbs $43B of the Rapid gross-tax swing, about a third, where
+we had reported $57B, nearly half. This version also corrects one explanation:
+our household-total tilt ratio (2.72×) exceeds our ratio on their
+federal-plus-corporate basis (2.00×) mainly because that basis carries the
+Budget Lab's corporate wedge, not because of state taxes and transfers.
 
 The Budget Lab's [How potential AI futures would play out in the current tax
 system](https://budgetlab.yale.edu/research/how-potential-ai-futures-would-play-out-current-tax-system)
@@ -140,9 +140,10 @@ income still falls, and there is not enough taxable capital income reaching
 returns to offset it. One important counterweight sits outside our model:
 corporate tax is levied upstream of household realization, so the Budget Lab's
 corporate wedge would still collect about $84B on the same shock regardless of
-realization — enough to keep the all-in federal total positive (about +$24B)
-even at the 0% floor. Low realization shifts the entire fiscal burden of an AI
-boom onto the corporate side; it does not eliminate it.
+realization — enough to keep the all-in total (household, state and
+corporate) positive, about +$24B, even at the 0% floor. Low realization shifts
+the entire fiscal burden of an AI boom onto the corporate side; it does not
+eliminate it.
 
 Poverty is flat across the entire sweep, 12.24% to 12.27%. Whether AI's capital
 gains are taxable moves the federal balance sheet by more than a
@@ -157,7 +158,7 @@ lightly" conclusion:
 | --- | --- | --- | --- |
 | Slow | +$6B | −$4B | −$10B, sign flips |
 | Moderate | +$144B | +$98B | −$46B |
-| Rapid | +$211B | +$106B | −$106B |
+| Rapid | +$211B | +$106B | −$105B |
 
 Excluding them halves the Rapid estimate and flips Slow negative.
 

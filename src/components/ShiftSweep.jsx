@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Area,
   Bar,
@@ -1418,8 +1419,11 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
           {predatesHeadStartCorrection(metadata) && (
             <>
               {" "}
-              These results predate the September 2026 Head Start correction to
-              the AI scenarios: benefit outlays and net income here still
+              These results predate the{" "}
+              <Link to="/budget-lab">
+                September 2026 Head Start correction
+              </Link>{" "}
+              to the AI scenarios: benefit outlays and net income here still
               include Head Start and Early Head Start.
             </>
           )}
