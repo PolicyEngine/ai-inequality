@@ -29,7 +29,6 @@ export function predatesHeadStartCorrection(metadata) {
     metadata.country_model_package ?? bundle?.model_package ?? null;
   if (modelPackage !== "policyengine-us") return false;
   return !(
-    hasNetIncomeExclusionRecord(metadata) ||
-    hasNetIncomeExclusionRecord(bundle)
+    hasNetIncomeExclusionRecord(metadata) || hasNetIncomeExclusionRecord(bundle)
   );
 }

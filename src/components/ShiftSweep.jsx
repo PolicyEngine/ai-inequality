@@ -1418,8 +1418,8 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
           {predatesHeadStartCorrection(metadata) && (
             <>
               {" "}
-              These results predate the September 2026 Head Start correction
-              to the AI scenarios: benefit outlays and net income here still
+              These results predate the September 2026 Head Start correction to
+              the AI scenarios: benefit outlays and net income here still
               include Head Start and Early Head Start.
             </>
           )}

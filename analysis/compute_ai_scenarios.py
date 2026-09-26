@@ -166,7 +166,8 @@ def _diff(scenario, baseline, key):
 def _state_delta_rows(scenario_states, baseline_states):
     """Per-state fiscal deltas in billions, keyed by two-letter code."""
     rows = {}
-    for code in set(scenario_states) | set(baseline_states):
+    # Sorted so the output's key order does not depend on the hash seed.
+    for code in sorted(set(scenario_states) | set(baseline_states)):
         scenario = scenario_states.get(code, {})
         baseline = baseline_states.get(code, {})
 

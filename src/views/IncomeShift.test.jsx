@@ -75,7 +75,9 @@ test("discloses that the US sweep predates the Head Start correction", () => {
 
   // Once in the Model card, once under the sweep chart.
   expect(
-    screen.getAllByText(/predate[s]? the September 2026 Head Start correction/i),
+    screen.getAllByText(
+      /predate[s]? the September 2026 Head Start correction/i,
+    ),
   ).toHaveLength(2);
   expect(document.body).toHaveTextContent(
     /still include Head Start and Early Head Start/i,

@@ -205,10 +205,10 @@ function IncomeShift() {
                 {predatesHeadStartCorrection(metadata) && (
                   <>
                     {" "}
-                    The shift experiment predates the September 2026 Head
-                    Start correction: its benefits and net income still
-                    include Head Start and Early Head Start, which the AI
-                    scenarios leave out.
+                    The shift experiment predates the September 2026 Head Start
+                    correction: its benefits and net income still include Head
+                    Start and Early Head Start, which the AI scenarios leave
+                    out.
                   </>
                 )}
               </p>

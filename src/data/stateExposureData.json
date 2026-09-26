@@ -868,12 +868,12 @@
       "comparable_percentage": true
     },
     {
-      "state": "TN",
-      "baseline_net_revenue_b": 0.0,
+      "state": "AK",
+      "baseline_net_revenue_b": -0.04684004586697613,
       "deltas_b": {
-        "compressive": 0.0,
-        "proportional": 0.0,
-        "expansive": 0.0
+        "compressive": 0.0019436458467915357,
+        "proportional": -0.0001811133434278965,
+        "expansive": -0.0033314477246173023
       },
       "exposure_pct": {
         "compressive": null,
@@ -883,52 +883,12 @@
       "exposure_pct_proportional": null,
       "exposure_pct_min": null,
       "exposure_pct_max": null,
-      "modelled_base_per_household": 0.0,
+      "modelled_base_per_household": -192.35376841723127,
       "modelled_base_kind": "none",
       "comparable_percentage": false
     },
     {
       "state": "FL",
-      "baseline_net_revenue_b": 0.0,
-      "deltas_b": {
-        "compressive": 0.0,
-        "proportional": 0.0,
-        "expansive": 0.0
-      },
-      "exposure_pct": {
-        "compressive": null,
-        "proportional": null,
-        "expansive": null
-      },
-      "exposure_pct_proportional": null,
-      "exposure_pct_min": null,
-      "exposure_pct_max": null,
-      "modelled_base_per_household": 0.0,
-      "modelled_base_kind": "none",
-      "comparable_percentage": false
-    },
-    {
-      "state": "WY",
-      "baseline_net_revenue_b": 0.0,
-      "deltas_b": {
-        "compressive": 0.0,
-        "proportional": 0.0,
-        "expansive": 0.0
-      },
-      "exposure_pct": {
-        "compressive": null,
-        "proportional": null,
-        "expansive": null
-      },
-      "exposure_pct_proportional": null,
-      "exposure_pct_min": null,
-      "exposure_pct_max": null,
-      "modelled_base_per_household": 0.0,
-      "modelled_base_kind": "none",
-      "comparable_percentage": false
-    },
-    {
-      "state": "NV",
       "baseline_net_revenue_b": 0.0,
       "deltas_b": {
         "compressive": 0.0,
@@ -968,7 +928,7 @@
       "comparable_percentage": false
     },
     {
-      "state": "TX",
+      "state": "NV",
       "baseline_net_revenue_b": 0.0,
       "deltas_b": {
         "compressive": 0.0,
@@ -1008,12 +968,12 @@
       "comparable_percentage": false
     },
     {
-      "state": "AK",
-      "baseline_net_revenue_b": -0.04684004586697613,
+      "state": "TN",
+      "baseline_net_revenue_b": 0.0,
       "deltas_b": {
-        "compressive": 0.0019436458467915357,
-        "proportional": -0.0001811133434278965,
-        "expansive": -0.0033314477246173023
+        "compressive": 0.0,
+        "proportional": 0.0,
+        "expansive": 0.0
       },
       "exposure_pct": {
         "compressive": null,
@@ -1023,7 +983,47 @@
       "exposure_pct_proportional": null,
       "exposure_pct_min": null,
       "exposure_pct_max": null,
-      "modelled_base_per_household": -192.35376841723127,
+      "modelled_base_per_household": 0.0,
+      "modelled_base_kind": "none",
+      "comparable_percentage": false
+    },
+    {
+      "state": "TX",
+      "baseline_net_revenue_b": 0.0,
+      "deltas_b": {
+        "compressive": 0.0,
+        "proportional": 0.0,
+        "expansive": 0.0
+      },
+      "exposure_pct": {
+        "compressive": null,
+        "proportional": null,
+        "expansive": null
+      },
+      "exposure_pct_proportional": null,
+      "exposure_pct_min": null,
+      "exposure_pct_max": null,
+      "modelled_base_per_household": 0.0,
+      "modelled_base_kind": "none",
+      "comparable_percentage": false
+    },
+    {
+      "state": "WY",
+      "baseline_net_revenue_b": 0.0,
+      "deltas_b": {
+        "compressive": 0.0,
+        "proportional": 0.0,
+        "expansive": 0.0
+      },
+      "exposure_pct": {
+        "compressive": null,
+        "proportional": null,
+        "expansive": null
+      },
+      "exposure_pct_proportional": null,
+      "exposure_pct_min": null,
+      "exposure_pct_max": null,
+      "modelled_base_per_household": 0.0,
       "modelled_base_kind": "none",
       "comparable_percentage": false
     }
