@@ -117,9 +117,12 @@ false. Head Start and Early Head Start are out because
 `analysis/policyengine_runtime.py` drops `NET_INCOME_EXCLUDED_BENEFITS` from
 `gov.household.household_benefits`, through a prebuilt tax-benefit system in
 `managed_us_microsimulation` (`RUNTIME_REVISION` 3). policyengine-us 1.764.6
-lists both programs there and values them at per-enrollee cost, and build p
-carries no Early Head Start take-up flag, so the default counts every eligible
-person as enrolled. Each run records the names it removed as
+lists both programs there and values them at per-enrollee cost. Build p records
+Head Start take-up (`takes_up_head_start_if_eligible`) but carries no Early
+Head Start take-up flag, so the default counts every eligible person as
+enrolled in Early Head Start. On the published runtime that came to $124B of
+Early Head Start and $5B of Head Start in 2030 baseline net income
+(`analysis/outputs/transfer_detail_buildp_published.json`). Each run records the names it removed as
 `net_income_excluded_benefits` in its metadata. policyengine-us 2.x does not
 list the two programs and counts them only when
 `gov.simulation.include_head_start_benefits_in_net_income` is set (default
