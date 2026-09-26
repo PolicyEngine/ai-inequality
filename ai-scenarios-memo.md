@@ -9,14 +9,19 @@ Start and Early Head Start in household net income. The model version they ran
 on, policyengine-us 1.764.6, values both programs at their per-enrollee cost,
 and the microdata do not record who takes up Early Head Start, so every
 eligible child under three and every eligible pregnant person counted as
-enrolled. That put $124B of Early Head Start into 2030 baseline net income, and
-because eligibility is income-tested, the amount rose and fell with the wage
-shocks. We reran every scenario on the same model and data with both programs
-kept out of net income, as current PolicyEngine does. Neither program counts
-toward SPM resources, so every poverty figure is unchanged, and so is every tax
-cell. Six of the twelve revenue cells move, by $2B to $8B; net Gini levels rise
-by about 0.005; and the transfer system absorbs $43B of the Rapid gross-tax
-swing, about a third, where we had reported $57B, nearly half.
+enrolled. That put $124B of Early Head Start and $5B of Head Start into 2030
+baseline net income, and because eligibility is income-tested, the amount rose
+and fell with the wage shocks. We reran every scenario on the same model and
+data with both programs kept out of net income, as current PolicyEngine does.
+Neither program counts toward SPM resources, so every poverty figure is
+unchanged. Every tax cell is also unchanged. Six of the twelve revenue cells
+move, by $2B to $8B; net Gini levels rise by about 0.005; across the Rapid
+wage-spread variants, revenue now moves 46%, not 36%; and the transfer system
+absorbs $43B of the Rapid gross-tax swing, about a third, where we had reported
+$57B, nearly half. This version also corrects one explanation: our
+household-total tilt ratio (2.72×) exceeds our federal one (2.00×) mainly
+because the federal basis carries the Budget Lab's corporate wedge, not because
+of state taxes and transfers.
 
 The Budget Lab's [How potential AI futures would play out in the current tax
 system](https://budgetlab.yale.edu/research/how-potential-ai-futures-would-play-out-current-tax-system)
@@ -99,8 +104,10 @@ puts it at exactly 2.11×. Our 2.7× above is not directly comparable — it is 
 all-government household total with no corporate wedge. Restated on their
 federal-plus-corporate basis, our ratios are 3.13× / 1.65× / 2.00× against
 their 3.62× / 1.71× / 2.11× — the two models agree on the tilt, scenario by
-scenario. The larger household-total ratio is saying something different:
-adding state taxes and the transfer system amplifies what the tilt costs.
+scenario. The larger household-total ratio mostly reflects the missing wedge:
+their corporate wedge grows with the capital shock, so on their basis it
+cushions the as-forecast cell. State taxes and the transfer system add to what
+the tilt costs in dollars but leave the ratio essentially unchanged.
 
 Their most extreme case checks out too: for Slow with compressive labor
 inequality they report the gain 82% lower than with shares and distribution
@@ -266,8 +273,10 @@ Their grid quantifies their "roughly twice as large" tilt claim at exactly
 2.11× for Rapid; on the same federal-plus-corporate basis ours is 2.00×
 (Slow 3.13× vs their 3.62×, Moderate 1.65× vs 1.71×) — agreement, not
 divergence, with the same ordering across scenarios. Our household-total 2.72×
-runs higher because states and transfers amplify the tilt's cost. One basis caveat: their "82%
-lower" figure for Slow/compressive uses a shares-fixed *compressive*
+runs higher mainly because that basis has no corporate wedge, which grows with
+the capital shock and so cushions the as-forecast cell; states and transfers
+add to the tilt's dollar cost but barely move the ratio. One basis caveat:
+their "82% lower" figure for Slow/compressive uses a shares-fixed *compressive*
 counterfactual; ours uses shares-fixed proportional, so our 93% is not exactly
 the same comparison.
 

@@ -20,7 +20,10 @@ import { IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import defaultSweepData from "../data/shiftSweepData.json";
 import { TOOLTIP_STYLE } from "../utils/chartStyles";
 import { niceTicks } from "../utils/chartTicks";
-import { policyEngineLabel } from "../utils/modelMetadata";
+import {
+  policyEngineLabel,
+  predatesHeadStartCorrection,
+} from "../utils/modelMetadata";
 import { useRovingRadioGroup } from "../utils/useRovingRadioGroup";
 
 const FEDERAL_BUCKETS_US = [
@@ -1412,6 +1415,14 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
             Learn more about the model
           </a>
           .
+          {predatesHeadStartCorrection(metadata) && (
+            <>
+              {" "}
+              These results predate the September 2026 Head Start correction
+              to the AI scenarios: benefit outlays and net income here still
+              include Head Start and Early Head Start.
+            </>
+          )}
         </p>
       </div>
     </div>

@@ -69,3 +69,21 @@ test("renders UK income-shift data from the country selector", () => {
     `${(ukFacts.positive_capital_top_10_share * 100).toFixed(1)}%`,
   );
 });
+
+test("discloses that the US sweep predates the Head Start correction", () => {
+  renderIncomeShift();
+
+  // Once in the Model card, once under the sweep chart.
+  expect(
+    screen.getAllByText(/predate[s]? the September 2026 Head Start correction/i),
+  ).toHaveLength(2);
+  expect(document.body).toHaveTextContent(
+    /still include Head Start and Early Head Start/i,
+  );
+});
+
+test("does not show the Head Start note on the UK sweep", () => {
+  renderIncomeShift("/income-shift?country=uk");
+
+  expect(document.body).not.toHaveTextContent(/Head Start/i);
+});

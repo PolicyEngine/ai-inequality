@@ -109,6 +109,26 @@ outlays. This model carries SNAP, SSI, TANF, WIC, Medicaid, CHIP and ACA premium
 tax credits, and reports the SPM poverty rate. A scenario that raises federal
 revenue and raises poverty is a scenario their model cannot express.
 
+**What household net income leaves out.** Two sets of programs are valued in the
+model but kept out of household net income, and so out of the benefits and
+revenue totals. Health programs (Medicaid, CHIP, ACA premium tax credits) are
+out because `gov.simulation.include_health_benefits_in_net_income` defaults to
+false. Head Start and Early Head Start are out because
+`analysis/policyengine_runtime.py` drops `NET_INCOME_EXCLUDED_BENEFITS` from
+`gov.household.household_benefits`, through a prebuilt tax-benefit system in
+`managed_us_microsimulation` (`RUNTIME_REVISION` 3). policyengine-us 1.764.6
+lists both programs there and values them at per-enrollee cost, and build p
+carries no Early Head Start take-up flag, so the default counts every eligible
+person as enrolled. Each run records the names it removed as
+`net_income_excluded_benefits` in its metadata. policyengine-us 2.x does not
+list the two programs and counts them only when
+`gov.simulation.include_head_start_benefits_in_net_income` is set (default
+false), so there the runtime removes nothing. A 1.764.6 run built without this
+runtime counts both and will not match the committed outputs. Neither program
+is in SPM resources, so poverty is the same either way. The committed mechanism
+sweep (`src/data/shiftSweepData.json`, committed 30 July 2026) predates the exclusion and
+still counts both.
+
 **State systems.** Per-state tax, refundable credit and benefit deltas. They do
 not model states at all.
 
@@ -185,7 +205,9 @@ would rise by more than reported here.
 
 Their total is federal individual income tax plus payroll plus a corporate
 wedge, with no states and no non-tax benefits. Ours is the household sector
-across federal and state, net of the whole transfer system. Setting the two
+across federal and state, net of refundable credits and the benefit programs in
+household net income (everything but the health programs, Head Start and Early
+Head Start; see above). Setting the two
 side by side without an explicit bridge is wrong, so `reconcile_budget_lab.py`
 builds one, using only our run output and parameters they publish.
 

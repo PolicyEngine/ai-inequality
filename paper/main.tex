@@ -48,7 +48,8 @@ between the two models are differences in coverage, not assumptions. In Rapid,
 the forecast tilt toward capital keeps \genKeptMatchedRapidPct\% of the
 revenue gain that shares-fixed growth would deliver on the federal basis
 comparable to the Budget Lab's (they get \genKeptTheirsRapidPct\%), and
-\genKeptHouseholdRapidPct\% once state taxes and transfers are counted
+\genKeptHouseholdRapidPct\% on the all-government household basis, which
+adds states and transfers but has no corporate wedge
 (\genRapidPropRev B against \genRapidFixedRev B); it also turns growth's
 poverty gain into a marginal loss (\genRapidFixedPovPp pp becomes
 \genRapidPropPovPp pp). Across the wage-inequality variants, net revenue
@@ -80,16 +81,22 @@ counted Head Start and Early Head Start in household net income.
 policyengine-us \genModelVersion{} values both programs at their per-enrollee
 cost, and the microdata do not record who takes up Early Head Start, so every
 eligible child under three and every eligible pregnant person counted as
-enrolled: \$124B of Early Head Start in 2030 baseline net income, rising and
-falling with the wage shocks because eligibility is income-tested. This
-version reruns every scenario on the same model and data with both programs
-kept out of net income, as current PolicyEngine does. Neither program counts
-toward SPM resources, so the poverty results and every tax cell are
-unchanged. Net revenue cells move by at most \$\genCorrMaxRevMoveB B, net Gini
-levels rise by about 0.005 (baseline \genPubBaselineGini{} to
-\genBaselineGini{}), and transfers absorb \genTransferAbsorbPct\% of the Rapid
-gross-tax swing (\$\genTransferSwing B), where earlier versions reported
-\genPubTransferAbsorbPct\% (\$\genPubTransferSwing B).
+enrolled: \$124B of Early Head Start and \$5B of Head Start in 2030 baseline
+net income, rising and falling with the wage shocks because eligibility is
+income-tested. This version reruns every calibrated scenario on the same model
+and data with both programs kept out of net income, as current PolicyEngine
+does. Neither program counts toward SPM resources, so the poverty results are
+unchanged. Every tax cell is also unchanged. Net revenue cells move by at most
+\$\genCorrMaxRevMoveB B, net Gini levels rise by about 0.005 (baseline
+\genPubBaselineGini{} to \genBaselineGini{}), and transfers absorb
+\genTransferAbsorbPct\% of the Rapid gross-tax swing (\$\genTransferSwing B),
+where earlier versions reported \genPubTransferAbsorbPct\%
+(\$\genPubTransferSwing B). The mechanism sweep of Section~\ref{sec:sweep} has
+not been rerun and still counts both programs in benefit outlays and net
+income. This version also corrects the explanation of why the household
+keep-rate sits below the federal one: the gap is mainly the Budget Lab's
+corporate wedge on the federal basis, not state taxes and transfers
+(Section~\ref{sec:reconciliation}).
 
 \medskip
 \input{sections/intro}
