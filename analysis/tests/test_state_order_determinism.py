@@ -5,8 +5,11 @@ Python's hash seed, and the state-exposure ranking broke ties by that order,
 so every rerun reshuffled the states without a modelled base.
 """
 
+import importlib
 import json
 import random
+import sys
+import types
 
 import pytest
 
@@ -18,7 +21,40 @@ except ImportError:  # pragma: no cover - hypothesis is a test-only extra
 
 from analysis import compute_state_exposure as exposure
 from analysis.compute_ai_scenarios import _state_delta_rows as scenario_rows
-from analysis.compute_shift_sweep import _state_delta_rows as sweep_rows
+
+
+def _import_sweep_rows():
+    """Import the sweep's ``_state_delta_rows`` with or without the engine.
+
+    ``compute_shift_sweep`` imports policyengine-us and policyengine-core at
+    module level (through ``labor_capital_shift``), and CI installs neither.
+    Missing engine modules are stubbed only for the import and removed after,
+    so later tests that probe for the real engine still see it as absent.
+    """
+
+    stubs = {
+        "policyengine_us": {"Microsimulation": object},
+        "policyengine_core": {},
+        "policyengine_core.reforms": {"Reform": object},
+    }
+    added = []
+    for name, attrs in stubs.items():
+        try:
+            importlib.import_module(name)
+        except ImportError:
+            module = types.ModuleType(name)
+            module.__dict__.update(attrs)
+            sys.modules[name] = module
+            added.append(name)
+    try:
+        from analysis.compute_shift_sweep import _state_delta_rows
+    finally:
+        for name in added:
+            sys.modules.pop(name, None)
+    return _state_delta_rows
+
+
+sweep_rows = _import_sweep_rows()
 
 CODES = ["AK", "CA", "FL", "NH", "NV", "NY", "SD", "TN", "TX", "WA", "WY"]
 
