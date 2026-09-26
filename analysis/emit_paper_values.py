@@ -7,6 +7,14 @@ analysis/outputs/yale_publishable_2030.xlsx (The Budget Lab's committed result
 grid) — so the text cannot drift from the results. Mirrors the
 emit-values pattern of the UK sister paper (PolicyEngine/uk-ai-study).
 
+Two committed comparison files feed the stability and correction values:
+analysis/outputs/ai_scenarios_buildo.json (build o) and
+analysis/outputs/ai_scenarios_buildp_published.json (build p as first
+published, with Head Start and Early Head Start still counted in household net
+income). The data-build comparison uses that pair, because both count net
+income the same way; the correction values compare the published build-p run
+with the corrected one.
+
 Usage:
     python analysis/emit_paper_values.py
 """
@@ -72,6 +80,19 @@ def state_net(deltas):
         for k, v in deltas.items()
         if isinstance(v, dict) and "state_net_change_b" in v
     }
+
+
+def net_income_accounting(metadata):
+    """What a run counted in household net income, as a comparable key.
+
+    The model version plus the benefit programs the run kept out of net
+    income. Runs from before the Head Start correction carry no
+    ``net_income_excluded_benefits`` and kept nothing out.
+    """
+    return (
+        metadata.get("country_model_version"),
+        tuple(sorted(metadata.get("net_income_excluded_benefits") or ())),
+    )
 
 
 def fmt(x, nd=1):
@@ -432,9 +453,20 @@ def main():
     V["DataBuildDate"] = f"{stamp[6:8]} {['','January','February','March','April','May','June','July','August','September','October','November','December'][int(stamp[4:6])]} {stamp[:4]}"
 
     # --- Stability across data builds (build o vs build p, same model) ---
+    # A data-only comparison needs the same model and the same net-income
+    # accounting on both builds. Build o was run while Head Start and Early
+    # Head Start were still counted in net income, so it is compared with
+    # build p as published, which counted them the same way, rather than with
+    # the corrected build-p run in ai_scenarios.json.
     with open(os.path.join(OUT, "ai_scenarios_buildo.json")) as fh:
         old = json.load(fh)
-    assert old["metadata"]["country_model_version"] == V["ModelVersion"]
+    with open(os.path.join(OUT, "ai_scenarios_buildp_published.json")) as fh:
+        pub = json.load(fh)
+    assert net_income_accounting(old["metadata"]) == net_income_accounting(
+        pub["metadata"]
+    ), "build-o and build-p stability runs count net income differently"
+    assert pub["metadata"]["certified_data_build_id"] == V["DataBuild"]
+    assert pub["metadata"]["country_model_version"] == V["ModelVersion"]
 
     def skey(r):
         s = r["scenario"]
@@ -442,8 +474,10 @@ def main():
 
     orows = {skey(r): r for r in old["scenarios"]}
     obase = old["baseline"]
+    prows = {skey(r): r for r in pub["scenarios"]}
+    pbase = pub["baseline"]
     max_abs = max_rel = max_rel_mr = max_pov = 0.0
-    for r in sc["scenarios"]:
+    for r in pub["scenarios"]:
         o = orows[skey(r)]
         d = abs(r["total_rev_change_b"] - o["total_rev_change_b"])
         rel = d / abs(o["total_rev_change_b"])
@@ -452,7 +486,7 @@ def main():
         if r["scenario"]["name"] != "Slow":
             max_rel_mr = max(max_rel_mr, rel)
         dpov = abs(
-            (r["spm_poverty_rate"] - base["spm_poverty_rate"])
+            (r["spm_poverty_rate"] - pbase["spm_poverty_rate"])
             - (o["spm_poverty_rate"] - obase["spm_poverty_rate"])
         )
         max_pov = max(max_pov, dpov)
@@ -461,12 +495,35 @@ def main():
     V["StabMaxRelModRapidPct"] = fmt(100 * max_rel_mr, 1)
     V["StabMaxPovChangePp"] = fmt(100 * max_pov, 2)
     V["StabTopOneOld"] = fmt(100 * obase["net_top_1_share"], 2)
-    V["StabTopOneNew"] = fmt(100 * base["net_top_1_share"], 2)
+    V["StabTopOneNew"] = fmt(100 * pbase["net_top_1_share"], 2)
+    V["BaselineTopOnePct"] = fmt(100 * base["net_top_1_share"], 2)
     ny_old = orows[("Rapid", "proportional", False)]["state_deltas"]["NY"][
         "state_net_change_b"
     ]
+    ny_pub = prows[("Rapid", "proportional", False)]["state_deltas"]["NY"][
+        "state_net_change_b"
+    ]
     V["StabNYOld"] = fmt(ny_old, 1)
-    V["StabNYNew"] = fmt(sn["NY"], 1)
+    V["StabNYNew"] = fmt(ny_pub, 1)
+
+    # --- Head Start correction (build p as published vs this run) ---
+    V["CorrMaxRevMoveB"] = fmt(
+        max(
+            abs(r["total_rev_change_b"] - prows[skey(r)]["total_rev_change_b"])
+            for r in sc["scenarios"]
+        ),
+        0,
+    )
+    ptc = transfers(prows[("Rapid", "compressive", False)])
+    pte = transfers(prows[("Rapid", "expansive", False)])
+    V["PubTransferSwing"] = fmt(pte["transfers"] - ptc["transfers"], 0)
+    V["PubTransferAbsorbPct"] = fmt(
+        100
+        * (pte["transfers"] - ptc["transfers"])
+        / (pte["gross_tax"] - ptc["gross_tax"]),
+        0,
+    )
+    V["PubBaselineGini"] = fmt(pbase["net_gini"], 4)
 
     # ---------------- values_generated.tex ----------------
     lines = [
