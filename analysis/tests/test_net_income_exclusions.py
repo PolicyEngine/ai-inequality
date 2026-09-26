@@ -289,9 +289,9 @@ def test_engine_moves_net_income_but_not_spm_or_health(monkeypatch):
         assert sim.baseline is None
         assert sim.get_branch("scenario_probe").baseline is None
         totals = {v: float(sim.calculate(v, 2030).sum()) for v in compared}
-        totals["listed_value"] = sum(
-            float(sim.calculate(v, 2030).sum()) for v in listed
-        )
+        for v in listed:
+            totals[f"value:{v}"] = float(sim.calculate(v, 2030).sum())
+        totals["listed_value"] = sum(totals[f"value:{v}"] for v in listed)
         return totals
 
     removed = set()
@@ -301,7 +301,16 @@ def test_engine_moves_net_income_but_not_spm_or_health(monkeypatch):
 
     assert removed == listed
     assert (system is None) == (not listed)
-    assert (before["listed_value"] > 0) == bool(listed)
+    # The household exercises every listed program, so each one's exclusion is
+    # tested, not just their sum.
+    for v in listed:
+        assert before[f"value:{v}"] > 0, v
+    if not listed:
+        # The 2.x premise: Head Start stays out of net income by default.
+        simulation_parameters = default.parameters("2030-01-01").gov.simulation
+        assert not getattr(
+            simulation_parameters, "include_head_start_benefits_in_net_income", False
+        )
     counted = before["listed_value"]
     assert after["household_benefits"] == pytest.approx(
         before["household_benefits"] - counted
@@ -311,3 +320,23 @@ def test_engine_moves_net_income_but_not_spm_or_health(monkeypatch):
     )
     for variable in compared[2:]:
         assert after[variable] == before[variable], variable
+
+
+def test_scenario_metadata_carries_the_excluded_benefits():
+    """Every scenarios output records which benefit names the running engine
+    had removed from household net income."""
+    from analysis import compute_ai_scenarios
+
+    baseline = SimpleNamespace(
+        policyengine_bundle={
+            "net_income_excluded_benefits": ["early_head_start", "head_start"]
+        }
+    )
+    metadata = compute_ai_scenarios._metadata(baseline, 2030, [])
+    assert metadata["net_income_excluded_benefits"] == [
+        "early_head_start",
+        "head_start",
+    ]
+    assert metadata["runtime_fingerprint"]["net_income_excluded_benefits"] == sorted(
+        EXCLUDED
+    )
