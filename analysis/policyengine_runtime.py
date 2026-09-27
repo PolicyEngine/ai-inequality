@@ -21,9 +21,10 @@ LEGACY_INPUT_RENAMES = {"would_claim_wic": "takes_up_wic_if_eligible"}
 #: ``head_start`` and ``early_head_start`` in ``gov.household.household_benefits``
 #: and values each enrollee at per-enrollee program cost; Early Head Start
 #: take-up is not seeded, so it defaults to every eligible person (children
-#: under the age limit and pregnant people). That put
-#: $129B of Head Start and Early Head Start into the 2030 baseline's net income
-#: and let it respond to the wage shocks. policyengine-us 2.x lists only
+#: under the age limit and pregnant people). That put $124B of Early Head Start
+#: and $5B of Head Start into the 2030 baseline's net income on build p
+#: (analysis/outputs/transfer_detail_buildp_published.json) and let it respond
+#: to the wage shocks. policyengine-us 2.x lists only
 #: ``household_head_start_benefits``, which is zero unless
 #: ``gov.simulation.include_head_start_benefits_in_net_income`` is set (default
 #: false). Dropping these names from the list counts Head Start the 2.x way on

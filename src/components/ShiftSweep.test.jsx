@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 import sweepData from "../data/shiftSweepData.json";
 import ShiftSweep from "./ShiftSweep";
@@ -20,7 +21,11 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
     return `${pct.toFixed(2)}%`;
   };
 
-  render(<ShiftSweep />);
+  render(
+    <MemoryRouter>
+      <ShiftSweep />
+    </MemoryRouter>,
+  );
 
   expect(
     screen.getByRole("radio", { name: /gini coefficient/i }),

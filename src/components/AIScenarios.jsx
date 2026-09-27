@@ -507,8 +507,11 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
               {" "}
               Under Rapid the tilt keeps {tiltKeptPct}% of the revenue gain on
               this all-government basis, and 50% on the narrower federal basis
-              comparable to the Budget Lab&apos;s — the difference is what
-              state taxes and transfers add to the tilt&apos;s cost.
+              comparable to the Budget Lab&apos;s, which adds their
+              corporate-tax estimate. Most of the difference is that
+              corporate term: it grows with capital income, so it cushions the
+              as-forecast case. State taxes and transfers add to the
+              tilt&apos;s dollar cost but barely move the share kept.
             </>
           )}
         </p>

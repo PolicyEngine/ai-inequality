@@ -30,11 +30,13 @@ yarn-error.log*
 
 # Python
 analysis/.venv/
-analysis/outputs/
+analysis/outputs/*
 # ...but the paper's canonical inputs are committed so the emit layer and the
 # reconciliation are runnable from a fresh clone (see paper/sections/appendix).
 !analysis/outputs/ai_scenarios.json
 !analysis/outputs/ai_scenarios_buildo.json
+!analysis/outputs/ai_scenarios_buildp_published.json
+!analysis/outputs/transfer_detail_buildp_published.json
 !analysis/outputs/yale_publishable_2030.xlsx
 .venv/
 .venv312/

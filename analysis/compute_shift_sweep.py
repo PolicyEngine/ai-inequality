@@ -98,7 +98,8 @@ def _zero_fiscal_row():
 
 def _state_delta_rows(scenario_states, baseline_states):
     """Return per-state delta dicts keyed by two-letter state code, in $B."""
-    codes = set(scenario_states) | set(baseline_states)
+    # Sorted so the output's key order does not depend on the hash seed.
+    codes = sorted(set(scenario_states) | set(baseline_states))
     rows = {}
     for code in codes:
         scen = scenario_states.get(code, {})
