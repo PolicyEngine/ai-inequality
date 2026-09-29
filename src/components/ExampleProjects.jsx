@@ -8,7 +8,7 @@ const PROJECTS = {
       description:
         "Interactive tool showing how the One Big Beautiful Bill Act affects over 20,000 representative household types.",
       image: withBasePath("/images/obbba-household-by-household.png"),
-      url: "https://policyengine.org/us/research/obbba-household-by-household",
+      url: "https://www.policyengine.org/us/obbba-households",
       type: "Distributional impact",
     },
     {
