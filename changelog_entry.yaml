@@ -1,9 +1,15 @@
-- bump: patch
+- bump: minor
   changes:
+    added:
+      - Add ~20 references to the references DB, including Brynjolfsson, Li, Raymond (2025) "Generative AI at Work", Noy & Zhang (2023) ChatGPT productivity, Bick, Blandin, Deming (2024) GenAI adoption, Felten, Raj, Seamans (2021) AIOE exposure measure, Korinek & Suh (2024) AGI scenarios, Trammell & Korinek (2023), Acemoglu, Manera, Restrepo (2020) "Does the US Tax Code Favor Automation?", IMF Gen-AI Staff Discussion Note, Bourguignon & Spadaro (2006) microsimulation methodology, Adrian, Boyarchenko, Giannone (2019) growth-at-risk, and UK government reports.
+      - Add topic metadata and per-reference summaries to enable a single source of truth for the Research and References pages.
+      - Show the Research view to UK visitors instead of suppressing it.
     changed:
-      - Enhance uprating viewer to show separate counts for parameters (294) vs variables (23)
-      - Highlight Income by Source categories as critical for AI scenarios
-      - Add visual distinction for income-related uprating with yellow border and star icon
-      - Display parameter/variable type badges on each item
-      - Improve display names for income by source categories
-      - Sort categories to show income by source first
+      - Refactor Research cards to read topics, blurbs, and references from `references.js`, so the Research page and References page can no longer drift apart.
+      - Order Research cards by topic relevance per country.
+    fixed:
+      - Replace broken Metaculus "/questions/" link in Challenge.jsx with a sourced IMF (2024) Gen-AI Staff Discussion Note reference.
+      - Update MIT Iceberg Index link from `futuretech.mit.edu/research` to the canonical `iceberg.mit.edu`.
+      - Replace fragile Google Doc URL for Trammell & Mazlish course materials with the Stanford DEL program page.
+      - Preserve `?country=uk` across Research and References back-navigation links.
+      - Remove duplicate "Canaries in the Coal Mine" entry that had incorrect author attribution (Ahn et al.) for the Brynjolfsson, Chandar, Chen paper.
