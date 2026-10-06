@@ -2,112 +2,92 @@ import { test, expect } from "@playwright/test";
 import { appUrl } from "./basePath";
 
 test.describe("AI Growth Research Homepage", () => {
-  test("should load homepage and display all sections", async ({ page }) => {
+  test("loads the homepage and displays current sections", async ({ page }) => {
     await page.goto(appUrl());
 
-    // Check header
-    await expect(page.locator("header")).toBeVisible();
-    await expect(page.locator('img[alt="PolicyEngine"]')).toBeVisible();
-
-    // Check hero section
+    await expect(page.locator("main")).toBeVisible();
     await expect(
-      page.locator('h1:has-text("AI Economic Growth Research")'),
+      page.getByRole("heading", {
+        name: /how will policy shape ai's impact on inequality/i,
+      }),
     ).toBeVisible();
 
-    // Check all major sections are present
+    for (const section of [
+      "The challenge",
+      "Our approach",
+      "What PolicyEngine does",
+      "What the research shows",
+      "The ecosystem",
+      "Get involved",
+      "Dive deeper",
+    ]) {
+      await expect(page.getByRole("heading", { name: section })).toBeVisible();
+    }
+  });
+
+  test("has working external links", async ({ page }) => {
+    await page.goto(appUrl());
+
     await expect(
-      page.locator('h2:has-text("Research Overview")'),
+      page.locator('a[href="https://github.com/PolicyEngine"]'),
     ).toBeVisible();
     await expect(
-      page.locator('h2:has-text("Why PolicyEngine?")'),
-    ).toBeVisible();
-    await expect(
-      page.locator('h2:has-text("Relevant Research")'),
-    ).toBeVisible();
-    await expect(
-      page.locator('h2:has-text("Policy Scenarios to Model")'),
-    ).toBeVisible();
-    await expect(
-      page.locator('h2:has-text("Technical Requirements")'),
-    ).toBeVisible();
-    await expect(
-      page.locator('h2:has-text("Potential Stakeholders")'),
+      page
+        .locator(
+          'a[href="https://digitaleconomy.stanford.edu/publications/canaries-in-the-coal-mine/"]',
+        )
+        .first(),
     ).toBeVisible();
   });
 
-  test("should have working external links", async ({ page }) => {
+  test("has project cards linking to PolicyEngine work", async ({ page }) => {
     await page.goto(appUrl());
 
-    // Check PolicyEngine main site link
-    const policyEngineLink = page.locator('a[href="https://policyengine.org"]');
-    await expect(policyEngineLink).toBeVisible();
-  });
-
-  test("should have interactive research cards", async ({ page }) => {
-    await page.goto(appUrl());
-
-    // Find and click a research topic card
-    const firstCard = page.locator(".card").first();
-    await firstCard.click();
-
-    // Check if expansion indicator changed
+    const firstCard = page.locator(".project-card").first();
     await expect(firstCard).toBeVisible();
+    await expect(firstCard).toHaveAttribute(
+      "href",
+      /policyengine\.org\/us\/research/,
+    );
   });
 
-  test("should have filterable stakeholder section", async ({ page }) => {
+  test("shows the ecosystem section", async ({ page }) => {
     await page.goto(appUrl());
 
-    // Scroll to stakeholders
     await page
-      .locator('h2:has-text("Potential Stakeholders")')
+      .getByRole("heading", { name: "The ecosystem" })
       .scrollIntoViewIfNeeded();
 
-    // Check filter buttons exist
-    await expect(
-      page.locator('button:has-text("All Organizations")'),
-    ).toBeVisible();
-    await expect(page.locator('button:has-text("AI Companies")')).toBeVisible();
-
-    // Click a filter button
-    await page.locator('button:has-text("AI Companies")').click();
-
-    // Check that stakeholders are still visible
-    await expect(page.locator(".stakeholder-badge")).toBeVisible();
+    for (const category of [
+      "Research & academia",
+      "AI companies",
+      "Policy & advocacy",
+      "Models & tools",
+      "Funders & forecasting",
+    ]) {
+      await expect(page.getByRole("heading", { name: category })).toBeVisible();
+    }
+    await expect(page.locator(".ecosystem-org-card")).toHaveCount(27);
   });
 
-  test("should have responsive design", async ({ page }) => {
-    // Test desktop
+  test("has responsive hero layout", async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 800 });
     await page.goto(appUrl());
     await expect(page.locator(".hero")).toBeVisible();
 
-    // Test mobile
     await page.setViewportSize({ width: 375, height: 667 });
     await expect(page.locator(".hero")).toBeVisible();
   });
 
-  test("should have all policy scenario cards", async ({ page }) => {
+  test("links to deeper pages from the homepage", async ({ page }) => {
     await page.goto(appUrl());
 
-    await page
-      .locator('h2:has-text("Policy Scenarios")')
-      .scrollIntoViewIfNeeded();
-
-    // Check for all 5 policy scenarios
     await expect(
-      page.locator('.scenario-card:has-text("Current Policy Baseline")'),
+      page.getByRole("link", { name: /income-shift experiment/i }),
     ).toBeVisible();
     await expect(
-      page.locator('.scenario-card:has-text("Universal Basic Income")'),
+      page.getByRole("link", { name: /research context/i }),
     ).toBeVisible();
-    await expect(
-      page.locator('.scenario-card:has-text("Expanded Safety Net")'),
-    ).toBeVisible();
-    await expect(
-      page.locator('.scenario-card:has-text("Capital Taxation")'),
-    ).toBeVisible();
-    await expect(
-      page.locator('.scenario-card:has-text("Hybrid Approaches")'),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /references/i })).toBeVisible();
   });
 });

@@ -68,4 +68,7 @@ test("renders UK income-shift data from the country selector", () => {
   expect(document.body).toHaveTextContent(
     `${(ukFacts.positive_capital_top_10_share * 100).toFixed(1)}%`,
   );
+  expect(
+    screen.queryByRole("heading", { name: /^poverty$/i }),
+  ).not.toBeInTheDocument();
 });

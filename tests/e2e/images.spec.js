@@ -21,12 +21,13 @@ test.describe("Image Loading", () => {
       // Wait for image to be visible
       await expect(img).toBeVisible();
 
-      // Check image loaded (naturalWidth > 0)
-      const isLoaded = await img.evaluate((el) => {
-        return el.complete && el.naturalWidth > 0;
-      });
-
-      expect(isLoaded).toBe(true);
+      // Check image decoded (naturalWidth > 0)
+      await expect
+        .poll(
+          async () => img.evaluate((el) => el.complete && el.naturalWidth > 0),
+          { timeout: 10_000 },
+        )
+        .toBe(true);
     }
   });
 
