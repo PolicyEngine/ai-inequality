@@ -35,6 +35,9 @@ function headlineFindings(sweepData) {
   const baseline = scenarios.find((s) => s.shift_pct === 0);
   const hundred = scenarios.find((s) => s.shift_pct === 100);
   if (!baseline || !hundred) return null;
+  const hasPovertyData = scenarios.some(
+    (row) => Number.isFinite(row.spm_poverty_rate) && row.spm_poverty_rate > 0,
+  );
   const trough = scenarios.reduce(
     (min, row) =>
       (row.total_rev_change_b ?? row.revenue_change_b ?? 0) <
@@ -63,8 +66,8 @@ function headlineFindings(sweepData) {
   return {
     baselineGini: baseline.net_gini,
     hundredGini: hundred.net_gini,
-    baselinePoverty: baseline.spm_poverty_rate,
-    hundredPoverty: hundred.spm_poverty_rate,
+    baselinePoverty: hasPovertyData ? baseline.spm_poverty_rate : null,
+    hundredPoverty: hasPovertyData ? hundred.spm_poverty_rate : null,
     troughRevenueB:
       trough.total_rev_change_b ?? trough.revenue_change_b ?? null,
     troughShift: trough.shift_pct,
@@ -207,14 +210,17 @@ function IncomeShift() {
                   shift.
                 </p>
               </div>
-              <div className="policy-analysis-brief-card">
-                <h2>Poverty</h2>
-                <p>
-                  SPM poverty rises from{" "}
-                  <strong>{formatPct1(findings.baselinePoverty)}</strong> to{" "}
-                  <strong>{formatPct1(findings.hundredPoverty)}</strong>.
-                </p>
-              </div>
+              {findings.baselinePoverty != null &&
+                findings.hundredPoverty != null && (
+                  <div className="policy-analysis-brief-card">
+                    <h2>Poverty</h2>
+                    <p>
+                      SPM poverty rises from{" "}
+                      <strong>{formatPct1(findings.baselinePoverty)}</strong> to{" "}
+                      <strong>{formatPct1(findings.hundredPoverty)}</strong>.
+                    </p>
+                  </div>
+                )}
               <div className="policy-analysis-brief-card">
                 <h2>Government revenue</h2>
                 <p>

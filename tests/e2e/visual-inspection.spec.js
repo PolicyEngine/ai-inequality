@@ -27,24 +27,24 @@ test.describe("Visual Inspection", () => {
       path: "test-results/screenshots/hero.png",
     });
 
-    // Overview
-    await page.locator("#overview").screenshot({
-      path: "test-results/screenshots/overview.png",
+    // Challenge
+    await page.locator(".challenge-section").screenshot({
+      path: "test-results/screenshots/challenge.png",
     });
 
-    // Capabilities
-    await page.locator("#capabilities").screenshot({
-      path: "test-results/screenshots/capabilities.png",
+    // Approach
+    await page.locator(".approach-section").screenshot({
+      path: "test-results/screenshots/approach.png",
     });
 
-    // Policy Scenarios
-    await page.locator("#scenarios").screenshot({
-      path: "test-results/screenshots/scenarios.png",
+    // Example projects
+    await page.locator("#examples").screenshot({
+      path: "test-results/screenshots/examples.png",
     });
 
-    // Stakeholders
-    await page.locator("#stakeholders").screenshot({
-      path: "test-results/screenshots/stakeholders.png",
+    // Ecosystem
+    await page.locator("#ecosystem").screenshot({
+      path: "test-results/screenshots/ecosystem.png",
     });
   });
 });

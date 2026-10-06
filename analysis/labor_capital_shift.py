@@ -8,12 +8,12 @@ proportionally.
 """
 
 import numpy as np
-from policyengine_us import Microsimulation
 from policyengine_core.reforms import Reform
 
 from .constants import YEAR, CAPITAL_INCOME_VARS
 from .fiscal import compute_ubi_amount, net_fiscal_impact, revenue_components
 from .metrics import extract_results as _extract_results
+from .policyengine_runtime import managed_us_microsimulation
 
 SHIFT_LEVELS = [0.10, 0.25, 0.50]
 
@@ -92,7 +92,7 @@ def run_scenarios(shift_levels=None):
         shift_levels = SHIFT_LEVELS
 
     print("Running baseline microsimulation...")
-    baseline = Microsimulation()
+    baseline = managed_us_microsimulation()
 
     # Create all branches BEFORE computing any downstream variables
     branches = {}
@@ -136,7 +136,7 @@ def run_scenarios(shift_levels=None):
             },
         }, country_id="us")
 
-        ubi_sim = Microsimulation(reform=reform)
+        ubi_sim = managed_us_microsimulation(reform=reform)
         ubi_branch, _ = _apply_shift(ubi_sim, "shift_ubi", shift_levels[-1])
         ubi_results = _extract_results(
             ubi_branch, f"{int(shift_levels[-1] * 100)}% shift + UBI"

@@ -13,14 +13,13 @@ Produces:
 
 import json
 import numpy as np
-from policyengine_us import Microsimulation
-from policyengine_core.reforms import Reform
 from analysis.compute_shift_sweep import run_shift_sweep as run_shift_sweep_analysis
 from analysis.constants import CAPITAL_INCOME_VARS, YEAR
 from analysis.income_distribution_breakdown import (
     build_income_distribution_payload,
 )
 from analysis.labor_capital_shift import run_scenarios as run_labor_shift_scenarios
+from analysis.policyengine_runtime import managed_us_microsimulation
 from analysis.website_exports import labor_shift_website_payload
 
 DATA_DIR = "src/data"
@@ -175,7 +174,7 @@ def gen_capital_sweep():
 
     for mult, label in zip(multipliers, labels):
         print(f"  Capital x{mult}...")
-        sim = Microsimulation()
+        sim = managed_us_microsimulation()
         if mult > 1.0:
             scale_capital(sim, mult)
 
@@ -200,7 +199,7 @@ def gen_capital_sweep():
         elif label == "5x":
             deciles_by_key["5x"] = ds
 
-    baseline_sim = Microsimulation()
+    baseline_sim = managed_us_microsimulation()
     cap_total_b = sum(
         baseline_sim.calc(v, period=YEAR).sum() for v in CAPITAL_INCOME_VARS
     )
@@ -231,10 +230,10 @@ def gen_capital_sweep():
 # ===== Capital Doubling =====
 def gen_capital_doubling():
     print("Generating capitalDoublingData.json...")
-    baseline_sim = Microsimulation()
+    baseline_sim = managed_us_microsimulation()
     baseline = detailed_metrics(baseline_sim)
 
-    doubled_sim = Microsimulation()
+    doubled_sim = managed_us_microsimulation()
     scale_capital(doubled_sim, 2.0)
     doubled = detailed_metrics(doubled_sim)
 
@@ -329,13 +328,13 @@ def gen_mtr_data():
     ]
 
     # Use household-level sums for consistent weighting
-    baseline_sim = Microsimulation()
+    baseline_sim = managed_us_microsimulation()
     baseline_hni = baseline_sim.calc("household_net_income", period=YEAR).sum()
 
     mtrs = []
     for label, var_name in sources:
         print(f"  MTR for {label}...")
-        sim = Microsimulation()
+        sim = managed_us_microsimulation()
         vals = sim.calc(var_name, period=YEAR)
 
         # 1% proportional bump
