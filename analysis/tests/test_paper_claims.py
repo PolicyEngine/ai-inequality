@@ -40,10 +40,12 @@ def v():
     return Values(raw)
 
 
-def test_tilt_turns_the_poverty_gain_into_a_loss(v):
-    """Abstract, intro, conclusion: shares-fixed Rapid cuts poverty, the
-    as-forecast tilt turns that into a marginal increase."""
-    assert v.num("RapidFixedPovPp") < 0 < v.num("RapidPropPovPp")
+def test_tilt_erodes_most_of_the_poverty_gain(v):
+    """Abstract, intro, conclusion: shares-fixed Rapid cuts poverty, and the
+    as-forecast tilt keeps only a minority of that cut ("erodes most of
+    growth's poverty gain"). On the July inputs it reversed the sign."""
+    assert v.num("RapidFixedPovPp") < v.num("RapidPropPovPp") < 0
+    assert 0 < v.num("RapidPovGainKeptPct") < 50
 
 
 def test_wage_spread_flips_the_poverty_sign_but_not_the_revenue_sign(v):
@@ -55,36 +57,58 @@ def test_wage_spread_flips_the_poverty_sign_but_not_the_revenue_sign(v):
     assert revenues == sorted(revenues)
 
 
-def test_state_take_roughly_doubles_across_the_wage_spread(v):
-    """Intro, results, discussion: the state take doubles from compressive to
-    expansive."""
-    ratio = v.num("RapidExpState") / v.num("RapidCompState")
-    assert 1.7 <= ratio <= 2.3
+def test_state_take_nearly_doubles_across_the_wage_spread(v):
+    """Abstract, intro, results, discussion: the state take nearly doubles from
+    compressive to expansive."""
+    assert 1.6 <= v.num("RapidStateSpanRatio") < 1.95
 
 
-def test_low_realization_turns_household_revenue_negative(v):
-    """Intro, sensitivity: below a breakeven realized share the household
-    sector loses revenue, and the breakeven sits inside the first grid step."""
-    assert v.num("RealZeroRev") < 0 < v.num("RealQuarterRev")
-    assert 0 < v.num("RealBreakevenPct") < v.num("RealGridStepPct")
+def test_state_net_is_roughly_a_sixth_of_the_bridged_take(v):
+    """Results: on the bridge cell, net state tax adds roughly a sixth."""
+    assert 0.12 <= v.num("RapidExpStateNet") / v.num("BridgeOursTotal") <= 0.21
 
 
-def test_realization_moves_more_than_a_quarter_trillion_and_poverty_not_at_all(v):
-    """Sensitivity, discussion: hundreds of billions of revenue, poverty flat."""
-    assert v.num("RealFullRev") - v.num("RealZeroRev") > 250
+def test_revenue_stays_positive_at_every_realized_share(v):
+    """Abstract, intro, sensitivity: the household sector still gains at a 0%
+    realized share, so there is no breakeven to cite; on the July inputs
+    there was one."""
+    assert v.num("RealZeroRev") > 0
+    assert "RealBreakevenPct" not in v
+    assert 0 < v.num("RevRealBreakevenOldPct") < 100
+    assert v.num("RevRealZeroRevOld") < 0
+
+
+def test_realization_sweep_is_linear_and_moves_a_quarter_trillion(v):
+    """Sensitivity, discussion: linear to within a percent; roughly a
+    quarter-trillion dollars of revenue; poverty flat."""
+    assert v.num("RealLineMaxGapPct") < 1
+    assert 225 <= v.num("RealFullLessZeroB") <= 275
     assert v.num("RealPovSpanPp") < 0.1
 
 
-def test_the_corporate_wedge_keeps_the_all_in_total_positive(v):
-    """Sensitivity: even at a 0% realized share, adding their corporate wedge
-    leaves the all-in total positive."""
-    assert v.num("RealZeroAllIn") > 0
+def test_the_corporate_wedge_lifts_the_all_in_total(v):
+    """Sensitivity: at a 0% realized share their wedge lifts the all-in total
+    above the household figure."""
+    assert v.num("RealZeroAllIn") > v.num("RealZeroRev") > 0
 
 
-def test_excluding_retirement_halves_rapid_and_flips_slow(v):
-    """Intro, sensitivity, site: halves Rapid, flips Slow negative."""
-    assert 0.4 <= v.num("RapidScopeExcl") / v.num("RapidScopeFull") <= 0.6
+def test_excluding_retirement_cuts_rapid_by_a_third_and_flips_slow(v):
+    """Intro, sensitivity, site: cuts Rapid by about a third, flips Slow."""
+    assert 30 <= v.num("RapidScopeCutPct") <= 40
     assert v.num("SlowScopeFull") > 0 > v.num("SlowScopeExcl")
+
+
+def test_definitional_choices_span_nearly_the_scenario_range(v):
+    """Intro, sensitivity: the two tax-base choices move the Rapid estimate
+    nearly as much as moving from Slow to Rapid (more than it, on the July
+    inputs)."""
+    ratio = v.num("DefinitionalSpanB") / v.num("ScenarioSpanB")
+    assert 0.8 <= ratio < 1
+
+
+def test_average_tax_rate_is_inside_their_band(v):
+    """Sensitivity: inside the 21-32% band the revised report states."""
+    assert 21 <= v.num("RapidPropATRPct") <= 32
 
 
 def test_forecast_range_is_the_first_decade_of_the_sweep(v):
@@ -94,10 +118,14 @@ def test_forecast_range_is_the_first_decade_of_the_sweep(v):
     assert 0 < shifts[0] and shifts[-1] < 10
 
 
-def test_household_keep_rate_is_below_the_federal_one(v):
-    """Intro, results, reconciliation: the household keep-rate is lower
-    (mainly the missing corporate wedge)."""
-    assert v.num("KeptHouseholdRapidPct") < v.num("KeptMatchedRapidPct")
+def test_household_keep_rate_is_below_the_federal_one_because_of_the_wedge(v):
+    """Intro, results, reconciliation: the household keep-rate is lower mainly
+    because that basis has no corporate wedge; states and transfers barely move
+    it. Without the wedge, the federal keep-rate is the household one."""
+    household = v.num("KeptHouseholdRapidPct")
+    assert household < v.num("KeptMatchedRapidPct")
+    assert abs(v.num("KeptFederalNoWedgeRapidPct") - household) <= 3
+    assert v.num("KeptMatchedRapidPct") - household >= 5
 
 
 def test_tilt_ratios_have_the_same_ordering_in_both_models(v):
@@ -109,11 +137,15 @@ def test_tilt_ratios_have_the_same_ordering_in_both_models(v):
     assert all(x > 1 for x in ours + theirs)
 
 
-def test_payroll_reverses_sign_under_compression_in_both_models(v):
-    """Reconciliation: both models show the sign reversal under compression."""
+def test_payroll_rises_under_compression_and_falls_under_expansion(v):
+    """Results, reconciliation: every Rapid variant grows labor income by the
+    same amount; payroll rises under compression and turns into a loss under
+    expansion, in both models."""
+    assert v.num("RapidCompLaborPct") > 0
+    assert v.num("RapidExpPayroll") < 0 < v.num("RapidCompPayroll")
     for name in ("PayrollTripletOurs", "PayrollTripletTheirs"):
         compressive, proportional, expansive = v.triplet(name)
-        assert compressive > 0, name
+        assert compressive > 0 > expansive, name
         assert expansive < proportional < compressive, name
 
 
@@ -132,10 +164,9 @@ def test_slow_compressive_reproduces_in_direction(v):
     assert v.num("SlowCompTheirsLowerPct") > 0
 
 
-def test_washington_out_collects_the_zero_states(v):
-    """Results: Washington's capital-gains excise collects more than the
-    zero-collecting states, which collect nothing."""
-    assert int(v["NZeroStates"]) >= 1
+def test_washington_out_collects_the_seven_zero_states(v):
+    """Results: "more than the seven zero-collecting states combined"."""
+    assert int(v["NZeroStates"]) == 7
     assert v.num("WAState") > 0
 
 
@@ -145,3 +176,12 @@ def test_site_panel_federal_keep_rate_matches_the_paper(v):
     match = re.search(r"and (\d+)% on the narrower federal basis", text)
     assert match, "keep-rate sentence not found in AIScenarios.jsx"
     assert match.group(1) == v["KeptMatchedRapidPct"]
+
+
+def test_revision_note_findings(v):
+    """Revision note: the tilt reversed the poverty gain on the July inputs and
+    erodes it on the revised ones; Rapid labor income turned from falling to
+    growing."""
+    assert v.num("RevRapidPropPovPpOld") > 0 > v.num("RevRapidPropPovPpNew")
+    assert v.num("RevRapidLaborGrowthOld") < 0 < v.num("RevRapidLaborGrowthNew")
+    assert v.num("RevRealZeroRevOld") < 0 < v.num("RevRealZeroRevNew")

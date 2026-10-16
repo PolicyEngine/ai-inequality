@@ -297,6 +297,12 @@ function CapitalScopeTable({ scenarios, scopeRows }) {
     })
     .filter(Boolean);
   if (rows.length === 0) return null;
+  const rapid = rows.find((row) => row.name === "Rapid");
+  const slow = rows.find((row) => row.name === "Slow");
+  const rapidCutPct =
+    rapid && rapid.full
+      ? Math.round((100 * (rapid.full - rapid.excl)) / rapid.full)
+      : null;
 
   return (
     <div className="ai-scenarios-scope">
@@ -326,8 +332,13 @@ function CapitalScopeTable({ scenarios, scopeRows }) {
       </table>
       <p className="shift-sweep-description">
         Taxable pension and IRA distributions are taxed at ordinary rates, so
-        counting them as capital raises the measured revenue gain. Excluding
-        them halves the Rapid estimate and turns Slow negative.
+        counting them as capital raises the measured revenue gain.
+        {rapidCutPct != null &&
+          ` Excluding them cuts the Rapid estimate by ${rapidCutPct}%${
+            slow && slow.full > 0 && slow.excl < 0
+              ? " and turns Slow negative"
+              : ""
+          }.`}
       </p>
     </div>
   );
@@ -351,6 +362,9 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
     () => realizationBreakeven(realizationRows),
     [realizationRows],
   );
+  const unrealizedRevenue = realizationRows.find(
+    (row) => row.realizationRate === 0,
+  )?.revenueChange;
 
   if (scenarios.length === 0 || !selected) return null;
 
@@ -367,7 +381,11 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
   // all-government basis these cards use. The matched-federal figure the
   // reconciliation reports is different, so the copy names both bases.
   const rapidFixed = findSharesFixed(scenarios, "Rapid")?.revenueChange;
-  const rapidForecast = findRow(scenarios, "Rapid", "proportional")?.revenueChange;
+  const rapidForecast = findRow(
+    scenarios,
+    "Rapid",
+    "proportional",
+  )?.revenueChange;
   const tiltKeptPct =
     rapidFixed && rapidForecast
       ? Math.round((100 * rapidForecast) / rapidFixed)
@@ -448,9 +466,9 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
                 by 2030 (survey inputs).{" "}
               </>
             )}
-            Against the CBO baseline, that means
-            capital income {fmtPct1(selected.capitalGrowth)} higher and labor
-            income {fmtPct1(Math.abs(selected.laborGrowth))}{" "}
+            Against the CBO baseline, that means capital income{" "}
+            {fmtPct1(selected.capitalGrowth)} higher and labor income{" "}
+            {fmtPct1(Math.abs(selected.laborGrowth))}{" "}
             {selected.laborGrowth >= 0 ? "higher" : "lower"}.
           </p>
         </div>
@@ -507,12 +525,12 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
             <>
               {" "}
               Under Rapid the tilt keeps {tiltKeptPct}% of the revenue gain on
-              this all-government basis, and 50% on the narrower federal basis
+              this all-government basis, and 58% on the narrower federal basis
               comparable to the Budget Lab&apos;s, which adds their
-              corporate-tax estimate. Most of the difference is that
-              corporate term: it grows with capital income, so it cushions the
-              as-forecast case. State taxes and transfers add to the
-              tilt&apos;s dollar cost but barely move the share kept.
+              corporate-tax estimate. Most of the difference is that corporate
+              term: it grows with capital income, so it cushions the as-forecast
+              case. State taxes and transfers add to the tilt&apos;s dollar cost
+              but barely move the share kept.
             </>
           )}
         </p>
@@ -520,8 +538,8 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
         <VariantPairCharts scenarios={scenarios} scenarioName={scenarioName} />
         <p className="shift-sweep-description">
           Whether AI compresses or spreads the wage distribution is the
-          assumption forecasters flag as least evidenced. Revenue stays
-          positive across the whole range; the poverty outcome flips sign.
+          assumption forecasters flag as least evidenced. Revenue stays positive
+          across the whole range; the poverty outcome flips sign.
         </p>
 
         <RealizationChart rows={realizationRows} breakeven={breakeven} />
@@ -529,8 +547,12 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
           The Budget Lab assumes the realized share of capital income is
           unchanged by AI (the 100% point). If less of the new capital income
           reaches tax returns — accruing instead as unrealized gains or inside
-          retirement accounts — the revenue gain shrinks linearly and turns
-          negative below the breakeven.
+          retirement accounts — the revenue gain shrinks linearly
+          {breakeven != null
+            ? " and turns negative below the breakeven."
+            : unrealizedRevenue != null
+              ? `, to ${fmtBillions(unrealizedRevenue)} if none of it does.`
+              : "."}
         </p>
 
         <CapitalScopeTable scenarios={scenarios} scopeRows={scopeRows} />

@@ -43,6 +43,66 @@ describe("AIScenarios", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("states the survey inputs the payload was run on", () => {
+    render(
+      <MemoryRouter>
+        <AIScenarios />
+      </MemoryRouter>,
+    );
+    // Rapid: 3.3% growth, labor share to 52.0% (revised 9 October 2026).
+    expect(
+      screen.getByText(/assumes 3\.3% annual real GDP growth/),
+    ).toBeTruthy();
+    expect(screen.getByText(/labor share falling to 52\.0%/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "Moderate" }));
+    expect(screen.getByText(/labor share falling to 54\.0%/)).toBeTruthy();
+  });
+
+  it("describes the realization sweep the payload actually shows", () => {
+    render(
+      <MemoryRouter>
+        <AIScenarios />
+      </MemoryRouter>,
+    );
+    const unrealized = scenariosData.sensitivities.realization.find(
+      (row) => row.realizationRate === 0,
+    );
+    expect(
+      screen.getByText(
+        new RegExp(
+          `to \\${fmtBillions(unrealized.revenueChange).replace("$", "\\$")} if none of it does`,
+        ),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/turns negative below the breakeven/)).toBeNull();
+  });
+
+  it("states the capital-scope cut from the payload", () => {
+    render(
+      <MemoryRouter>
+        <AIScenarios />
+      </MemoryRouter>,
+    );
+    const full = scenariosData.scenarios.find(
+      (r) =>
+        r.name === "Rapid" &&
+        r.inequality === "proportional" &&
+        !r.holdSharesFixed,
+    ).revenueChange;
+    const excl =
+      scenariosData.sensitivities.capital_scope_excluding_retirement.find(
+        (r) => r.name === "Rapid",
+      ).revenueChange;
+    const cut = Math.round((100 * (full - excl)) / full);
+    expect(
+      screen.getByText(
+        new RegExp(
+          `cuts the Rapid estimate by ${cut}% and turns Slow negative`,
+        ),
+      ),
+    ).toBeTruthy();
+  });
+
   it("switches scenario when a tab is clicked", () => {
     render(
       <MemoryRouter>
@@ -105,10 +165,14 @@ describe("realizationBreakeven", () => {
     ).toBeNull();
   });
 
-  it("handles the committed payload without error", async () => {
+  it("finds no crossing in the committed payload", async () => {
+    // On the Budget Lab's revised inputs Rapid labor income grows, so revenue
+    // stays positive even at a 0% realized share. (On the July inputs it
+    // crossed zero near 22.5%.)
     const { default: data } = await import("../data/aiScenariosData.json");
-    const breakeven = realizationBreakeven(data.sensitivities.realization);
-    expect(breakeven).toBeGreaterThan(0.2);
-    expect(breakeven).toBeLessThan(0.26);
+    const rows = data.sensitivities.realization;
+    expect(realizationBreakeven(rows)).toBeNull();
+    const unrealized = rows.find((row) => row.realizationRate === 0);
+    expect(unrealized.revenueChange).toBeGreaterThan(0);
   });
 });

@@ -140,3 +140,75 @@ def test_site_copy_is_generated_from_the_memo():
     js = MEMO_JS.read_text()
     payload = js[js.index("export const memoMarkdown = ") + len("export const memoMarkdown = ") :]
     assert json.loads(payload.rstrip().rstrip(";")) == expected
+
+
+VALUES = ROOT / "paper" / "values_generated.tex"
+
+
+@pytest.fixture(scope="module")
+def paper():
+    text = VALUES.read_text()
+    raw = dict(re.findall(r"\\newcommand\{\\gen(\w+)\}\{([^}]*)\}", text))
+    return {k: v for k, v in raw.items()}
+
+
+def _memo_has(pattern):
+    match = re.search(pattern, MEMO.read_text(), flags=re.S)
+    assert match, pattern
+    return match.groups()
+
+
+def _pnum(paper, name):
+    return float(paper[name].replace(",", ""))
+
+
+def test_headline_findings_match_the_paper(paper):
+    fixed, prop = _memo_has(
+        r"poverty falls ([\d.]+)\s+points if the gains split at today's factor "
+        r"shares, and only ([\d.]+) points with"
+    )
+    assert -float(fixed) == _pnum(paper, "RapidFixedPovPp")
+    assert -float(prop) == _pnum(paper, "RapidPropPovPp")
+    move, span = _memo_has(r"revenue moves (\d+)% while poverty moves \*\*([\d.]+) points\*\*")
+    assert move == paper["RapidRevRelMovePct"]
+    assert span == paper["RapidPovSpanPp"]
+
+
+def test_bridge_table_and_ratio_match_the_paper(paper):
+    rows = _table("| Rapid + expansive | Fed income tax (net) |")
+    ours, theirs = rows
+    assert [_num(c) for c in ours[1:4]] == [
+        _pnum(paper, "BridgeOursIIT"),
+        _pnum(paper, "BridgeOursPayroll"),
+        _pnum(paper, "BridgeWedge"),
+    ]
+    assert _num(ours[4].strip("*")) == _pnum(paper, "BridgeOursTotal")
+    assert _num(theirs[4]) == _pnum(paper, "BridgeTheirsTotal")
+    ratio, ours_pct, theirs_pct = _memo_has(
+        r"\*\*We are ([\d.]+)× their estimate\*\* — ([\d.]+)% of CBO 2030 revenue "
+        r"against their ([\d.]+)%"
+    )
+    assert ratio == paper["BridgeRatio"]
+    assert ours_pct == paper["BridgeOursCboPct"]
+    assert theirs_pct == paper["BridgeTheirsCboPct"]
+
+
+def test_realization_prose_matches_the_paper(paper):
+    wedge, all_in = _memo_has(
+        r"would still collect about \$(\d+)B\s+on the same shock.*?to about \+\$(\d+)B"
+    )
+    assert float(wedge) == _pnum(paper, "TheirRapidCit")
+    assert float(all_in) == _pnum(paper, "RealZeroAllIn")
+    low, high = _memo_has(r"Poverty is flat across the entire sweep, ([\d.]+)% to ([\d.]+)%")
+    assert low == paper["RealPovMinPct"]
+    assert high == paper["RealPovMaxPct"]
+
+
+def test_tilt_ratios_match_the_paper(paper):
+    ours, theirs = _memo_has(
+        r"our ratios are ([\d.]+× / [\d.]+× / [\d.]+×) against\s+their "
+        r"([\d.]+× / [\d.]+× / [\d.]+×)"
+    )
+    names = ("Slow", "Mod", "Rapid")
+    assert ours == " / ".join(f"{paper['TiltOursMatched' + n]}×" for n in names)
+    assert theirs == " / ".join(f"{paper['TiltTheirs' + n]}×" for n in names)

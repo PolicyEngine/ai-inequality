@@ -7,10 +7,11 @@ leaves two gaps this script closes:
   1. Part of the non-credit benefit swing across the Rapid wage-inequality
      variants sits in programs the headline run never separated (school
      meals, housing, the commodity food program and others). The swing less
-     the five named components is $4.3B of $27.8B once Head Start and Early
-     Head Start are out of net income (`NET_INCOME_EXCLUDED_BENEFITS`,
-     `analysis/outputs/ai_scenarios.json`), against $18.6B of $42.1B when the
-     published run still counted them
+     the five named components is $4.4B of $27.8B with Head Start and Early
+     Head Start out of net income (`NET_INCOME_EXCLUDED_BENEFITS`,
+     `analysis/outputs/ai_scenarios.json`; $4.3B of $27.8B on the Budget
+     Lab's July inputs, `ai_scenarios_v1_0_0_inputs.json`), against $18.6B of
+     $42.1B when the published run still counted them
      (`analysis/outputs/ai_scenarios_buildp_published.json`).
 
   2. Health programs are absent from `household_benefits` entirely: the

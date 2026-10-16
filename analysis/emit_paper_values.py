@@ -136,6 +136,17 @@ def revision_values(current, july, theirs_current, july_workbook_path):
         out[f"RevRapidPropPovPp{tag}"] = sfmt(
             100 * (prop["spm_poverty_rate"] - doc["baseline"]["spm_poverty_rate"]), 2
         )
+        real = sorted(
+            (r["scenario"]["realization_rate"], r["total_rev_change_b"])
+            for r in doc["sensitivities"]["realization"]
+        )
+        out[f"RevRealZeroRev{tag}"] = sfmt(real[0][1])
+        for (x0, y0), (x1, y1) in zip(real, real[1:]):
+            if y0 <= 0 <= y1:
+                out[f"RevRealBreakeven{tag}Pct"] = fmt(
+                    100 * (x0 + (0 - y0) * (x1 - x0) / (y1 - y0)), 1
+                )
+                break
     for tag, doc, grid, anchors in (
         ("Old", july, theirs_july, july_anchors),
         ("New", current, theirs_current, None),
@@ -230,6 +241,13 @@ def main():
     V["RapidExpPovPp"] = sfmt(
         100 * (re_["spm_poverty_rate"] - base["spm_poverty_rate"]), 2
     )
+    # Share of shares-fixed growth's poverty change the forecast tilt keeps.
+    V["RapidPovGainKeptPct"] = fmt(
+        100
+        * (rp["spm_poverty_rate"] - base["spm_poverty_rate"])
+        / (rf["spm_poverty_rate"] - base["spm_poverty_rate"]),
+        0,
+    )
     V["RapidPovSpanPp"] = fmt(
         100 * (re_["spm_poverty_rate"] - rc["spm_poverty_rate"]), 2
     )
@@ -293,6 +311,9 @@ def main():
         re_["state_tax_change_b"] - re_["state_refundable_credits_change_b"]
     )
     V["RapidExpStateNet"] = sfmt(exp_state_net)
+    V["RapidStateSpanRatio"] = fmt(
+        re_["state_tax_change_b"] / rc["state_tax_change_b"], 2
+    )
     sn = state_net(rp["state_deltas"])
     top5 = sorted(sn.items(), key=lambda kv: kv[1], reverse=True)[:5]
     V["StateTopFiveSharePct"] = fmt(
@@ -329,8 +350,19 @@ def main():
         if y0 <= 0 <= y1:
             breakeven = x0 + (0 - y0) * (x1 - x0) / (y1 - y0)
             break
-    V["RealBreakevenPct"] = fmt(100 * breakeven, 1)
+    # Revenue may stay positive at every realized share, in which case there
+    # is no breakeven to report and the prose must not cite one.
+    if breakeven is not None:
+        V["RealBreakevenPct"] = fmt(100 * breakeven, 1)
     V["RealGridStepPct"] = fmt(100 * (grid[1][0] - grid[0][0]), 0)
+    # Largest gap between the sweep and the straight line through its ends, as
+    # a share of the revenue range: the "linear to within a percent" check.
+    (x_lo, y_lo), (x_hi, y_hi) = grid[0], grid[-1]
+    line_gap = max(
+        abs(y - (y_lo + (x - x_lo) * (y_hi - y_lo) / (x_hi - x_lo))) for x, y in grid
+    )
+    V["RealLineMaxGapPct"] = fmt(100 * line_gap / abs(y_hi - y_lo), 1)
+    V["RealFullLessZeroB"] = fmt(revs[1.0] - revs[0.0], 0)
     V["RealQuarterRev"] = sfmt(revs[0.25])
     povs = [r["spm_poverty_rate"] for r in real] + [rp["spm_poverty_rate"]]
     V["RealPovMinPct"] = fmt(100 * min(povs), 2)
@@ -367,6 +399,18 @@ def main():
     )
     V["RapidScopeDiff"] = sfmt(scope_diff)
     V["RapidScopeDiffAbs"] = fmt(abs(scope_diff), 0)
+    V["RapidScopeCutPct"] = fmt(
+        100 * -scope_diff / rows[("Rapid", "proportional")]["total_rev_change_b"], 0
+    )
+    # The definitional choices' span on the Rapid estimate (the lowest of the
+    # realization and capital-scope runs to the headline) against the span
+    # between the Slow and Rapid headlines.
+    rapid_prop = rows[("Rapid", "proportional")]["total_rev_change_b"]
+    definitional_low = min(revs[0.0], scope["Rapid"]["total_rev_change_b"])
+    V["DefinitionalSpanB"] = fmt(rapid_prop - definitional_low, 0)
+    V["ScenarioSpanB"] = fmt(
+        rapid_prop - rows[("Slow", "proportional")]["total_rev_change_b"], 0
+    )
 
     # --- Average tax rate cross-check ---
     V["RapidPropMarketDelta"] = sfmt(rp["market_income_change_b"])
@@ -445,6 +489,11 @@ def main():
             rows[(name, "fixed")]["total_rev_change_b"]
             / rows[(name, "proportional")]["total_rev_change_b"],
             2,
+        )
+        # The federal microsimulation total without their wedge: separates the
+        # wedge's effect on the keep-rate from that of states and transfers.
+        V[f"KeptFederalNoWedge{macro}Pct"] = fmt(
+            100 * or_["total"] / of_["total"], 0
         )
         # Keep-rates (inverse tilt ratios), so the paper can state the basis.
         V[f"KeptMatched{macro}Pct"] = fmt(100 * or_tot / of_tot, 0)

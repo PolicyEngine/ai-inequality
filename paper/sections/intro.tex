@@ -35,8 +35,8 @@ rate, drives the fiscal and poverty results. Rapid adoption with factor
 shares held at today's levels raises net government revenue by
 \genRapidFixedRev B in 2030 and cuts SPM poverty by
 \genRapidFixedPovPp pp; the same growth with the forecast tilt keeps
-\genKeptHouseholdRapidPct\% of that revenue (\genRapidPropRev B) and turns
-the poverty gain into a marginal loss (\genRapidPropPovPp pp). The keep-rate
+\genKeptHouseholdRapidPct\% of that revenue (\genRapidPropRev B) and only
+\genRapidPovGainKeptPct\% of the poverty gain (\genRapidPropPovPp pp). The keep-rate
 is basis-dependent, and the paper reports it both ways: on the narrower
 federal basis that the Budget Lab measures, the tilt keeps
 \genKeptMatchedRapidPct\% here and \genKeptTheirsRapidPct\% in their grid.
@@ -59,20 +59,22 @@ gross tax collections swing \$\genGrossTaxSwing B, and automatic transfer
 responses absorb \genTransferAbsorbPct\% of that swing ---
 \$\genBenefitSwing B of it in non-credit programs such as SNAP and SSI that a
 tax microsimulation does not carry. State tax codes add
-\genRapidPropState B under proportional Rapid growth and double across the
-variants, from \genRapidCompState B to \genRapidExpState B. Whether these
+\genRapidPropState B under proportional Rapid growth and nearly double across
+the variants, from \genRapidCompState B to \genRapidExpState B. Whether these
 channels matter is exactly the kind of question a full-system model exists to
 answer.
 
-Fourth, two definitional choices about the tax base move the revenue answer
-by more than the choice between Slow, Moderate and Rapid. If AI's incremental
+Fourth, two definitional choices about the tax base move the Rapid revenue
+answer by nearly as much as the choice between Slow and Rapid adoption does
+(\$\genDefinitionalSpanB B against \$\genScenarioSpanB B). If AI's incremental
 capital income goes unrealized --- retained, accrued, or sheltered inside
-retirement accounts --- revenue falls roughly linearly, and below a realized
-share of roughly \genRealBreakevenPct\% the household sector loses money on
-Rapid AI growth; poverty, meanwhile, moves by
-\genRealPovSpanPp~pp across the whole sweep. And whether
-taxable retirement distributions count as capital income halves the Rapid
-estimate when excluded (\genRapidScopeFull B to \genRapidScopeExcl B).
+retirement accounts --- revenue falls roughly linearly, from
+\genRealFullRev B at full realization to \genRealZeroRev B when none of it
+is realized; poverty, meanwhile, moves by \genRealPovSpanPp~pp across the
+whole sweep. And whether
+taxable retirement distributions count as capital income cuts the Rapid
+estimate by about a third when they are excluded (\genRapidScopeFull B to
+\genRapidScopeExcl B).
 
 The reconciliation with the Budget Lab in Section~\ref{sec:reconciliation} is,
 to my knowledge, the first cell-level comparison of two independent
