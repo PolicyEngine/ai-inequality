@@ -80,9 +80,13 @@ is its first decade, and the rest is out-of-sample stress test.
 \subsection{Design II: forecaster-calibrated scenarios}\label{sec:method-scenarios}
 
 The scenarios adopt the Budget Lab's calibration of \citet{karger2026}
-exactly. Each scenario is defined by an annual real GDP growth rate under AI
-(Slow 2.0\%, Moderate 2.6\%, Rapid 3.3\%) and a 2030 labor share of factor
-income (55.0\%, 53.8\%, 51.3\%). Growth is expressed in excess of the CBO
+exactly, as revised on 9 October 2026. Each scenario is defined by an annual
+real GDP growth rate under AI (Slow 2.0\%, Moderate 2.6\%, Rapid 3.3\%) and
+a 2030 labor share of factor income (55.0\%, 54.0\%, 52.0\%), both the
+medians of the survey's economist respondents. The report as first published
+took the labor shares from the pooled all-respondent column instead (53.8\%
+for Moderate, 51.3\% for Rapid); its revision, and this version of the
+paper, use the economist column for both inputs. Growth is expressed in excess of the CBO
 baseline path: the five-year output shock is
 $g_Y = (1+r_{\mathrm{ai}})^5 / G_{\mathrm{CBO}} - 1$, and the factor shocks
 follow from the target shares,
@@ -90,12 +94,15 @@ follow from the target shares,
 g_K = \frac{\theta^1_K (1+g_Y) - \theta^0_K}{\theta^0_K}, \qquad
 g_L = \frac{\theta^1_L (1+g_Y) - \theta^0_L}{\theta^0_L}.
 \end{equation}
-Two inputs their report uses but does not print --- the cumulative CBO
-baseline factor $G_{\mathrm{CBO}} = 1.0976$ and the pre-shock labor share
-$\theta^0_L = 0.5550$ --- are recovered by inverting their published
-formulas against the nine derived values in their Table~1; unit tests
-reproduce all nine to within 0.005\,pp and re-derive the labor share by grid
-search so the constants cannot drift.
+The two remaining inputs are the cumulative CBO baseline factor,
+$G_{\mathrm{CBO}} = 1.022 \times 1.018^4 \approx 1.0976$ from the CBO growth
+path their report states (2.2\% in 2026, 1.8\% a year after), and the
+pre-shock labor share $\theta^0_L = 0.555$, which their model repository
+commits. With these, unit tests reproduce their committed per-cell output,
+capital and labor growth rates and $\lambda$ to machine precision in both
+versions of their release, reproduce the rounded Table~1 of both versions to
+within 0.005\,pp, and re-derive both constants by grid search so they cannot
+drift.
 
 The wage-inequality channel is their stylization $\lambda = 1 \pm g_Y$: a
 spread transform on log labor income,
@@ -122,7 +129,8 @@ shock reaches the tax base rather than being recomputed away; the labor
 aggregate lands on its target to within relative error
 \genLaborTargetMaxErr{}. Each scenario also has a shares-fixed
 counterfactual growing both factors at $g_Y$, the comparison behind the
-Budget Lab's ``roughly twice as large'' finding.
+Budget Lab's finding that revenue gains would be ``nearly twice as large''
+with factor shares held fixed (``roughly twice'' before the revision).
 
 Two further axes vary definitional assumptions their report flags. A
 \emph{realization rate} routes a fraction of the incremental capital flow

@@ -108,6 +108,8 @@ def _serialize_ai_scenario_row(row):
         "inequality": scenario.get("inequality"),
         "holdSharesFixed": scenario.get("hold_shares_fixed"),
         "realizationRate": scenario.get("realization_rate"),
+        "annualGdpGrowth": scenario.get("annual_gdp_growth"),
+        "targetLaborShare": scenario.get("target_labor_share"),
         "gdpGrowth": scenario.get("gdp_growth"),
         "capitalGrowth": scenario.get("capital_growth"),
         "laborGrowth": scenario.get("labor_growth"),

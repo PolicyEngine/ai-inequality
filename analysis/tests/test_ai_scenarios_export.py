@@ -99,6 +99,13 @@ class TestAIScenarioPayload:
         assert scenario["capitalGrowth"] == pytest.approx(0.1728)
         assert scenario["label"] == "Rapid / proportional"
 
+    def test_survey_inputs_are_carried_so_the_site_cannot_restate_them(self):
+        row = _scenario_row()
+        row["scenario"].update(annual_gdp_growth=0.033, target_labor_share=0.52)
+        scenario = ai_scenarios_website_payload(_result(scenarios=[row]))["scenarios"][0]
+        assert scenario["annualGdpGrowth"] == pytest.approx(0.033)
+        assert scenario["targetLaborShare"] == pytest.approx(0.52)
+
     def test_poverty_and_gini_changes_are_computed_against_baseline(self):
         scenario = ai_scenarios_website_payload(_result())["scenarios"][0]
         assert scenario["povertyRateChange"] == pytest.approx(0.1258 - 0.1250)

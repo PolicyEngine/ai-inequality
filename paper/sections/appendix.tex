@@ -119,9 +119,11 @@ explorer) and \url{https://policyengine.org/us/ai-inequality/budget-lab}
 (memo-length summary).
 \end{itemize}
 
-Calibration unit tests reproduce all nine of the Budget Lab's published
-derived scenario values to within 0.005\,pp from the two recovered
-constants ($G_{\mathrm{CBO}}=1.0976$, $\theta^0_L=0.5550$) and re-derive the
-labor share by grid search. The scenario runner checkpoints per-scenario
+Calibration unit tests reproduce the Budget Lab's committed per-cell growth
+rates and $\lambda$ to machine precision, and all nine published derived
+values of their Table~1 to within 0.005\,pp, in both the July and the
+revised October version of their release, from the CBO path their report
+states ($G_{\mathrm{CBO}}=1.022\times1.018^4$) and the pre-shock labor share
+their repository commits ($\theta^0_L=0.555$); grid searches re-derive both. The scenario runner checkpoints per-scenario
 results and is resumable; run logs and build-o archives are kept under
 \texttt{analysis/outputs/}.

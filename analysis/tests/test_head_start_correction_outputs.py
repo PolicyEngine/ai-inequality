@@ -2,10 +2,12 @@
 
 ``analysis/outputs/ai_scenarios_buildp_published.json`` is the build-p run as
 first published, with Head Start and Early Head Start counted in household net
-income. ``analysis/outputs/ai_scenarios.json`` is the same runtime and data
-with both programs kept out (``NET_INCOME_EXCLUDED_BENEFITS``). The correction
-only drops two names from the household benefits list, so for every baseline,
-scenario and sensitivity row:
+income. ``analysis/outputs/ai_scenarios_v1_0_0_inputs.json`` is the same
+runtime, data and scenario inputs with both programs kept out
+(``NET_INCOME_EXCLUDED_BENEFITS``); it was ``ai_scenarios.json`` from
+2026-09-26 until the Budget Lab's 2026-10-09 revision changed the scenario
+inputs. The correction only drops two names from the household benefits list,
+so for every baseline, scenario and sensitivity row:
 
 - SPM poverty, market income, every tax and credit cell, and every separately
   reported program are exactly unchanged (neither program is in SPM resources);
@@ -101,6 +103,9 @@ MAY_CHANGE = (
 #: own identity residual is about 2e-5 $B.
 TOL_B = 1e-4
 
+#: The corrected run on the July scenario inputs.
+CORRECTED = "ai_scenarios_v1_0_0_inputs.json"
+
 
 def _load(name):
     return json.loads((OUTPUTS / name).read_text())
@@ -117,7 +122,7 @@ def _rows(doc):
 
 def test_correction_moves_only_household_benefits():
     published = _load("ai_scenarios_buildp_published.json")
-    corrected = _load("ai_scenarios.json")
+    corrected = _load(CORRECTED)
     pairs = list(zip(_rows(published), _rows(corrected)))
     assert len(pairs) == len(list(_rows(corrected)))
     for (label, before), (label_after, after) in pairs:
@@ -136,7 +141,11 @@ def test_correction_moves_only_household_benefits():
 def test_every_row_field_is_classified():
     """A field added to the outputs has to be declared unchanged or movable."""
     assert not set(UNCHANGED) & set(MAY_CHANGE)
-    for name in ("ai_scenarios_buildp_published.json", "ai_scenarios.json"):
+    for name in (
+        "ai_scenarios_buildp_published.json",
+        CORRECTED,
+        "ai_scenarios.json",
+    ):
         for label, row in _rows(_load(name)):
             unclassified = set(row) - set(UNCHANGED) - set(MAY_CHANGE)
             assert not unclassified, (name, label, sorted(unclassified))
@@ -185,7 +194,7 @@ def test_head_start_programs_account_for_the_whole_correction():
     """
     detail = _load("transfer_detail_buildp_published.json")
     published = _load("ai_scenarios_buildp_published.json")
-    corrected = _load("ai_scenarios.json")
+    corrected = _load(CORRECTED)
     totals = detail["baseline_totals"]
     head_start_b = (totals["early_head_start"] + totals["head_start"]) / 1e9
     mean_before = published["baseline"]["mean_net_income"]
@@ -211,7 +220,7 @@ def test_head_start_programs_account_for_the_whole_correction():
 
 def test_corrected_run_records_the_exclusion_on_the_published_runtime():
     published = _load("ai_scenarios_buildp_published.json")["metadata"]
-    corrected = _load("ai_scenarios.json")["metadata"]
+    corrected = _load(CORRECTED)["metadata"]
     for key in (
         "policyengine_version",
         "country_model_version",
@@ -229,7 +238,7 @@ def test_corrected_run_records_the_exclusion_on_the_published_runtime():
 def test_stability_pair_counts_net_income_the_same_way():
     build_o = _load("ai_scenarios_buildo.json")["metadata"]
     build_p_published = _load("ai_scenarios_buildp_published.json")["metadata"]
-    corrected = _load("ai_scenarios.json")["metadata"]
+    corrected = _load(CORRECTED)["metadata"]
     assert net_income_accounting(build_o) == net_income_accounting(build_p_published)
     assert net_income_accounting(build_o) != net_income_accounting(corrected)
 

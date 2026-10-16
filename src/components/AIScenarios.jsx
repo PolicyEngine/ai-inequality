@@ -21,16 +21,6 @@ import { useRovingRadioGroup } from "../utils/useRovingRadioGroup";
 
 const SCENARIO_NAMES = ["Slow", "Moderate", "Rapid"];
 
-// Survey inputs behind each scenario: annualised real GDP growth under AI and
-// the 2030 labor share of factor income. Karger et al. (2026) via The Budget
-// Lab, Table 1. Descriptive context only; every computed number on this page
-// comes from the payload.
-const SCENARIO_INPUTS = {
-  Slow: { annualGrowth: "2.0%", laborShare2030: "55.0%" },
-  Moderate: { annualGrowth: "2.6%", laborShare2030: "53.8%" },
-  Rapid: { annualGrowth: "3.3%", laborShare2030: "51.3%" },
-};
-
 const VARIANTS = [
   { key: "compressive", label: "Wages compress" },
   { key: "proportional", label: "Proportional" },
@@ -364,7 +354,12 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
 
   if (scenarios.length === 0 || !selected) return null;
 
-  const inputs = SCENARIO_INPUTS[scenarioName] ?? {};
+  // Survey inputs behind the scenario (Karger et al. 2026 economist medians,
+  // via The Budget Lab's Table 1): read from the payload, so they always
+  // describe the run the numbers came from.
+  const hasInputs =
+    Number.isFinite(selected.annualGdpGrowth) &&
+    Number.isFinite(selected.targetLaborShare);
   const povertyPp = (selected.povertyRateChange ?? 0) * 100;
   const crossover = selected.laborCrossoverIncome;
 
@@ -445,9 +440,15 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
             </div>
           </div>
           <p className="shift-sweep-description">
-            {scenarioName} adoption assumes {inputs.annualGrowth} annual real
-            GDP growth with the labor share falling to {inputs.laborShare2030}{" "}
-            by 2030 (survey inputs). Against the CBO baseline, that means
+            {hasInputs && (
+              <>
+                {scenarioName} adoption assumes{" "}
+                {fmtPct1(selected.annualGdpGrowth)} annual real GDP growth with
+                the labor share falling to {fmtPct1(selected.targetLaborShare)}{" "}
+                by 2030 (survey inputs).{" "}
+              </>
+            )}
+            Against the CBO baseline, that means
             capital income {fmtPct1(selected.capitalGrowth)} higher and labor
             income {fmtPct1(Math.abs(selected.laborGrowth))}{" "}
             {selected.laborGrowth >= 0 ? "higher" : "lower"}.

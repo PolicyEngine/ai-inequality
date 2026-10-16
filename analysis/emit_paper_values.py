@@ -27,12 +27,19 @@ import os
 
 import pandas as pd
 
+try:
+    from analysis.reconcile_budget_lab import their_anchors
+except ModuleNotFoundError:  # run as a script: python analysis/emit_paper_values.py
+    from reconcile_budget_lab import their_anchors
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "analysis", "outputs")
 PAPER = os.path.join(ROOT, "paper")
 
-#: CBO 2030 corporate income tax anchor, from their corporate_tax sheet.
-CBO_CIT_ANCHOR_B = 486.0
+#: The corrected build-p run on the Budget Lab's July (v1.0.0) scenario
+#: inputs, committed 2026-09-26 as ai_scenarios.json. Kept because the Head
+#: Start correction and the October revision are each measured against it.
+JULY_INPUTS_FILE = "ai_scenarios_v1_0_0_inputs.json"
 
 VARIANT = {"Slow": "S", "Moderate": "M", "Rapid": "R"}
 LABOR = {"proportional": "S0", "compressive": "S2", "expansive": "S3"}
@@ -121,6 +128,7 @@ def main():
     their_cbo_rev = float(rev_gdp["baseline_revenue_B_cbo"].dropna().unique()[0])
     cell_params = pd.read_excel(xlsx, sheet_name="cell_params", engine="openpyxl")
     their_y0k = float(cell_params["y0_k_B"].dropna().unique()[0])
+    their_cit_anchor = their_anchors(xlsx)["cit_b"]
 
     V = {}  # macro name -> string value
     base = sc["baseline"]
@@ -269,13 +277,15 @@ def main():
     V["RealPovSpanPp"] = fmt(100 * (max(povs) - min(povs)), 2)
     their_rapid_cit = theirs.loc["ai_R_R_S0_V1", "macro_cit_delta"]
     V["TheirRapidCit"] = sfmt(their_rapid_cit)
-    # Their wedge equals g_K x $486B on every committed cell (the base cancels):
-    # verify against their own per-cell g_k rather than asserting it.
+    # Their wedge equals g_K times their CBO 2030 CIT level on every committed
+    # cell (the base cancels): verify against their own per-cell g_k rather
+    # than asserting it.
     n_cells = len(cell_params)
     cit_dev = max(
-        abs(row.delta_R_CIT_B - row.g_k * CBO_CIT_ANCHOR_B)
+        abs(row.delta_R_CIT_B - row.g_k * their_cit_anchor)
         for row in cell_params.itertuples()
     )
+    V["TheirCitAnchorB"] = fmt(their_cit_anchor, 1)
     V["CitWedgeMaxDevB"] = fmt(cit_dev, 3)
     V["TheirNCells"] = str(n_cells)
     V["RealZeroAllIn"] = sfmt(revs[0.0] + their_rapid_cit)
@@ -509,12 +519,31 @@ def main():
     V["StabNYOld"] = fmt(ny_old, 1)
     V["StabNYNew"] = fmt(ny_pub, 1)
 
-    # --- Head Start correction (build p as published vs this run) ---
+    # --- Head Start correction (build p as published vs the corrected run) ---
+    # The correction is measured on the run it produced: the same July
+    # scenario inputs with the two programs kept out of net income. The
+    # headline file now carries the Budget Lab's revised inputs as well, so
+    # comparing it with the published run would mix the two changes.
+    with open(os.path.join(OUT, JULY_INPUTS_FILE)) as fh:
+        july = json.load(fh)
+    assert net_income_accounting(july["metadata"]) == net_income_accounting(meta), (
+        "July-inputs run and headline run count net income differently"
+    )
+    jrows = {skey(r): r for r in july["scenarios"]}
     V["CorrMaxRevMoveB"] = fmt(
         max(
             abs(r["total_rev_change_b"] - prows[skey(r)]["total_rev_change_b"])
-            for r in sc["scenarios"]
+            for r in july["scenarios"]
         ),
+        0,
+    )
+    jtc = transfers(jrows[("Rapid", "compressive", False)])
+    jte = transfers(jrows[("Rapid", "expansive", False)])
+    V["CorrTransferSwing"] = fmt(jte["transfers"] - jtc["transfers"], 0)
+    V["CorrTransferAbsorbPct"] = fmt(
+        100
+        * (jte["transfers"] - jtc["transfers"])
+        / (jte["gross_tax"] - jtc["gross_tax"]),
         0,
     )
     ptc = transfers(prows[("Rapid", "compressive", False)])
