@@ -36,6 +36,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "analysis", "outputs")
 PAPER = os.path.join(ROOT, "paper")
 
+XLSX_PATH = os.path.join(OUT, "yale_publishable_2030.xlsx")
+
+#: The Budget Lab's v1.0.0 (July) publishable workbook, the bridge's other
+#: side before their 2026-10-09 revision; yale_publishable_2030.xlsx is v1.0.1.
+JULY_WORKBOOK = os.path.join(OUT, "yale_publishable_2030_v1_0_0.xlsx")
+
 #: The corrected build-p run on the Budget Lab's July (v1.0.0) scenario
 #: inputs, committed 2026-09-26 as ai_scenarios.json. Kept because the Head
 #: Start correction and the October revision are each measured against it.
@@ -105,6 +111,61 @@ def net_income_accounting(metadata):
     )
 
 
+def revision_values(current, july, theirs_current, july_workbook_path):
+    """Macros for the October 2026 revision note: July inputs against now."""
+    theirs_july = pd.read_excel(
+        july_workbook_path, sheet_name="revenue_grid_wide", engine="openpyxl"
+    ).set_index("scenario_id")
+    july_anchors = their_anchors(july_workbook_path)
+    out = {}
+    for tag, doc in (("Old", july), ("New", current)):
+        for name, macro in (("Moderate", "Mod"), ("Rapid", "Rapid")):
+            s = our_row(doc, name, "proportional")["scenario"]
+            out[f"Rev{macro}LaborShare{tag}"] = fmt(100 * s["target_labor_share"], 1)
+            out[f"Rev{macro}CapGrowth{tag}"] = fmt(100 * s["capital_growth"], 2)
+            out[f"Rev{macro}LaborGrowth{tag}"] = sfmt(100 * s["labor_growth"], 2)
+        for variant, macro in (("proportional", "Prop"), ("expansive", "Exp")):
+            out[f"RevRapid{macro}Rev{tag}"] = sfmt(
+                our_row(doc, "Rapid", variant)["total_rev_change_b"]
+            )
+        fixed = our_row(doc, "Rapid", "none", shares_fixed=True)
+        prop = our_row(doc, "Rapid", "proportional")
+        out[f"RevKeptHouseholdRapid{tag}Pct"] = fmt(
+            100 * prop["total_rev_change_b"] / fixed["total_rev_change_b"], 0
+        )
+        out[f"RevRapidPropPovPp{tag}"] = sfmt(
+            100 * (prop["spm_poverty_rate"] - doc["baseline"]["spm_poverty_rate"]), 2
+        )
+    for tag, doc, grid, anchors in (
+        ("Old", july, theirs_july, july_anchors),
+        ("New", current, theirs_current, None),
+    ):
+        cell = grid.loc["ai_R_R_S3_V1"]
+        bridged = our_side(our_row(doc, "Rapid", "expansive"))["total"] + (
+            cell.macro_cit_delta
+        )
+        out[f"RevBridgeOurs{tag}"] = sfmt(bridged)
+        out[f"RevBridgeTheirs{tag}"] = sfmt(cell.total_with_macro_cit)
+        if anchors is not None:
+            out[f"RevTheirCitAnchor{tag}B"] = fmt(anchors["cit_b"], 1)
+    out["RevTheirCitAnchorNewB"] = fmt(their_anchors(XLSX_PATH)["cit_b"], 1)
+
+    # Cells the labor-share revision leaves alone (Slow and every shares-fixed
+    # counterfactual) move only through the CBO growth factor's last digits.
+    def key(row):
+        s = row["scenario"]
+        return (s["name"], s["inequality"], bool(s.get("hold_shares_fixed")))
+
+    july_rows = {key(r): r for r in july["scenarios"]}
+    untouched = [
+        abs(r["total_rev_change_b"] - july_rows[key(r)]["total_rev_change_b"])
+        for r in current["scenarios"]
+        if r["scenario"]["name"] == "Slow" or r["scenario"].get("hold_shares_fixed")
+    ]
+    out["RevUntouchedMaxMoveB"] = fmt(max(untouched), 2)
+    return out
+
+
 def fmt(x, nd=1):
     return f"{x:.{nd}f}"
 
@@ -118,7 +179,7 @@ def main():
         sc = json.load(fh)
     with open(os.path.join(ROOT, "src", "data", "shiftSweepData.json")) as fh:
         sweep = json.load(fh)
-    xlsx = os.path.join(OUT, "yale_publishable_2030.xlsx")
+    xlsx = XLSX_PATH
     theirs = pd.read_excel(
         xlsx, sheet_name="revenue_grid_wide", engine="openpyxl"
     ).set_index("scenario_id")
@@ -574,6 +635,11 @@ def main():
     pub_totals = pub_detail["baseline_totals"]
     V["PubEarlyHeadStartB"] = fmt(pub_totals["early_head_start"] / 1e9, 0)
     V["PubHeadStartB"] = fmt(pub_totals["head_start"] / 1e9, 0)
+
+    # --- The Budget Lab's 2026-10-09 revision (July inputs vs this run) ---
+    # Both runs use the same runtime, data and accounting; the July one is the
+    # corrected run on their v1.0.0 inputs, bridged to their v1.0.0 workbook.
+    V.update(revision_values(sc, july, theirs, JULY_WORKBOOK))
 
     # ---------------- values_generated.tex ----------------
     lines = [
