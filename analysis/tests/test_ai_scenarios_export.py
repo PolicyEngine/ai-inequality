@@ -273,3 +273,71 @@ class TestCheckpointKeysCarryScenarioInputs:
         assert _run_one(
             *args, checkpoint=fresh, checkpoint_key="grid:Rapid / proportional"
         ) == {"revenue": "revised"}
+
+
+class TestUnitBudget:
+    """One simulation per process: the run stops before exceeding its budget."""
+
+    def test_budget_counts_and_then_refuses(self):
+        from analysis.compute_ai_scenarios import UnitBudget, UnitBudgetExhausted
+
+        budget = UnitBudget(2)
+        budget.spend()
+        budget.spend()
+        with pytest.raises(UnitBudgetExhausted):
+            budget.spend()
+        assert budget.spent == 2
+
+    def test_no_limit_never_refuses(self):
+        from analysis.compute_ai_scenarios import UnitBudget
+
+        budget = UnitBudget(None)
+        for _ in range(100):
+            budget.spend()
+        assert budget.spent == 100
+
+    def test_resumed_units_do_not_spend_the_budget(self):
+        from analysis.ai_scenarios import CAPITAL_INCOME_VARS, build_scenario
+        from analysis.compute_ai_scenarios import (
+            UnitBudget,
+            UnitBudgetExhausted,
+            _run_one,
+            scenario_checkpoint_key,
+        )
+
+        def factory():
+            raise AssertionError("a simulation started")
+
+        scenario = build_scenario("Moderate")
+        key = scenario_checkpoint_key("grid:x", scenario, CAPITAL_INCOME_VARS)
+        budget = UnitBudget(0)
+        args = (scenario, {}, {}, factory, 2030, CAPITAL_INCOME_VARS, False)
+        assert _run_one(
+            *args, checkpoint={key: {"ok": 1}}, checkpoint_key="grid:x",
+            unit_budget=budget,
+        ) == {"ok": 1}
+        # A unit not in the checkpoint is refused before any simulation starts.
+        with pytest.raises(UnitBudgetExhausted):
+            _run_one(*args, checkpoint={}, checkpoint_key="grid:x", unit_budget=budget)
+
+    def test_main_exits_with_the_relaunch_status(self, monkeypatch, tmp_path):
+        from analysis import compute_ai_scenarios as runner
+
+        def exhausted(**kwargs):
+            assert kwargs["max_new_units"] == 1
+            raise runner.UnitBudgetExhausted
+
+        monkeypatch.setattr(runner, "run_ai_scenarios", exhausted)
+        status = runner.main(
+            [
+                "--max-new-units",
+                "1",
+                "--checkpoint",
+                str(tmp_path / "c.jsonl"),
+                "--output",
+                str(tmp_path / "out.json"),
+                "--no-website",
+            ]
+        )
+        assert status == runner.EXIT_MORE_UNITS
+        assert not (tmp_path / "out.json").exists()

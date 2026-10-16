@@ -73,6 +73,33 @@ CHECKPOINT_PATH = os.path.join(
 
 BASELINE_KEY = "baseline"
 
+#: Exit status of a run that stopped after its unit budget with work left, so
+#: a wrapper can relaunch it (fresh process, fresh memory) to resume.
+EXIT_MORE_UNITS = 3
+
+
+class UnitBudgetExhausted(Exception):
+    """Raised before computing a unit once the run's unit budget is spent."""
+
+
+class UnitBudget:
+    """How many units a run may compute, as opposed to resume, before stopping.
+
+    One full simulation of this pipeline reaches a memory footprint near the
+    host's ceiling, and a process does not hand all of it back between
+    units. Running one unit per process, resuming the rest from the
+    checkpoint, keeps each process to a single simulation's peak.
+    """
+
+    def __init__(self, limit=None):
+        self.limit = limit
+        self.spent = 0
+
+    def spend(self):
+        if self.limit is not None and self.spent >= self.limit:
+            raise UnitBudgetExhausted
+        self.spent += 1
+
 MODEL_URL = "https://www.policyengine.org/us/model"
 
 DESCRIPTION = (
@@ -355,6 +382,7 @@ def _run_one(
     checkpoint=None,
     checkpoint_key=None,
     checkpoint_fingerprint=None,
+    unit_budget=None,
 ):
     """Run a single scenario from a fresh microsimulation."""
     key = scenario_checkpoint_key(
@@ -365,6 +393,8 @@ def _run_one(
             print(f"  {scenario.label} ... (from checkpoint)", flush=True)
         return checkpoint[key]
 
+    if unit_budget is not None:
+        unit_budget.spend()
     if verbose:
         print(f"  {scenario.label} ...", flush=True)
 
@@ -416,6 +446,7 @@ def run_ai_scenarios(
     include_capital_scope_sensitivity=True,
     verbose=False,
     checkpoint_path=CHECKPOINT_PATH,
+    max_new_units=None,
 ):
     """Run the scenario grid plus sensitivities and return an export payload.
 
@@ -425,7 +456,12 @@ def run_ai_scenarios(
     same runtime wrote are resumed, so an engine or dataset change recomputes
     everything instead of mixing vintages. Pass `checkpoint_path=None` to
     disable. Delete the file to force a clean run.
+
+    `max_new_units` caps how many units (the baseline counts as one) this call
+    computes rather than resumes; past it, `UnitBudgetExhausted` is raised
+    before the next simulation starts.
     """
+    budget = UnitBudget(max_new_units)
     if scenarios is None:
         scenarios = default_scenario_grid()
 
@@ -447,6 +483,7 @@ def run_ai_scenarios(
         baseline_states = cached_baseline["states"]
         metadata = cached_baseline["metadata"]
     else:
+        budget.spend()
         baseline = microsim_factory()
         baseline_metrics = extract_results(baseline, "Baseline", year=year)
         baseline_revenue = revenue_components(baseline, year=year)
@@ -500,6 +537,7 @@ def run_ai_scenarios(
             checkpoint=checkpoint,
             checkpoint_fingerprint=checkpoint_fingerprint,
             checkpoint_key=f"grid:{scenario.label}",
+            unit_budget=budget,
         )
         for scenario in scenarios
     ]
@@ -524,6 +562,7 @@ def run_ai_scenarios(
                 checkpoint=checkpoint,
                 checkpoint_fingerprint=checkpoint_fingerprint,
                 checkpoint_key=f"realization:{rate}",
+                unit_budget=budget,
             )
             for rate in realization_sweep
         ]
@@ -544,6 +583,7 @@ def run_ai_scenarios(
                 checkpoint=checkpoint,
                 checkpoint_fingerprint=checkpoint_fingerprint,
                 checkpoint_key=f"capital_scope:{name}",
+                unit_budget=budget,
             )
             for name in ("Slow", "Moderate", "Rapid")
         ]
@@ -602,14 +642,38 @@ def main(argv=None):
         default=CHECKPOINT_PATH,
         help="Resume store; 'none' disables resuming.",
     )
+    parser.add_argument(
+        "--max-new-units",
+        type=int,
+        default=None,
+        help=(
+            "Compute at most this many units not already in the checkpoint, "
+            f"then exit with status {EXIT_MORE_UNITS} if any remain. Relaunching "
+            "until the status is 0 runs one simulation per process."
+        ),
+    )
     args = parser.parse_args(argv)
     checkpoint_path = None if args.checkpoint == "none" else args.checkpoint
+    if args.max_new_units is not None and checkpoint_path is None:
+        parser.error("--max-new-units needs a checkpoint to resume from")
 
     print("=" * 78)
     print("AI SCENARIOS (Budget Lab calibration, PolicyEngine-US)")
     print("=" * 78)
 
-    result = run_ai_scenarios(verbose=True, checkpoint_path=checkpoint_path)
+    try:
+        result = run_ai_scenarios(
+            verbose=True,
+            checkpoint_path=checkpoint_path,
+            max_new_units=args.max_new_units,
+        )
+    except UnitBudgetExhausted:
+        print(
+            f"\nUnit budget of {args.max_new_units} spent; relaunch to resume "
+            "from the checkpoint.",
+            flush=True,
+        )
+        return EXIT_MORE_UNITS
 
     output_dir = os.path.dirname(args.output)
     if output_dir:
@@ -633,7 +697,8 @@ def main(argv=None):
         print(line)
 
     print(f"\n{result['metadata']['corporate_tax_scope_note']}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
