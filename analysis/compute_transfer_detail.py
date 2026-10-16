@@ -52,6 +52,7 @@ from .compute_ai_scenarios import (
     _package_version,
     append_checkpoint,
     load_checkpoint,
+    scenario_checkpoint_key,
 )
 from .policyengine_runtime import (
     managed_us_microsimulation,
@@ -198,7 +199,10 @@ def run(year=TARGET_YEAR, verbose=True, output_path=None, checkpoint_path=None):
 
     rows = {}
     for variant in VARIANTS:
-        key = f"rapid:{variant}"
+        scenario = build_scenario("Rapid", inequality=variant)
+        key = scenario_checkpoint_key(
+            f"rapid:{variant}", scenario, CAPITAL_INCOME_VARS
+        )
         if key in checkpoint:
             rows[variant] = checkpoint[key]
             if verbose:
@@ -207,7 +211,6 @@ def run(year=TARGET_YEAR, verbose=True, output_path=None, checkpoint_path=None):
 
         if verbose:
             print(f"Rapid / {variant} ...", flush=True)
-        scenario = build_scenario("Rapid", inequality=variant)
         sim = managed_us_microsimulation()
         branch, _diagnostics = apply_ai_scenario(
             sim,

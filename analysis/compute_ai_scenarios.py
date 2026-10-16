@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import gc
+import hashlib
 import json
 import os
 import warnings
@@ -76,7 +77,8 @@ MODEL_URL = "https://www.policyengine.org/us/model"
 
 DESCRIPTION = (
     "AI scenarios calibrated to the Karger et al. (2026) forecaster survey as "
-    "implemented by The Budget Lab (Iselin and Nunn, 2026-07-20). Labor and "
+    "implemented by The Budget Lab (Iselin and Nunn, 2026-07-20, revised "
+    "2026-10-09). Labor and "
     "capital income are grown at scenario-specific rates derived from a "
     "target 2030 labor share, with an optional log-scale spread change in the "
     "labor income distribution. Static current-law microsimulation: no "
@@ -151,6 +153,28 @@ def _branch_name(scenario):
     """
     slug = "".join(char if char.isalnum() else "_" for char in scenario.label.lower())
     return f"ai_{slug}"[:48]
+
+
+def scenario_digest(scenario, capital_income_vars):
+    """Short digest of the inputs that decide one unit's numbers.
+
+    Checkpoint keys carry it, so a resumed run cannot return a unit computed
+    from other scenario inputs under the same label. The Budget Lab's
+    2026-10-09 revision moved the Moderate and Rapid labor shares without
+    changing either label; keyed by label alone, a resume would have reused
+    the July cells.
+    """
+    payload = {
+        "scenario": scenario.to_dict(),
+        "capital_income_vars": list(capital_income_vars),
+    }
+    encoded = json.dumps(payload, sort_keys=True, default=float).encode()
+    return hashlib.sha256(encoded).hexdigest()[:12]
+
+
+def scenario_checkpoint_key(prefix, scenario, capital_income_vars):
+    """Checkpoint key for one unit: its family prefix plus its input digest."""
+    return f"{prefix}@{scenario_digest(scenario, capital_income_vars)}"
 
 
 def _fiscal_row(delta):
@@ -333,7 +357,9 @@ def _run_one(
     checkpoint_fingerprint=None,
 ):
     """Run a single scenario from a fresh microsimulation."""
-    key = checkpoint_key or scenario.label
+    key = scenario_checkpoint_key(
+        checkpoint_key or scenario.label, scenario, capital_income_vars
+    )
     if checkpoint and key in checkpoint:
         if verbose:
             print(f"  {scenario.label} ... (from checkpoint)", flush=True)

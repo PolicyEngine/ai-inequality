@@ -183,3 +183,86 @@ class TestCheckpointRoundTrip:
         append_checkpoint(path, "grid:Rapid / proportional", {"revenue": 1.0})
         append_checkpoint(path, "grid:Rapid / proportional", {"revenue": 2.0})
         assert load_checkpoint(path)["grid:Rapid / proportional"] == {"revenue": 2.0}
+
+
+class TestCheckpointKeysCarryScenarioInputs:
+    """A resumed unit must have been computed from the inputs being asked for.
+
+    The Budget Lab's 2026-10-09 revision changed the Moderate and Rapid labor
+    shares but no scenario label. A store keyed by label alone would have
+    handed the July cells back to a rerun on the revised inputs.
+    """
+
+    def test_same_label_different_inputs_get_different_keys(self):
+        from analysis.ai_scenarios import CAPITAL_INCOME_VARS, build_scenario
+        from analysis.compute_ai_scenarios import scenario_checkpoint_key
+
+        revised = build_scenario("Rapid")
+        july = build_scenario("Rapid", target_labor_share=0.513)
+        assert revised.label == july.label
+        assert scenario_checkpoint_key(
+            "grid:Rapid / proportional", revised, CAPITAL_INCOME_VARS
+        ) != scenario_checkpoint_key(
+            "grid:Rapid / proportional", july, CAPITAL_INCOME_VARS
+        )
+
+    def test_key_is_deterministic(self):
+        from analysis.ai_scenarios import CAPITAL_INCOME_VARS, build_scenario
+        from analysis.compute_ai_scenarios import scenario_checkpoint_key
+
+        first = scenario_checkpoint_key(
+            "grid:x", build_scenario("Moderate"), CAPITAL_INCOME_VARS
+        )
+        second = scenario_checkpoint_key(
+            "grid:x", build_scenario("Moderate"), tuple(CAPITAL_INCOME_VARS)
+        )
+        assert first == second
+        assert first.startswith("grid:x@")
+
+    def test_capital_scope_is_part_of_the_key(self):
+        from analysis.ai_scenarios import (
+            CAPITAL_INCOME_VARS,
+            CAPITAL_INCOME_VARS_EXCL_RETIREMENT,
+            build_scenario,
+        )
+        from analysis.compute_ai_scenarios import scenario_checkpoint_key
+
+        scenario = build_scenario("Slow")
+        assert scenario_checkpoint_key(
+            "u", scenario, CAPITAL_INCOME_VARS
+        ) != scenario_checkpoint_key("u", scenario, CAPITAL_INCOME_VARS_EXCL_RETIREMENT)
+
+    def test_a_label_only_match_is_recomputed_and_an_exact_match_is_reused(self):
+        from analysis.ai_scenarios import CAPITAL_INCOME_VARS, build_scenario
+        from analysis.compute_ai_scenarios import _run_one, scenario_checkpoint_key
+
+        class Recomputed(Exception):
+            pass
+
+        def factory():
+            raise Recomputed
+
+        revised = build_scenario("Rapid")
+        july = build_scenario("Rapid", target_labor_share=0.513)
+        stale = {
+            "grid:Rapid / proportional": {"revenue": "July, keyed by label"},
+            scenario_checkpoint_key(
+                "grid:Rapid / proportional", july, CAPITAL_INCOME_VARS
+            ): {"revenue": "July, keyed by July inputs"},
+        }
+        args = (revised, {}, {}, factory, 2030, CAPITAL_INCOME_VARS, False)
+        with pytest.raises(Recomputed):
+            _run_one(
+                *args,
+                checkpoint=stale,
+                checkpoint_key="grid:Rapid / proportional",
+            )
+
+        fresh = {
+            scenario_checkpoint_key(
+                "grid:Rapid / proportional", revised, CAPITAL_INCOME_VARS
+            ): {"revenue": "revised"}
+        }
+        assert _run_one(
+            *args, checkpoint=fresh, checkpoint_key="grid:Rapid / proportional"
+        ) == {"revenue": "revised"}
