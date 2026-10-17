@@ -185,7 +185,8 @@ def main():
     rp = srow("Rapid", "proportional")
     rates = [r["scenario"]["realization_rate"] for r in real] + [1.0]
     revs = [r["total_rev_change_b"] for r in real] + [rp["total_rev_change_b"]]
-    # Their committed Rapid corporate wedge (g_K x $486B; realization-independent).
+    # Their committed Rapid corporate wedge (g_K times their CBO 2030 CIT level;
+    # realization-independent).
     import pandas as pd
 
     wedge = float(
@@ -271,14 +272,15 @@ def main():
             f"{v:+.1f}", xy=(v, c), xytext=(3, -2), textcoords="offset points",
             fontsize=7.5, color=GRAY,
         )
-    ax.annotate(
-        "WA has no income tax; its take is the\ncapital gains excise tax",
-        xy=(0.98, 0.05),
-        xycoords="axes fraction",
-        ha="right",
-        fontsize=7.5,
-        color=NAVY,
-    )
+    if "WA" in codes:
+        ax.annotate(
+            "WA has no income tax; its take is the\ncapital gains excise tax",
+            xy=(0.98, 0.05),
+            xycoords="axes fraction",
+            ha="right",
+            fontsize=7.5,
+            color=NAVY,
+        )
     save(fig, "states.pdf")
 
 

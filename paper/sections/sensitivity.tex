@@ -11,28 +11,28 @@ capital flow lands on a tax return (Figure~\ref{fig:realization},
 Table~\ref{tab:realization} in the appendix), revenue runs from
 \genRealZeroRev B at a 0\% realized share to \genRealFullRev B at their
 100\% assumption --- linear to within a percent across a grid in
-\genRealGridStepPct-point steps, with breakeven interpolated at a
-\genRealBreakevenPct\% realized share (the grid's own adjacent points are
-\genRealZeroRev B at 0\% and \genRealQuarterRev B at
-\genRealGridStepPct\%). Below that, the household side of the fiscal system
-loses money on Rapid AI growth: labor income still falls, and not enough
-taxable capital income reaches returns to offset it.
+\genRealGridStepPct-point steps (no point lies more than
+\genRealLineMaxGapPct\% of the range off the straight line through the
+ends). Revenue stays positive across the whole grid: Rapid labor income grows
+\genRapidCompLaborPct\% on the revised inputs, so the household side gains
+even when none of the incremental capital income reaches a return. On the
+Budget Lab's July inputs, under which Rapid labor income fell, the same sweep
+turned negative below a \genRevRealBreakevenOldPct\% realized share.
 
 One counterweight sits outside the household sector: corporate tax is levied
 upstream of household realization, so the Budget Lab's corporate wedge would
 still collect about \genTheirRapidCit B on the same shock regardless of the
-realized share --- enough to keep the all-in total (household, state and
-corporate) positive, about \genRealZeroAllIn B, even at the 0\% floor. Low
-realization shifts the fiscal burden of an AI boom onto the corporate side;
-it does not eliminate it. One scope note: the realization haircut applies
+realized share, lifting the all-in total (household, state and corporate) to
+about \genRealZeroAllIn B at the 0\% floor. Low realization shifts the fiscal
+gain from an AI boom toward the corporate side; it does not eliminate it. One scope note: the realization haircut applies
 uniformly to all nine capital variables, including pass-through income and
 retirement distributions that are realized by construction, so the low end
 of the axis is a stress bound rather than a describable world.
 
 Poverty is flat across the entire sweep, between \genRealPovMinPct\% and
-\genRealPovMaxPct\%. Whether AI's capital gains are taxable moves the
-federal balance sheet by more than a quarter-trillion dollars and moves poor
-households essentially not at all: the transfer system responds to what
+\genRealPovMaxPct\%. Whether AI's capital gains are taxable moves net revenue
+by roughly a quarter-trillion dollars (\$\genRealFullLessZeroB B) and moves
+poor households essentially not at all: the transfer system responds to what
 happens to wages, not to how much of the capital gain the tax system
 reaches.
 
@@ -52,18 +52,20 @@ them in the capital set --- which the Budget Lab does, and the headline
 results follow --- raises the revenue estimate and softens the ``capital is
 taxed lightly'' mechanism. Excluding them (Table~\ref{tab:scope} in the
 appendix) moves Rapid from \genRapidScopeFull B to \genRapidScopeExcl B and
-flips Slow's sign (\genSlowScopeFull B to \genSlowScopeExcl B). Together
-with realization, these two definitional choices span more of the revenue
-answer than the choice between Slow, Moderate and Rapid.
+flips Slow's sign (\genSlowScopeFull B to \genSlowScopeExcl B). Realization
+alone spans \$\genRealFullLessZeroB B of the Rapid estimate, nearly the
+\$\genScenarioSpanB B that separates the Slow and Rapid headlines; the
+retirement-scope choice, worth \$\genRapidScopeDiffAbs B, falls inside that
+range.
 
 \subsection{Stability across data builds}\label{sec:stability}
 
 The results were first computed on the prior \texttt{populace-us} build
 (build~o, 22 July 2026) and rerun on build~p (\genDataBuildDate{}, with
 revised capital gains calibration) under the identical pinned model version
---- a data-only change. Both runs predate the Head Start correction noted
-before the introduction, so this comparison uses the net-income accounting they
-shared. No scenario revenue figure moved by more than
+--- a data-only change. Both runs predate the Head Start correction and the
+October revision noted before the introduction, so this comparison uses the
+net-income accounting and the July scenario inputs they shared. No scenario revenue figure moved by more than
 \$\genStabMaxAbsRevB B in absolute terms; in relative terms Moderate and
 Rapid cells moved by at most \genStabMaxRelModRapidPct\%, while the smallest
 Slow cells --- single-digit-billion bases --- moved by up to
@@ -72,12 +74,17 @@ Slow cells --- single-digit-billion bases --- moved by up to
 visible effect is distributional: the baseline top-1\% net income share
 rises from \genStabTopOneOld\% to \genStabTopOneNew\% (\genBaselineTopOnePct\%
 after the correction), and New York's state
-take under Rapid rises from \$\genStabNYOld B to \$\genStabNYNew B as more
+take under Rapid~/~proportional rises from \$\genStabNYOld B to \$\genStabNYNew B as more
 of the gains land where they are taxed. This build-to-build movement bounds
 sensitivity to data calibration, not sampling error, which is unquantified
-here (Section~\ref{sec:discussion}). An average-tax-rate cross-check also
-lands in range: Rapid~/~proportional turns a \genRapidPropMarketDelta B
-market income increase into \genRapidPropRev B of receipts,
-\genRapidPropATRPct\% --- of the same order as the 21--34\% band the Budget
-Lab reports, though their denominator is gross factor income rather than
-modelled market income.
+here (Section~\ref{sec:discussion}). An average-tax-rate cross-check points
+the same way as the reconciliation. The Budget Lab's Rapid band, 21\% to
+32\% across the wage-spread variants, is federal revenue including their
+corporate wedge over the gross factor income their shock adds
+(\$\genTheirRapidGrossIncomeB B); their cells run \genAtrTheirsTriplet\%
+for compressive~/~proportional~/~expansive. On the same numerator ---
+federal income tax net of credits, payroll and their wedge --- over the
+market income the shock adds here (\genRapidPropMarketDelta B in each
+variant), this paper's cells run \genAtrOursMatchedTriplet\%, higher in
+every cell, as the bridged headline is. The denominators differ, so the
+comparison is indicative.

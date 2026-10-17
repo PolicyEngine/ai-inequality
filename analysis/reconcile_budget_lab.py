@@ -1,23 +1,28 @@
 """Compare our scenario results to The Budget Lab's, cell by cell.
 
-Their AI-Fiscal repository (github.com/Budget-Lab-Yale/AI-Fiscal, MIT, release
-git rev 74de5986e5ff) commits the full published result grid:
+Their AI-Fiscal repository (github.com/Budget-Lab-Yale/AI-Fiscal, MIT) commits
+the full published result grid:
 `results/aggregates/ai_fiscal_publishable_2030_latest.xlsx`, with revenue by
-instrument for all 18 cells. That replaces the two text-stated totals this
-script previously compared against, and it corrects two errors in the earlier
-version of this bridge:
+instrument for all 18 cells. The committed copy here is their v1.0.1 workbook
+(the 2026-10-09 revision), fetched at AI-Fiscal 1c25162c9aae; it equals run D
+of their `results/erratum_v1.0.1/` comparison cell for cell (git blob
+b4cdf12c). v1.0.0, which this bridge used before and which is kept as
+yale_publishable_2030_v1_0_0.xlsx, is the copy at their tag v1.0.0
+(53a92aa61c2d; git blob 3090e94d). The grid replaces the two
+text-stated totals this script first compared against, and it corrected two
+errors in the earliest version of this bridge:
 
   The wedge cancels its base.  Their corporate line is
   dR_CIT = X * (R_CIT_CBO / Y0_K) with X = Y0_K * g, so dR_CIT = g * R_CIT_CBO
-  — the capital base drops out. All 18 committed macro_cit_delta values equal
-  g x $486B to <$0.15B. The earlier bridge applied a flat 10.5% to OUR larger
-  capital base, overstating the borrowed wedge (Rapid: $96B vs the correct
-  $84B).
+  — the capital base drops out. Every committed macro_cit_delta equals g times
+  the workbook's CBO 2030 CIT level: $477.3B in v1.0.1, $486.1B in v1.0.0. The
+  earliest bridge applied a flat 10.5% to OUR larger capital base, overstating
+  the borrowed wedge (Rapid, v1.0.0: $96B vs the correct $84B).
 
   The base is not recoverable from the wedge.  Because it cancels, "inverting
-  the identity" says nothing about their Y0_K. Their methodology's remark that
-  eta "falls out to roughly one in practice" implies Y0_K near $486B/0.105 ~
-  $4.6T, but that rests on their prose, not on algebra this script can verify.
+  the identity" says nothing about their Y0_K. Their committed cell_params
+  sheet records it instead: $4.51T of baseline realized taxable capital
+  income (y0_k_B), the same in both releases.
 
 Alignment of cells: their share_mode R (reallocate) is our as-forecast run and
 F (fixed share) is our shares-fixed counterfactual; S0/S2/S3 are our
@@ -43,9 +48,6 @@ THEIRS_URL = (
     "results/aggregates/ai_fiscal_publishable_2030_latest.xlsx"
 )
 
-#: CBO 2030 corporate income tax anchor, from their corporate_tax sheet.
-CBO_CIT_B = 486.0
-THEIR_CBO_2030_TOTAL_REVENUE_B = 6595.0
 
 VARIANT = {"Slow": "S", "Moderate": "M", "Rapid": "R"}
 LABOR = {"proportional": "S0", "compressive": "S2", "expansive": "S3"}
@@ -58,6 +60,22 @@ def load_theirs(path):
         )
     df = pd.read_excel(path, sheet_name="revenue_grid_wide", engine="openpyxl")
     return df.set_index("scenario_id")
+
+
+def their_anchors(path):
+    """CBO 2030 anchors as their workbook records them, $B.
+
+    Read rather than restated: v1.0.1 replaced the rounded CBO ratios, moving
+    the corporate anchor from $486.1B to $477.3B and total revenue from
+    $6,618.2B to $6,595.1B.
+    """
+    parameters = pd.read_excel(path, sheet_name="parameters", engine="openpyxl")
+    cit = parameters["CBO baseline-year CIT level, $"].dropna().unique()
+    rev_gdp = pd.read_excel(path, sheet_name="revenue_to_gdp", engine="openpyxl")
+    revenue = rev_gdp["baseline_revenue_B_cbo"].dropna().unique()
+    if len(cit) != 1 or len(revenue) != 1:
+        raise ValueError(f"{path}: expected one CBO CIT level and one revenue total")
+    return {"cit_b": float(cit[0]) / 1e9, "revenue_b": float(revenue[0])}
 
 
 def our_row(data, name, variant, shares_fixed=False):
@@ -104,6 +122,16 @@ def main():
     with open(ours_path) as handle:
         ours = json.load(handle)
     theirs = load_theirs(theirs_path)
+    anchors = their_anchors(theirs_path)
+    (their_y0k_b,) = (
+        pd.read_excel(theirs_path, sheet_name="cell_params", engine="openpyxl")[
+            "y0_k_B"
+        ]
+        .dropna()
+        .unique()
+    )
+    their_y0k_t = float(their_y0k_b) / 1000
+    our_k_t = ours["baseline"]["context"]["positive_capital_income_t"]
 
     print("=" * 96)
     print("OURS vs THE BUDGET LAB, CELL BY CELL (their committed result grid)")
@@ -112,7 +140,10 @@ def main():
         "  theirs: AI-Fiscal results/aggregates/ai_fiscal_publishable_2030_latest.xlsx"
     )
     print("  basis:  federal IIT net of refundable credits + payroll ('microsim');")
-    print("          'bridged' adds their corporate wedge g x $486B to our microsim.")
+    print(
+        "          'bridged' adds their corporate wedge "
+        f"g x ${anchors['cit_b']:,.1f}B to our microsim."
+    )
     print("=" * 96)
 
     header = (
@@ -174,8 +205,8 @@ def main():
         print(
             f"  ours bridged {bridged:+,.0f}B vs theirs {publ:+,.0f}B"
             f"  ({bridged / publ:.2f}x; "
-            f"{bridged / THEIR_CBO_2030_TOTAL_REVENUE_B:.1%} vs "
-            f"{publ / THEIR_CBO_2030_TOTAL_REVENUE_B:.1%} of CBO 2030 revenue)"
+            f"{bridged / anchors['revenue_b']:.1%} vs "
+            f"{publ / anchors['revenue_b']:.1%} of CBO 2030 revenue)"
         )
 
     print("\nSTILL NOT NETTED OUT")
@@ -183,8 +214,10 @@ def main():
     print("    income (ours); they note a narrower base is more top-concentrated.")
     print("  - Pass-through: their active/passive-aware split vs our single rule.")
     print("  - Microdata: 2015 IRS PUF aged to 2030 vs populace-us survey build.")
-    print("  - Their capital base is not observable here; eta ~ 1 in their prose")
-    print("    implies about $4.6T vs our $5.3T, but the wedge cannot confirm it.")
+    print(
+        f"  - Capital base: their committed y0_k is ${their_y0k_t:.2f}T against our "
+        f"${our_k_t:.2f}T ({our_k_t / their_y0k_t - 1:.0%} larger)."
+    )
 
 
 if __name__ == "__main__":

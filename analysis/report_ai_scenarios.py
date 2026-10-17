@@ -1,12 +1,13 @@
 """Turn ai_scenarios.json into the tables that go in the write-up."""
 
 import json
+import os
 import sys
 
 PATH = (
     sys.argv[1]
     if len(sys.argv) > 1
-    else "/Users/maxghenis/PolicyEngine/ai-inequality/analysis/outputs/ai_scenarios.json"
+    else os.path.join(os.path.dirname(__file__), "outputs", "ai_scenarios.json")
 )
 
 with open(PATH) as handle:
@@ -80,9 +81,10 @@ for name in ("Slow", "Moderate", "Rapid"):
         continue
     a, b = fixed["total_rev_change_b"], tilted["total_rev_change_b"]
     print(f"{name:12s} {a:>+13,.0f} {b:>+12,.0f} {b / a:>6.0%} {b - a:>+9,.0f}")
-print("\nThe Budget Lab reports revenue gains roughly twice as large under Rapid")
-print("with capital and labor shares held at 2026 levels (i.e. 'kept' ~50%),")
-print("and 82% lower in their most extreme case (Slow, compressive).")
+print("\nThe Budget Lab (revised 2026-10-09) reports revenue gains nearly twice as")
+print("large under Rapid with capital and labor shares held at 2026 levels (their")
+print("grid: 1.79x, i.e. 'kept' 56%), and 82% lower in their most extreme case")
+print("(Slow, compressive).")
 
 for name in ("Slow", "Moderate", "Rapid"):
     print(f"\n\nTHE LABOR INEQUALITY CHANNEL ({name})")
@@ -155,8 +157,9 @@ if rapid:
             f"{rapid['total_rev_change_b']:+,.0f}B = "
             f"{rapid['total_rev_change_b'] / gross:.1%} of the increment"
         )
-        print("The Budget Lab reports 21%-34% for Rapid on gross factor income,")
-        print("including corporate tax, which is outside this model.")
+        print("The Budget Lab reports 21%-32% for Rapid: federal revenue including")
+        print("their corporate wedge over gross factor income. The bases differ;")
+        print("emit_paper_values.py states both on a matched numerator.")
 
     print("\n\nSTATE FISCAL IMPACT, Rapid / proportional (top and bottom 8, $B)")
     states = sorted(
