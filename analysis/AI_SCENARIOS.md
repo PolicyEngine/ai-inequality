@@ -295,14 +295,17 @@ checkpoint (`analysis/outputs/ai_scenarios_checkpoint.jsonl`) and exits with
 status 3 while work remains, so relaunch until it exits 0:
 
 ```bash
-until python -m analysis.compute_ai_scenarios --max-new-units 1; do
-  [ $? -eq 3 ] || break
+while true; do
+  python -m analysis.compute_ai_scenarios --max-new-units 1; status=$?
+  [ $status -eq 3 ] || break
 done
+[ $status -eq 0 ]
 ```
 
-Checkpoint keys carry the runtime fingerprint and a digest of each unit's
-scenario and shock settings, so a resumed unit is always one computed from the
-same inputs on the same runtime.
+Each checkpoint record carries the runtime fingerprint, and only records from
+the current runtime are loaded; each key carries a digest of the unit's scenario
+and shock settings. So a resumed unit is always one computed from the same
+inputs on the same runtime.
 
 Then regenerate what derives from the run:
 

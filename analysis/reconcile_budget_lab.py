@@ -123,13 +123,14 @@ def main():
         ours = json.load(handle)
     theirs = load_theirs(theirs_path)
     anchors = their_anchors(theirs_path)
-    their_y0k_t = float(
+    (their_y0k_b,) = (
         pd.read_excel(theirs_path, sheet_name="cell_params", engine="openpyxl")[
             "y0_k_B"
         ]
         .dropna()
-        .unique()[0]
-    ) / 1000
+        .unique()
+    )
+    their_y0k_t = float(their_y0k_b) / 1000
     our_k_t = ours["baseline"]["context"]["positive_capital_income_t"]
 
     print("=" * 96)

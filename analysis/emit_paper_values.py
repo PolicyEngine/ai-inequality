@@ -203,7 +203,8 @@ def main(paper_dir=PAPER):
     rev_gdp = pd.read_excel(xlsx, sheet_name="revenue_to_gdp", engine="openpyxl")
     their_cbo_rev = float(rev_gdp["baseline_revenue_B_cbo"].dropna().unique()[0])
     cell_params = pd.read_excel(xlsx, sheet_name="cell_params", engine="openpyxl")
-    their_y0k = float(cell_params["y0_k_B"].dropna().unique()[0])
+    (their_y0k,) = cell_params["y0_k_B"].dropna().unique()
+    their_y0k = float(their_y0k)
     their_cit_anchor = their_anchors(xlsx)["cit_b"]
 
     V = {}  # macro name -> string value
@@ -258,12 +259,6 @@ def main(paper_dir=PAPER):
         / (rf["spm_poverty_rate"] - base["spm_poverty_rate"]),
         0,
     )
-    # The tilt against growth: what the tilt costs Rapid, and what Slow-to-Rapid
-    # growth (both as forecast) adds.
-    sp = rows[("Slow", "proportional")]
-    V["RapidTiltCostB"] = fmt(rf["total_rev_change_b"] - rp["total_rev_change_b"], 0)
-    V["RapidTiltPovPp"] = fmt(100 * (rp["spm_poverty_rate"] - rf["spm_poverty_rate"]), 2)
-    V["GrowthPovPp"] = fmt(100 * abs(rp["spm_poverty_rate"] - sp["spm_poverty_rate"]), 2)
     V["RapidPovSpanPp"] = fmt(
         100 * (re_["spm_poverty_rate"] - rc["spm_poverty_rate"]), 2
     )
@@ -505,6 +500,16 @@ def main(paper_dir=PAPER):
             for v in ("compressive", "proportional", "expansive")
         ),
         1,
+    )
+
+    # Payroll in the shares-fixed counterfactuals, where labor income grows with
+    # output: the level response, which the as-forecast cells (small aggregate
+    # labor growth) do not test.
+    fixed_cell = theirs.loc["ai_R_F_S0_V1"]
+    V["PayrollFixedRapidOurs"] = sfmt(our_side(rf)["payroll"])
+    V["PayrollFixedRapidTheirs"] = sfmt(fixed_cell.revenues_payroll_tax)
+    V["PayrollFixedRapidRatio"] = fmt(
+        our_side(rf)["payroll"] / fixed_cell.revenues_payroll_tax, 1
     )
 
     # Market-income deltas behind the tilt (Section: national vs modelled shares).

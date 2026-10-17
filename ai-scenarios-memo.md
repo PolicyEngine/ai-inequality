@@ -138,7 +138,8 @@ the tilt costs in dollars but leave the ratio essentially unchanged.
 
 Their most extreme case reproduces in direction, not magnitude: for Slow with
 compressive labor inequality they report the gain 82% lower than with shares
-and distribution unchanged (their grid puts it at 84%); we get 93% lower.
+and distribution unchanged (their grid, against the shares-fixed proportional
+cell, puts it at 84%); we get 93% lower.
 
 An average-tax-rate comparison points the same way as the bridge below. They
 report 21%–32% for Rapid: federal revenue including their corporate wedge over
@@ -238,7 +239,8 @@ state codes concentrate collections at the top the way federal brackets do. On
 the Rapid / expansive cell we bridge to their headline below, state tax net of
 state credits adds $54B — another 16% on top of the +$344B federal take.
 
-More than half of it (55%) lands in five states — California
+Under Rapid / proportional, more than half of the +$42B (55%) lands in five
+states — California
 +$11.6B, New York +$6.4B, New Jersey +$2.0B, Massachusetts +$1.5B, Maryland
 +$1.4B.
 
@@ -254,8 +256,8 @@ not participate in an economy where wages are the shrinking share.
 
 Whatever AI does to the federal fiscal picture, it does little for most of the
 states that would bear the cost of absorbing displaced workers — unless they
-have a capital tax to collect it with. Outside ten states the gain is under
-$1B; the median state collects $0.3B.
+have a capital tax to collect it with. Under Rapid / proportional, outside ten
+states the gain is under $1B, and the median state collects $0.3B.
 
 ## Scope and method
 
@@ -289,9 +291,12 @@ their wedge. On that basis:
 
 **We are 1.39× their estimate** — 5.2% of CBO 2030 revenue against their 3.7%.
 And the divergence has a clean anatomy: **payroll responses agree remarkably
-well in every cell** (ours +58/+7/−47 against theirs +54/+5/−48 across the
-compressive, proportional and expansive Rapid variants — two independent models putting similar wage distributions
-against the same cap), while the gap is concentrated in the **income tax
+well in every as-forecast cell** (ours +58/+7/−47 against theirs +54/+5/−48
+across the compressive, proportional and expansive Rapid variants — two
+independent models putting similar wage distributions against the same cap).
+That agreement is on the cap; the level response differs. With shares held
+fixed, so that labor income grows with output, our Rapid payroll gain is 1.4
+times theirs (+$121B against +$84B). The larger gap is concentrated in the **income tax
 response to the capital shock**: on the proportional cell, where the wage
 spread is neutral and the income tax response is almost entirely the capital
 shock, ours is 1.82× theirs (1.44× on this expansive cell). The absolute gap

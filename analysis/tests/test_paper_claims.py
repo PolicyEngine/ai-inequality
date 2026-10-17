@@ -117,12 +117,17 @@ def test_average_tax_rates_on_a_matched_numerator(v):
     assert ours == sorted(ours) and theirs == sorted(theirs)
 
 
-def test_tilt_costs_about_as_much_as_growth_adds_and_more_for_poverty(v):
-    """Intro: the tilt matters about as much as the growth rate for revenue,
-    and more for poverty."""
-    ratio = v.num("RapidTiltCostB") / v.num("ScenarioSpanB")
-    assert 0.8 <= ratio <= 1.25
-    assert v.num("RapidTiltPovPp") > 2 * v.num("GrowthPovPp")
+def test_tilt_takes_back_more_of_the_poverty_gain_than_of_revenue(v):
+    """Intro: the tilt takes back much of what growth delivers, and more of its
+    poverty gain than of its revenue."""
+    assert v.num("RapidPovGainKeptPct") < v.num("KeptHouseholdRapidPct") < 60
+
+
+def test_payroll_level_response_differs_with_shares_fixed(v):
+    """Reconciliation, memo: payroll agrees in the as-forecast cells, but with
+    shares fixed ours is about 1.4 times theirs."""
+    assert 1.3 <= v.num("PayrollFixedRapidRatio") <= 1.5
+    assert v.num("PayrollFixedRapidOurs") > v.num("PayrollFixedRapidTheirs") > 0
 
 
 def test_forecast_range_is_the_first_decade_of_the_sweep(v):

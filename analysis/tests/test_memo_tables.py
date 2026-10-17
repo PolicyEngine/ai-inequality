@@ -288,6 +288,11 @@ PROSE = [
          "ModExpBenefits"],
     ),
     (r"Refundable credits contribute the remaining \$(\d+)B", ["CreditSwing"]),
+    (
+        r"our Rapid payroll gain is ([\d.]+)\s+times theirs \((\+\$\d+B) against "
+        r"(\+\$\d+B)\)",
+        ["PayrollFixedRapidRatio", "PayrollFixedRapidOurs", "PayrollFixedRapidTheirs"],
+    ),
     (r"outlay side of the ([\d.]+)-point poverty span", ["RapidPovSpanPp"]),
     (
         r"\*\*(\+\$\d+B)\*\* under Rapid / proportional, nearly\s+doubling from (\+\$\d+B) "
@@ -298,11 +303,14 @@ PROSE = [
         r"state credits adds \$(\d+)B — another \d+% on top of the (\+\$\d+B) federal take",
         ["RapidExpStateNet", "BridgeOursTotal"],
     ),
-    (r"More than half of it \((\d+)%\) lands in five states", ["StateTopFiveSharePct"]),
+    (
+        r"more than half of the (\+\$\d+B) \((\d+)%\) lands in five\s+states",
+        ["RapidPropState", "StateTopFiveSharePct"],
+    ),
     (r"capital gains excise tax collects \*\*(\+\$[\d.]+B)\*\*", ["WAState"]),
     (
-        r"\(ours ([+−]\d+/[+−]\d+/[+−]\d+) against theirs ([+−]\d+/[+−]\d+/[+−]\d+) across"
-        r" the\s+compressive, proportional and expansive",
+        r"\(ours ([+−]\d+/[+−]\d+/[+−]\d+) against theirs ([+−]\d+/[+−]\d+/[+−]\d+)\s+"
+        r"across the\s+compressive, proportional and expansive",
         ["PayrollTripletOurs", "PayrollTripletTheirs"],
     ),
     (
@@ -325,8 +333,11 @@ PROSE = [
          "TiltTheirsSlow", "TiltOursMatchedMod", "TiltTheirsMod",
          "TiltOursHouseholdRapid"],
     ),
-    (r"\(their grid puts it at (\d+)%\); we get (\d+)% lower", ["SlowCompTheirsLowerPct",
-                                                                "SlowCompOursLowerPct"]),
+    (
+        r"\(their grid, against the shares-fixed proportional\s+cell, puts it at (\d+)%\); "
+        r"we get (\d+)% lower",
+        ["SlowCompTheirsLowerPct", "SlowCompOursLowerPct"],
+    ),
 ]
 
 

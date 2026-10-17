@@ -505,8 +505,13 @@ def run_ai_scenarios(
         baseline_row = cached_baseline["row"]
         baseline_revenue = cached_baseline["revenue"]
         baseline_states = cached_baseline["states"]
-        # The description is this code's, not the resumed unit's.
-        metadata = {**cached_baseline["metadata"], "description": DESCRIPTION}
+        # Descriptive fields are this code's, not the resumed unit's.
+        metadata = {
+            **cached_baseline["metadata"],
+            "description": DESCRIPTION,
+            "model_url": MODEL_URL,
+            "corporate_tax_scope_note": CORPORATE_TAX_SCOPE_NOTE,
+        }
     else:
         budget.spend()
         baseline = microsim_factory()

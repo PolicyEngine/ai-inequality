@@ -179,10 +179,13 @@ def run(year=TARGET_YEAR, verbose=True, output_path=None, checkpoint_path=None):
     stamp = fingerprint["digest"] if checkpoint_path else None
     checkpoint = load_checkpoint(checkpoint_path, stamp)
 
-    if "baseline" in checkpoint and "programs" in checkpoint:
-        baseline_totals = checkpoint["baseline"]
-        programs = checkpoint["programs"]
-        bundle = checkpoint.get("bundle") or {}
+    baseline_key, programs_key, bundle_key = (
+        f"{name}@{year}" for name in ("baseline", "programs", "bundle")
+    )
+    if baseline_key in checkpoint and programs_key in checkpoint:
+        baseline_totals = checkpoint[baseline_key]
+        programs = checkpoint[programs_key]
+        bundle = checkpoint.get(bundle_key) or {}
         if verbose:
             print("baseline ... (from checkpoint)", flush=True)
     else:
@@ -192,9 +195,9 @@ def run(year=TARGET_YEAR, verbose=True, output_path=None, checkpoint_path=None):
         programs = benefit_programs(sim, year)
         baseline_totals = program_totals(sim, year, programs)
         bundle = policyengine_bundle(sim)
-        append_checkpoint(checkpoint_path, "baseline", baseline_totals, stamp)
-        append_checkpoint(checkpoint_path, "programs", programs, stamp)
-        append_checkpoint(checkpoint_path, "bundle", bundle or {}, stamp)
+        append_checkpoint(checkpoint_path, baseline_key, baseline_totals, stamp)
+        append_checkpoint(checkpoint_path, programs_key, programs, stamp)
+        append_checkpoint(checkpoint_path, bundle_key, bundle or {}, stamp)
         del sim
         gc.collect()
 
