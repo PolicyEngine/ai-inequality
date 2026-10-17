@@ -5,8 +5,10 @@ the full published result grid:
 `results/aggregates/ai_fiscal_publishable_2030_latest.xlsx`, with revenue by
 instrument for all 18 cells. The committed copy here is their v1.0.1 workbook
 (the 2026-10-09 revision), fetched at AI-Fiscal 1c25162c9aae; it equals run D
-of their `results/erratum_v1.0.1/` comparison cell for cell. v1.0.0, which
-this bridge used before, came from rev 74de5986e5ff. The grid replaces the two
+of their `results/erratum_v1.0.1/` comparison cell for cell (git blob
+b4cdf12c). v1.0.0, which this bridge used before and which is kept as
+yale_publishable_2030_v1_0_0.xlsx, is the copy at their tag v1.0.0
+(53a92aa61c2d; git blob 3090e94d). The grid replaces the two
 text-stated totals this script first compared against, and it corrected two
 errors in the earliest version of this bridge:
 
@@ -18,9 +20,9 @@ errors in the earliest version of this bridge:
   the borrowed wedge (Rapid, v1.0.0: $96B vs the correct $84B).
 
   The base is not recoverable from the wedge.  Because it cancels, "inverting
-  the identity" says nothing about their Y0_K. Their methodology's remark that
-  eta "falls out to roughly one in practice" implies Y0_K near $486B/0.105 ~
-  $4.6T, but that rests on their prose, not on algebra this script can verify.
+  the identity" says nothing about their Y0_K. Their committed cell_params
+  sheet records it instead: $4.51T of baseline realized taxable capital
+  income (y0_k_B), the same in both releases.
 
 Alignment of cells: their share_mode R (reallocate) is our as-forecast run and
 F (fixed share) is our shares-fixed counterfactual; S0/S2/S3 are our
@@ -121,6 +123,14 @@ def main():
         ours = json.load(handle)
     theirs = load_theirs(theirs_path)
     anchors = their_anchors(theirs_path)
+    their_y0k_t = float(
+        pd.read_excel(theirs_path, sheet_name="cell_params", engine="openpyxl")[
+            "y0_k_B"
+        ]
+        .dropna()
+        .unique()[0]
+    ) / 1000
+    our_k_t = ours["baseline"]["context"]["positive_capital_income_t"]
 
     print("=" * 96)
     print("OURS vs THE BUDGET LAB, CELL BY CELL (their committed result grid)")
@@ -203,8 +213,10 @@ def main():
     print("    income (ours); they note a narrower base is more top-concentrated.")
     print("  - Pass-through: their active/passive-aware split vs our single rule.")
     print("  - Microdata: 2015 IRS PUF aged to 2030 vs populace-us survey build.")
-    print("  - Their capital base is not observable here; eta ~ 1 in their prose")
-    print("    implies about $4.6T vs our $5.3T, but the wedge cannot confirm it.")
+    print(
+        f"  - Capital base: their committed y0_k is ${their_y0k_t:.2f}T against our "
+        f"${our_k_t:.2f}T ({our_k_t / their_y0k_t - 1:.0%} larger)."
+    )
 
 
 if __name__ == "__main__":

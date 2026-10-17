@@ -36,6 +36,9 @@ from .ai_scenarios import (
     CAPITAL_INCOME_VARS,
     CAPITAL_INCOME_VARS_EXCL_RETIREMENT,
     CORPORATE_TAX_SCOPE_NOTE,
+    LABOR_INCOME_VARS,
+    PASSTHROUGH_CAPITAL_SHARE,
+    PASSTHROUGH_VAR,
     TARGET_YEAR,
     apply_ai_scenario,
     build_scenario,
@@ -182,26 +185,46 @@ def _branch_name(scenario):
     return f"ai_{slug}"[:48]
 
 
-def scenario_digest(scenario, capital_income_vars):
-    """Short digest of the inputs that decide one unit's numbers.
+def _shock_settings(year, capital_income_vars):
+    """The settings besides the scenario itself that decide a unit's numbers."""
+    return {
+        "year": year,
+        "capital_income_vars": list(capital_income_vars),
+        "labor_income_vars": list(LABOR_INCOME_VARS),
+        "passthrough_var": PASSTHROUGH_VAR,
+        "passthrough_capital_share": PASSTHROUGH_CAPITAL_SHARE,
+    }
+
+
+def _digest(payload):
+    encoded = json.dumps(payload, sort_keys=True, default=float).encode()
+    return hashlib.sha256(encoded).hexdigest()[:12]
+
+
+def scenario_digest(scenario, capital_income_vars, year=TARGET_YEAR):
+    """Short digest of the scenario and the shock settings applied with it.
 
     Checkpoint keys carry it, so a resumed run cannot return a unit computed
     from other scenario inputs under the same label. The Budget Lab's
     2026-10-09 revision moved the Moderate and Rapid labor shares without
     changing either label; keyed by label alone, a resume would have reused
-    the July cells.
+    the July cells. Changes to the shock code itself are not covered: bump
+    ``RUNTIME_REVISION`` for those, as for any change to computed values.
     """
-    payload = {
-        "scenario": scenario.to_dict(),
-        "capital_income_vars": list(capital_income_vars),
-    }
-    encoded = json.dumps(payload, sort_keys=True, default=float).encode()
-    return hashlib.sha256(encoded).hexdigest()[:12]
+    return _digest(
+        {"scenario": scenario.to_dict(), **_shock_settings(year, capital_income_vars)}
+    )
 
 
-def scenario_checkpoint_key(prefix, scenario, capital_income_vars):
+def scenario_checkpoint_key(prefix, scenario, capital_income_vars, year=TARGET_YEAR):
     """Checkpoint key for one unit: its family prefix plus its input digest."""
-    return f"{prefix}@{scenario_digest(scenario, capital_income_vars)}"
+    return f"{prefix}@{scenario_digest(scenario, capital_income_vars, year)}"
+
+
+def baseline_checkpoint_key(year, capital_income_vars):
+    """Checkpoint key for the baseline unit, which depends on the year and on
+    the capital set its factor-share context is measured with."""
+    return f"{BASELINE_KEY}@{_digest(_shock_settings(year, capital_income_vars))}"
 
 
 def _fiscal_row(delta):
@@ -386,7 +409,7 @@ def _run_one(
 ):
     """Run a single scenario from a fresh microsimulation."""
     key = scenario_checkpoint_key(
-        checkpoint_key or scenario.label, scenario, capital_income_vars
+        checkpoint_key or scenario.label, scenario, capital_income_vars, year
     )
     if checkpoint and key in checkpoint:
         if verbose:
@@ -474,14 +497,16 @@ def run_ai_scenarios(
     if verbose:
         print(f"Baseline microsimulation for {year}...", flush=True)
 
-    cached_baseline = checkpoint.get(BASELINE_KEY)
+    baseline_key = baseline_checkpoint_key(year, capital_income_vars)
+    cached_baseline = checkpoint.get(baseline_key)
     if cached_baseline:
         if verbose:
             print("  (from checkpoint)", flush=True)
         baseline_row = cached_baseline["row"]
         baseline_revenue = cached_baseline["revenue"]
         baseline_states = cached_baseline["states"]
-        metadata = cached_baseline["metadata"]
+        # The description is this code's, not the resumed unit's.
+        metadata = {**cached_baseline["metadata"], "description": DESCRIPTION}
     else:
         budget.spend()
         baseline = microsim_factory()
@@ -498,7 +523,7 @@ def run_ai_scenarios(
         gc.collect()
         append_checkpoint(
             checkpoint_path,
-            BASELINE_KEY,
+            baseline_key,
             {
                 "row": baseline_row,
                 "revenue": baseline_revenue,
@@ -656,6 +681,8 @@ def main(argv=None):
     checkpoint_path = None if args.checkpoint == "none" else args.checkpoint
     if args.max_new_units is not None and checkpoint_path is None:
         parser.error("--max-new-units needs a checkpoint to resume from")
+    if args.max_new_units is not None and args.max_new_units < 1:
+        parser.error("--max-new-units must be at least 1")
 
     print("=" * 78)
     print("AI SCENARIOS (Budget Lab calibration, PolicyEngine-US)")

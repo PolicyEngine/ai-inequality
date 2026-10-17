@@ -202,7 +202,7 @@ def run(year=TARGET_YEAR, verbose=True, output_path=None, checkpoint_path=None):
     for variant in VARIANTS:
         scenario = build_scenario("Rapid", inequality=variant)
         key = scenario_checkpoint_key(
-            f"rapid:{variant}", scenario, CAPITAL_INCOME_VARS
+            f"rapid:{variant}", scenario, CAPITAL_INCOME_VARS, year
         )
         if key in checkpoint:
             rows[variant] = checkpoint[key]

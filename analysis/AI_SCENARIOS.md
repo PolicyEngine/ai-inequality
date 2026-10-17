@@ -84,9 +84,10 @@ and the pre-shock factor shares.
 
 `test_ai_scenarios.py` checks the per-cell `g_y`, `g_k`, `g_l` and `lambda`
 against AI-Fiscal's committed `cell_params` for both releases, all eighteen
-cells, to 1e-12. It also reproduces the rounded Table 1 of both versions to
-within 0.005 percentage points, and re-derives both constants by grid search so
-they cannot be quietly nudged.
+cells, to 1e-12; that differential test is what pins both constants (the
+four-decimal 1.0976 fails it). It also reproduces the rounded Table 1 of both
+versions to within 0.005 percentage points, and a grid search confirms both
+constants are least-squares fits to it.
 
 ## Every shocked variable reaches the tax base
 
@@ -284,7 +285,41 @@ python -m analysis.compute_ai_scenarios
 Writes `analysis/outputs/ai_scenarios.json`: per scenario, the revenue
 decomposition, inequality and poverty metrics, decile shares, per-state deltas,
 Social Security cap diagnostics, and the shock diagnostics needed to confirm the
-labor aggregate landed on its target.
+labor aggregate landed on its target. It also writes the site payload,
+`src/data/aiScenariosData.json`.
+
+One simulation of this pipeline peaks near 80 GB of memory footprint, and a
+process does not hand it all back between units. On a shared host, run one unit
+per process: `--max-new-units 1` computes one unit not already in the
+checkpoint (`analysis/outputs/ai_scenarios_checkpoint.jsonl`) and exits with
+status 3 while work remains, so relaunch until it exits 0:
+
+```bash
+until python -m analysis.compute_ai_scenarios --max-new-units 1; do
+  [ $? -eq 3 ] || break
+done
+```
+
+Checkpoint keys carry the runtime fingerprint and a digest of each unit's
+scenario and shock settings, so a resumed unit is always one computed from the
+same inputs on the same runtime.
+
+Then regenerate what derives from the run:
+
+```bash
+python -m analysis.compute_state_exposure     # src/data/stateExposureData.json
+python analysis/emit_paper_values.py          # paper/values_generated.tex, tables_generated.tex
+python analysis/paper_figures.py              # paper/figures/*.pdf
+make paper                                    # paper/main.pdf
+bun run build:memo                            # src/data/memoContent.js, after editing the memo
+python -m analysis.compare_scenario_vintages  # before/after table against the July-inputs run
+```
+
+The memo, `ai-scenarios-memo.md`, is written by hand: update its figures from
+the run, then `analysis/tests/test_memo_tables.py` and
+`test_paper_claims.py` check the memo's tables and the paper's qualitative
+claims against the outputs, and `test_generated_files_in_sync.py` checks every
+generated file against its source.
 
 Unit tests need no PolicyEngine install:
 

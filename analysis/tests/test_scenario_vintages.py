@@ -40,11 +40,11 @@ from analysis.compute_ai_scenarios import REALIZATION_SWEEP
 
 OUTPUTS = Path(__file__).resolve().parents[1] / "outputs"
 
-#: $B. The growth factor moved by 5e-6 of itself, which moves g_Y by about
-#: 5e-6 and so a cell of a few hundred billion dollars by well under a cent of
-#: a billion per basis point of growth; 0.1 leaves room for float noise in
-#: weighted totals without hiding a labor-share change, which moves Moderate
-#: and Rapid cells by billions.
+#: $B. The growth factor moved by about 5e-6 of itself, which moves g_Y by
+#: about 5e-6. Revenue in the largest untouched cell (Rapid shares fixed) is
+#: about $8,000B per unit of g_Y, so the expected move is about $0.04B, and
+#: the largest observed is $0.042B. A labor-share change moves the Moderate
+#: and Rapid cells by billions, so 0.1 cannot hide one.
 UNTOUCHED_TOL_B = 0.1
 
 

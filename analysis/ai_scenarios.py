@@ -37,9 +37,9 @@ and the pre-shock factor shares. The report gives the CBO path (2.2% growth in
 2026, 1.8% a year after), and their AI-Fiscal repository commits both inputs
 in `config/scenario_params.yaml`. With those values this module reproduces the
 per-cell g_Y, g_K, g_L and lambda in their committed `cell_params` to machine
-precision, for v1.0.0 and v1.0.1 alike; see `tests/test_ai_scenarios.py`,
-which also re-derives both constants from the rounded Table 1 so they cannot
-be quietly nudged.
+precision, for v1.0.0 and v1.0.1 alike; `tests/test_ai_scenarios.py` checks
+that to 1e-12, which is what pins both constants, and also checks the rounded
+Table 1 of both versions.
 
 Two things we model that the Budget Lab analysis does not, and one it models
 that we cannot:

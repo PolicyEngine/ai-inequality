@@ -81,12 +81,15 @@ is its first decade, and the rest is out-of-sample stress test.
 
 The scenarios adopt the Budget Lab's calibration of \citet{karger2026}
 exactly, as revised on 9 October 2026. Each scenario is defined by an annual
-real GDP growth rate under AI (Slow 2.0\%, Moderate 2.6\%, Rapid 3.3\%) and
-a 2030 labor share of factor income (55.0\%, 54.0\%, 52.0\%), both the
+real GDP growth rate under AI (Slow \genInputSlowGrowthPct\%, Moderate
+\genInputModGrowthPct\%, Rapid \genInputRapidGrowthPct\%) and a 2030 labor
+share of factor income (\genInputSlowLaborSharePct\%,
+\genInputModLaborSharePct\%, \genInputRapidLaborSharePct\%), both the
 medians of the survey's economist respondents. The report as first published
-took the labor shares from the pooled all-respondent column instead (53.8\%
-for Moderate, 51.3\% for Rapid); its revision, and this version of the
-paper, use the economist column for both inputs. Growth is expressed in excess of the CBO
+took the labor shares from the pooled all-respondent column instead
+(\genRevModLaborShareOld\% for Moderate, \genRevRapidLaborShareOld\% for
+Rapid); its revision, and this version of the paper, use the economist column
+for both inputs. Growth is expressed in excess of the CBO
 baseline path: the five-year output shock is
 $g_Y = (1+r_{\mathrm{ai}})^5 / G_{\mathrm{CBO}} - 1$, and the factor shocks
 follow from the target shares,
@@ -100,9 +103,8 @@ path their report states (2.2\% in 2026, 1.8\% a year after), and the
 pre-shock labor share $\theta^0_L = 0.555$, which their model repository
 commits. With these, unit tests reproduce their committed per-cell output,
 capital and labor growth rates and $\lambda$ to machine precision in both
-versions of their release, reproduce the rounded Table~1 of both versions to
-within 0.005\,pp, and re-derive both constants by grid search so they cannot
-drift.
+versions of their release, which pins both constants, and reproduce the
+rounded Table~1 of both versions to within 0.005\,pp.
 
 The wage-inequality channel is their stylization $\lambda = 1 \pm g_Y$: a
 spread transform on log labor income,

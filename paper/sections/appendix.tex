@@ -97,14 +97,18 @@ paper is emitted from the run outputs by
 \texttt{analysis/paper\_figures.py}.
 \item \textbf{Their side:} the Budget Lab's \texttt{AI-Fiscal} repository
 (MIT license) commits the complete published result grid
-(\texttt{results/aggregates/ai\_fiscal\_publishable\_2030\_latest.xlsx});
-the reconciliation reads it directly, and a copy is committed alongside this
+(\texttt{results/aggregates/ai\_fiscal\_publishable\_2030\_latest.xlsx},
+here at their revised release v1.0.1); the reconciliation reads it directly,
+and a copy is committed alongside this
 paper's own run outputs so the bridge is reproducible without a network
 fetch. Their PUF-based input microdata cannot be redistributed, so their
 pipeline is readable but not rerunnable by third parties; this paper's is
 both.
 \item \textbf{Canonical run outputs:} \texttt{analysis/outputs/ai\_scenarios.json}
-(build~p) is committed with three comparison files:
+(build~p, the Budget Lab's revised inputs) is committed with five comparison
+files: \texttt{ai\_scenarios\_v1\_0\_0\_inputs.json} (the same run on their
+July inputs, the basis of the revision and correction notes) and
+\texttt{yale\_publishable\_2030\_v1\_0\_0.xlsx} (their July result grid);
 \texttt{ai\_scenarios\_buildp\_published.json} (build~p as first published,
 with Head Start and Early Head Start in net income) and
 \texttt{ai\_scenarios\_buildo.json} (build~o), the stability comparison of
@@ -124,6 +128,6 @@ rates and $\lambda$ to machine precision, and all nine published derived
 values of their Table~1 to within 0.005\,pp, in both the July and the
 revised October version of their release, from the CBO path their report
 states ($G_{\mathrm{CBO}}=1.022\times1.018^4$) and the pre-shock labor share
-their repository commits ($\theta^0_L=0.555$); grid searches re-derive both. The scenario runner checkpoints per-scenario
+their repository commits ($\theta^0_L=0.555$). The scenario runner checkpoints per-scenario
 results and is resumable; run logs and build-o archives are kept under
 \texttt{analysis/outputs/}.

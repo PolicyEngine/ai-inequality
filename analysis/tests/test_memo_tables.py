@@ -212,3 +212,148 @@ def test_tilt_ratios_match_the_paper(paper):
     names = ("Slow", "Mod", "Rapid")
     assert ours == " / ".join(f"{paper['TiltOursMatched' + n]}×" for n in names)
     assert theirs == " / ".join(f"{paper['TiltTheirs' + n]}×" for n in names)
+
+
+def _signed(text):
+    return float(text.replace("−", "-").replace("$", "").replace("B", "").replace(",", ""))
+
+
+#: Each memo sentence that quotes a figure, as a regex whose groups are the
+#: figures, and the paper macro each group must equal (signs and dollar signs
+#: are normalized; the memo prints what the macro rounds to).
+PROSE = [
+    (
+        r"Moderate labor share rises from ([\d.]+)% to\s+([\d.]+)% and the Rapid share "
+        r"from ([\d.]+)% to ([\d.]+)%",
+        ["RevModLaborShareOld", "RevModLaborShareNew", "RevRapidLaborShareOld",
+         "RevRapidLaborShareNew"],
+    ),
+    (
+        r"Rapid aggregate labor\s+income now grows ([\d.]+)% instead of falling ([\d.]+)%",
+        ["RevRapidLaborGrowthNew", "-RevRapidLaborGrowthOld"],
+    ),
+    (
+        r"poverty falls ([\d.]+)\s+points where we had reported a ([\d.]+)-point rise",
+        ["-RevRapidPropPovPpNew", "RevRapidPropPovPpOld"],
+    ),
+    (
+        r"realized \((\+\$\d+B)\), where we had reported a\s+loss below a ([\d.]+)% realized",
+        ["RevRealZeroRevNew", "RevRealBreakevenOldPct"],
+    ),
+    (
+        r"Rapid / proportional revenue moves from (\+\$\d+B) to (\+\$\d+B)",
+        ["RevRapidPropRevOld", "RevRapidPropRevNew"],
+    ),
+    (
+        r"headline moves from (\+\$\d+B) to (\+\$\d+B),\s+against\s+their \$(\d+)B, now "
+        r"\$(\d+)B",
+        ["RevBridgeOursOld", "RevBridgeOursNew", "RevBridgeTheirsOld",
+         "RevBridgeTheirsNew"],
+    ),
+    (
+        r"takes Rapid revenue from\s+(\+\$\d+B) to (\+\$\d+B), a \$(\d+)B span against "
+        r"the \$(\d+)B",
+        ["RealFullRev", "RealZeroRev", "RealFullLessZeroB", "ScenarioSpanB"],
+    ),
+    (r"capital set cuts it to\s+(\+\$\d+B)", ["RapidScopeExcl"]),
+    (
+        r"payroll receipts\s+\*rise\* \$(\d+)B, against \$(\d+)B when.*?payroll loss of "
+        r"\$(\d+)B",
+        ["RapidCompPayroll", "RapidPropPayroll", "-RapidExpPayroll"],
+    ),
+    (r"the\s+same ([\d.]+)%; only its distribution differs", ["RapidCompLaborPct"]),
+    (
+        r"over\s+the \$(\d+)B of gross factor income their shock adds, (\d+)% / (\d+)% / "
+        r"(\d+)% for",
+        ["TheirRapidGrossIncomeB", "AtrTheirs0", "AtrTheirs1", "AtrTheirs2"],
+    ),
+    (
+        r"our Rapid cells run (\d+)% / (\d+)% / (\d+)%, higher in every cell",
+        ["AtrOurs0", "AtrOurs1", "AtrOurs2"],
+    ),
+    (
+        r"gross tax collections swing \$(\d+)B, and automatic transfer responses absorb"
+        r"\s+\$(\d+)B",
+        ["GrossTaxSwing", "TransferSwing"],
+    ),
+    (
+        r"Non-credit transfers alone swing \*\*\$(\d+)B\*\*:\s+(−\$\d+B) under compressive"
+        r".*?to (\+\$\d+B) under expansive",
+        ["BenefitSwing", "RapidCompBenefits", "RapidExpBenefits"],
+    ),
+    (
+        r"SNAP carries \$(\d+)B of the swing \((−\$\d+B) to (\+\$\d+B)\) and SSI \$(\d+)B;"
+        r" Moderate shows the\s+same shape at (−\$\d+B) to (\+\$\d+B)",
+        ["SnapSwing", "RapidCompSnap", "RapidExpSnap", "SsiSwing", "ModCompBenefits",
+         "ModExpBenefits"],
+    ),
+    (r"Refundable credits contribute the remaining \$(\d+)B", ["CreditSwing"]),
+    (r"outlay side of the ([\d.]+)-point poverty span", ["RapidPovSpanPp"]),
+    (
+        r"\*\*(\+\$\d+B)\*\* under Rapid / proportional, nearly\s+doubling from (\+\$\d+B) "
+        r"to (\+\$\d+B)",
+        ["RapidPropState", "RapidCompState", "RapidExpState"],
+    ),
+    (
+        r"state credits adds \$(\d+)B — another \d+% on top of the (\+\$\d+B) federal take",
+        ["RapidExpStateNet", "BridgeOursTotal"],
+    ),
+    (r"More than half of it \((\d+)%\) lands in five states", ["StateTopFiveSharePct"]),
+    (r"capital gains excise tax collects \*\*(\+\$[\d.]+B)\*\*", ["WAState"]),
+    (
+        r"\(ours ([+−]\d+/[+−]\d+/[+−]\d+) against theirs ([+−]\d+/[+−]\d+/[+−]\d+) across"
+        r" the\s+compressive, proportional and expansive",
+        ["PayrollTripletOurs", "PayrollTripletTheirs"],
+    ),
+    (
+        r"ours is ([\d.]+)× theirs \(([\d.]+)× on this expansive cell\)",
+        ["IITRatioProp", "IITRatio"],
+    ),
+    (
+        r"nearly constant at \$(\d+)B / \$(\d+)B / \$(\d+)B",
+        ["IITGap0", "IITGap1", "IITGap2"],
+    ),
+    (
+        r"capital base at \$([\d.]+)T against our \$[\d.]+T, (\d+)% larger",
+        ["TheirYZeroKT", "BaseGapPct"],
+    ),
+    (
+        r"tilt claim at ([\d.]+)× for\s+Rapid; on the same federal-plus-corporate basis "
+        r"ours is ([\d.]+)× \(Slow ([\d.]+)× vs\s+their ([\d.]+)×, Moderate ([\d.]+)× vs "
+        r"([\d.]+)×\).*?Our household-total ([\d.]+)×",
+        ["TiltTheirsRapid", "TiltOursMatchedRapid", "TiltOursMatchedSlow",
+         "TiltTheirsSlow", "TiltOursMatchedMod", "TiltTheirsMod",
+         "TiltOursHouseholdRapid"],
+    ),
+    (r"\(their grid puts it at (\d+)%\); we get (\d+)% lower", ["SlowCompTheirsLowerPct",
+                                                                "SlowCompOursLowerPct"]),
+]
+
+
+def _expected(paper, name):
+    sign = -1 if name.startswith("-") else 1
+    name = name.lstrip("-")
+    for prefix, macro in (
+        ("AtrTheirs", "AtrTheirsTriplet"),
+        ("AtrOurs", "AtrOursMatchedTriplet"),
+        ("IITGap", "IITGapTriplet"),
+    ):
+        if name.startswith(prefix) and name[len(prefix) :].isdigit():
+            return sign * float(paper[macro].split("/")[int(name[len(prefix) :])])
+    return sign * float(paper[name].replace(",", ""))
+
+
+@pytest.mark.parametrize("pattern,names", PROSE, ids=[n[0] for _, n in PROSE])
+def test_memo_prose_figures_match_the_paper(paper, pattern, names):
+    groups = _memo_has(pattern)
+    assert len(groups) == len(names)
+    for text, name in zip(groups, names):
+        if "/" in text:
+            assert text.replace("−", "-") == paper[name], name
+        else:
+            assert _signed(text) == pytest.approx(_expected(paper, name)), name
+
+
+def test_revision_note_untouched_cells_claim(paper):
+    _memo_has(r"Slow and the shares-fixed counterfactuals move by less\s+than \$0\.1B")
+    assert float(paper["RevUntouchedMaxMoveB"]) < 0.1

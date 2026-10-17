@@ -9,18 +9,20 @@ As first published, it took GDP growth from the economists in the Karger et al.
 survey but the 2030 labor shares from all respondents pooled; the revision
 takes both from the economists, so the Moderate labor share rises from 53.8% to
 54.0% and the Rapid share from 51.3% to 52.0%. It also replaces CBO's rounded
-2030 ratios, which lowers their corporate wedge by 1.8% in every cell. We reran
-every scenario on the same model and data with the revised inputs, and the
-comparison below is against their revised result grid. Rapid aggregate labor
+2030 ratios, which by itself lowers their corporate wedge by 1.8%; with lower
+capital growth as well, their Rapid wedge falls from $84B to $74B. We reran
+every scenario on the same model and data with the revised inputs, taking the
+CBO growth path as their report states it rather than our rounded 1.0976, and
+the comparison below is against their revised result grid. Rapid aggregate labor
 income now grows 0.41% instead of falling 0.94%, and that changes four of our
 findings. The tilt toward capital now erodes most of growth's poverty gain
 rather than reversing it: under Rapid / proportional, poverty falls 0.17
 points where we had reported a 0.11-point rise. Revenue stays positive even if
 none of the new capital income is realized (+$26B), where we had reported a
 loss below a 22.5% realized share. Excluding retirement distributions now cuts
-the Rapid estimate by about a third, not half. And the two tax-base choices
-now span nearly as much of the Rapid estimate as the move from Slow to Rapid,
-rather than more. Rapid / proportional revenue moves from +$211B to +$272B;
+the Rapid estimate by about a third, not half. And how much capital income is
+realized now moves the Rapid estimate nearly as much as the move from Slow to
+Rapid, rather than more. Rapid / proportional revenue moves from +$211B to +$272B;
 our bridged Rapid / expansive headline moves from +$301B to +$344B, against
 their $216B, now $246B. Slow and the shares-fixed counterfactuals move by less
 than $0.1B. The September correction below describes the run before this
@@ -60,8 +62,7 @@ The Budget Lab's report gave that work an external anchor. We extended the same
 framework to the Karger et al. scenarios they calibrate to, deliberately
 adopting their calibration so that what differs is model coverage rather than
 assumptions. PolicyEngine carries the transfer system, the SPM poverty measure,
-and the state codes their tax model does not. Three things follow that a
-revenue-only score cannot show.
+and the state codes their tax model does not. Three things follow.
 
 **1. The tilt toward capital erodes most of growth's poverty gain.** In the
 Rapid scenario — 3.3% annual real GDP growth either way — poverty falls 1.09
@@ -73,11 +74,13 @@ outcome.** The Budget Lab is explicit that nobody knows whether AI compresses or
 widens the wage distribution, so they span the range. Across that span in Rapid,
 revenue moves 34% while poverty moves **3.23 points**, from 10.49% to 13.72%.
 
-**3. Two definitional choices about the tax base matter nearly as much as the
-choice between Slow and Rapid.** How much AI capital income is realized, and
-whether taxable retirement distributions count as capital, together range the
-Rapid revenue estimate from +$26B to +$272B, a $245B span against the $265B
-between the Slow and Rapid estimates.
+**3. How much AI capital income is realized matters nearly as much as the
+choice between Slow and Rapid.** Moving the realized share from 100% to 0% —
+a stress bound, since the haircut also hits pass-through income and retirement
+distributions that are realized by construction — takes Rapid revenue from
++$272B to +$26B, a $245B span against the $265B between the Slow and Rapid
+estimates. Excluding retirement distributions from the capital set cuts it to
++$177B.
 
 ## Scenario results
 
@@ -109,10 +112,11 @@ revenue as earnings cross the Social Security cap ($214,200 in 2030; at
 baseline, 15.8% of wage income and 5.7% of workers sit above it).
 
 The cap effect runs in both directions, which is worth stating because it is
-easy to get backwards: every Rapid variant grows aggregate labor income by the
-same 0.41%, yet payroll receipts *rise* $58B under compression, against $7B
-when that growth is spread proportionally, because compression moves earnings
-from above the cap to below it.
+easy to get backwards. Every Rapid variant grows aggregate labor income by the
+same 0.41%; only its distribution differs. Under compression, payroll receipts
+*rise* $58B, against $7B when the same growth is spread proportionally,
+because compression moves earnings from above the cap to below it; under
+expansion the same cap turns that wage growth into a payroll loss of $47B.
 
 ## What the tilt toward capital costs
 
@@ -123,23 +127,26 @@ from above the cap to below it.
 | Rapid | +$576B | +$272B | 47% |
 
 Their "nearly twice as large" claim is specifically about Rapid; their grid
-puts it at 1.79×. Our 2.1× above is not directly comparable — it is an
+puts it at 1.79×. Our 2.12× above is not directly comparable — it is an
 all-government household total with no corporate wedge. Restated on their
 federal-plus-corporate basis, our ratios are 3.16× / 1.53× / 1.72× against
-their 3.68× / 1.58× / 1.79× — the two models agree on the tilt, scenario by
-scenario. The larger household-total ratio mostly reflects the missing wedge:
+their 3.68× / 1.58× / 1.79× — the two models agree on the tilt for Moderate
+and Rapid, and on the ordering across all three. The larger household-total ratio mostly reflects the missing wedge:
 their corporate wedge grows with the capital shock, so on their basis it
 cushions the as-forecast cell. State taxes and the transfer system add to what
 the tilt costs in dollars but leave the ratio essentially unchanged.
 
-Their most extreme case checks out too: for Slow with compressive labor
-inequality they report the gain 82% lower than with shares and distribution
-unchanged; we get 93% lower.
+Their most extreme case reproduces in direction, not magnitude: for Slow with
+compressive labor inequality they report the gain 82% lower than with shares
+and distribution unchanged (their grid puts it at 84%); we get 93% lower.
 
-An independent cross-check: they report an average tax rate of 21%–32% on gross
-factor income in Rapid. Our Rapid / proportional turns an $887B market income
-increase into $272B of receipts — **30.7%**, inside their band, from a different
-model on different microdata.
+An average-tax-rate comparison points the same way as the bridge below. They
+report 21%–32% for Rapid: federal revenue including their corporate wedge over
+the $767B of gross factor income their shock adds, 21% / 26% / 32% for
+compressive / proportional / expansive. On the same numerator (federal income
+tax net of credits, payroll and their wedge) over the market income our shock
+adds, our Rapid cells run 30% / 34% / 39%, higher in every cell. The
+denominators differ, so treat the comparison as indicative.
 
 ## The two assumptions that dominate
 
@@ -231,7 +238,7 @@ state codes concentrate collections at the top the way federal brackets do. On
 the Rapid / expansive cell we bridge to their headline below, state tax net of
 state credits adds $54B — another 16% on top of the +$344B federal take.
 
-That revenue concentrates almost entirely in a handful of states — California
+More than half of it (55%) lands in five states — California
 +$11.6B, New York +$6.4B, New Jersey +$2.0B, Massachusetts +$1.5B, Maryland
 +$1.4B.
 
@@ -240,14 +247,15 @@ Nevada, New Hampshire, South Dakota, Tennessee, Texas and Wyoming. Alaska
 rounds to zero.
 
 Washington is the instructive exception. It has no income tax either, but its
-capital gains excise tax collects **+$1.1B** — more than all seven
-zero-collecting states combined, many times over. A state that taxes capital
+capital gains excise tax collects **+$1.1B**, while those seven collect
+nothing. A state that taxes capital
 gains participates in an AI capital boom; a state that taxes only wages does
 not participate in an economy where wages are the shrinking share.
 
-Whatever AI does to the federal fiscal picture, it does almost nothing for most
-of the states that would bear the cost of absorbing displaced workers — unless
-they have a capital tax to collect it with.
+Whatever AI does to the federal fiscal picture, it does little for most of the
+states that would bear the cost of absorbing displaced workers — unless they
+have a capital tax to collect it with. Outside ten states the gain is under
+$1B; the median state collects $0.3B.
 
 ## Scope and method
 
@@ -281,14 +289,14 @@ their wedge. On that basis:
 
 **We are 1.39× their estimate** — 5.2% of CBO 2030 revenue against their 3.7%.
 And the divergence has a clean anatomy: **payroll responses agree remarkably
-well in every cell** (ours +7/+58/−47 against theirs +5/+54/−48 across the
-Rapid variants — two independent models putting similar wage distributions
+well in every cell** (ours +58/+7/−47 against theirs +54/+5/−48 across the
+compressive, proportional and expansive Rapid variants — two independent models putting similar wage distributions
 against the same cap), while the gap is concentrated in the **income tax
 response to the capital shock**: on the proportional cell, where the wage
 spread is neutral and the income tax response is almost entirely the capital
 shock, ours is 1.82× theirs (1.44× on this expansive cell). The absolute gap
-says it more plainly: nearly constant at $98B / $100B / $96B across the three
-Rapid variants, which is what a difference in the shared capital shock —
+says it more plainly: nearly constant at $98B / $100B / $96B across the same
+three Rapid variants, which is what a difference in the shared capital shock —
 rather than in the varying wage channel — looks like. Three things point the
 same way: their committed cell parameters put their baseline realized taxable
 capital base at $4.51T against our $5.27T, 17% larger; allocation by realized
@@ -306,8 +314,9 @@ their "82% lower" figure for Slow/compressive uses a shares-fixed *compressive*
 counterfactual; ours uses shares-fixed proportional, so our 93% is not exactly
 the same comparison.
 
-`reconcile_budget_lab.py` reproduces every number in this section from our run
-output and their committed workbook. The borrowed wedge is not PolicyEngine
+`reconcile_budget_lab.py` prints the cell-by-cell bridge from our run output and
+their committed workbook; `emit_paper_values.py` computes the ratios, gaps and
+capital base quoted here. The borrowed wedge is not PolicyEngine
 modelling corporate tax, and it inherits every constant-rate assumption they
 list.
 
@@ -343,11 +352,11 @@ are as small as $3B, by up to 12%. No poverty change moved by more than 0.11pp,
 and no conclusion changed. The recalibration's
 visible effect is distributional: the baseline top-1% net income share rises
 from 8.77% to 9.00% (9.06% after the correction), and New York's state take
-under Rapid rises from $3.8B to $5.8B as more of the gains land where they are
+under Rapid / proportional rises from $3.8B to $5.8B as more of the gains land where they are
 taxed.
 
 **Diagnostics.** The net-income identity closes to $0.000B in every scenario,
-and the labor shock hits its target aggregate to within 2e-16.
+and the labor shock hits its target aggregate to machine precision (2.2e-16).
 
 ## Reproducibility
 

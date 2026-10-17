@@ -111,8 +111,11 @@ def net_income_accounting(metadata):
     )
 
 
-def revision_values(current, july, theirs_current, july_workbook_path):
+def revision_values(current, july, current_workbook_path, july_workbook_path):
     """Macros for the October 2026 revision note: July inputs against now."""
+    theirs_current = pd.read_excel(
+        current_workbook_path, sheet_name="revenue_grid_wide", engine="openpyxl"
+    ).set_index("scenario_id")
     theirs_july = pd.read_excel(
         july_workbook_path, sheet_name="revenue_grid_wide", engine="openpyxl"
     ).set_index("scenario_id")
@@ -159,7 +162,7 @@ def revision_values(current, july, theirs_current, july_workbook_path):
         out[f"RevBridgeTheirs{tag}"] = sfmt(cell.total_with_macro_cit)
         if anchors is not None:
             out[f"RevTheirCitAnchor{tag}B"] = fmt(anchors["cit_b"], 1)
-    out["RevTheirCitAnchorNewB"] = fmt(their_anchors(XLSX_PATH)["cit_b"], 1)
+    out["RevTheirCitAnchorNewB"] = fmt(their_anchors(current_workbook_path)["cit_b"], 1)
 
     # Cells the labor-share revision leaves alone (Slow and every shares-fixed
     # counterfactual) move only through the CBO growth factor's last digits.
@@ -185,7 +188,8 @@ def sfmt(x, nd=0):
     return f"{x:+.{nd}f}"
 
 
-def main():
+def main(paper_dir=PAPER):
+    """Write values_generated.tex and tables_generated.tex into paper_dir."""
     with open(os.path.join(OUT, "ai_scenarios.json")) as fh:
         sc = json.load(fh)
     with open(os.path.join(ROOT, "src", "data", "shiftSweepData.json")) as fh:
@@ -205,6 +209,12 @@ def main():
     V = {}  # macro name -> string value
     base = sc["baseline"]
     meta = sc["metadata"]
+
+    # --- Scenario inputs, from the run itself ---
+    for name, macro in (("Slow", "Slow"), ("Moderate", "Mod"), ("Rapid", "Rapid")):
+        s = our_row(sc, name, "proportional")["scenario"]
+        V[f"Input{macro}GrowthPct"] = fmt(100 * s["annual_gdp_growth"], 1)
+        V[f"Input{macro}LaborSharePct"] = fmt(100 * s["target_labor_share"], 1)
 
     # --- Baseline (2030) ---
     V["BaselinePovertyPct"] = fmt(100 * base["spm_poverty_rate"], 2)
@@ -248,6 +258,12 @@ def main():
         / (rf["spm_poverty_rate"] - base["spm_poverty_rate"]),
         0,
     )
+    # The tilt against growth: what the tilt costs Rapid, and what Slow-to-Rapid
+    # growth (both as forecast) adds.
+    sp = rows[("Slow", "proportional")]
+    V["RapidTiltCostB"] = fmt(rf["total_rev_change_b"] - rp["total_rev_change_b"], 0)
+    V["RapidTiltPovPp"] = fmt(100 * (rp["spm_poverty_rate"] - rf["spm_poverty_rate"]), 2)
+    V["GrowthPovPp"] = fmt(100 * abs(rp["spm_poverty_rate"] - sp["spm_poverty_rate"]), 2)
     V["RapidPovSpanPp"] = fmt(
         100 * (re_["spm_poverty_rate"] - rc["spm_poverty_rate"]), 2
     )
@@ -402,14 +418,12 @@ def main():
     V["RapidScopeCutPct"] = fmt(
         100 * -scope_diff / rows[("Rapid", "proportional")]["total_rev_change_b"], 0
     )
-    # The definitional choices' span on the Rapid estimate (the lowest of the
-    # realization and capital-scope runs to the headline) against the span
-    # between the Slow and Rapid headlines.
-    rapid_prop = rows[("Rapid", "proportional")]["total_rev_change_b"]
-    definitional_low = min(revs[0.0], scope["Rapid"]["total_rev_change_b"])
-    V["DefinitionalSpanB"] = fmt(rapid_prop - definitional_low, 0)
+    # The span between the Slow and Rapid headlines, against which the
+    # realization span (RealFullLessZeroB) is compared.
     V["ScenarioSpanB"] = fmt(
-        rapid_prop - rows[("Slow", "proportional")]["total_rev_change_b"], 0
+        rows[("Rapid", "proportional")]["total_rev_change_b"]
+        - rows[("Slow", "proportional")]["total_rev_change_b"],
+        0,
     )
 
     # --- Average tax rate cross-check ---
@@ -417,6 +431,29 @@ def main():
     V["RapidPropATRPct"] = fmt(
         100 * rp["total_rev_change_b"] / rp["market_income_change_b"], 1
     )
+    # Their report's Rapid band (21% to 32%) is federal revenue including
+    # their corporate wedge over the gross factor income the shock adds, the
+    # capital flow X plus the change in labor income. On the same numerator
+    # (our federal microsimulation total plus their wedge) over the market
+    # income our shock adds, per wage-spread variant.
+    rapid_cell = cell_params[
+        (cell_params["variant"] == "R")
+        & (cell_params["share_mode"] == "R")
+        & (cell_params["labor_scenario"] == "S0")
+    ].iloc[0]
+    their_gross = rapid_cell.X_B + rapid_cell.y1_l_B - rapid_cell.y0_l_B
+    V["TheirRapidGrossIncomeB"] = fmt(their_gross, 0)
+    atr_ours, atr_theirs = [], []
+    for var in ("compressive", "proportional", "expansive"):
+        row = rows[("Rapid", var)]
+        cell = theirs.loc[f"ai_R_R_{LABOR[var]}_V1"]
+        atr_ours.append(
+            100 * (our_side(row)["total"] + cell.macro_cit_delta)
+            / row["market_income_change_b"]
+        )
+        atr_theirs.append(100 * cell.total_with_macro_cit / their_gross)
+    V["AtrOursMatchedTriplet"] = "/".join(f"{x:.0f}" for x in atr_ours)
+    V["AtrTheirsTriplet"] = "/".join(f"{x:.0f}" for x in atr_theirs)
 
     # --- Reconciliation with their committed grid ---
     us = our_side(re_)
@@ -467,7 +504,7 @@ def main():
             for n in ("Slow", "Moderate", "Rapid")
             for v in ("compressive", "proportional", "expansive")
         ),
-        0,
+        1,
     )
 
     # Market-income deltas behind the tilt (Section: national vs modelled shares).
@@ -688,18 +725,21 @@ def main():
     # --- The Budget Lab's 2026-10-09 revision (July inputs vs this run) ---
     # Both runs use the same runtime, data and accounting; the July one is the
     # corrected run on their v1.0.0 inputs, bridged to their v1.0.0 workbook.
-    V.update(revision_values(sc, july, theirs, JULY_WORKBOOK))
+    V.update(revision_values(sc, july, xlsx, JULY_WORKBOOK))
 
     # ---------------- values_generated.tex ----------------
     lines = [
         "% values_generated.tex — machine-generated by analysis/emit_paper_values.py",
-        "% from analysis/outputs/ai_scenarios.json, src/data/shiftSweepData.json and",
-        "% analysis/outputs/yale_publishable_2030.xlsx. DO NOT EDIT BY HAND.",
+        "% from analysis/outputs/ai_scenarios.json, src/data/shiftSweepData.json,",
+        "% analysis/outputs/yale_publishable_2030.xlsx and the comparison files",
+        "% ai_scenarios_v1_0_0_inputs.json, yale_publishable_2030_v1_0_0.xlsx,",
+        "% ai_scenarios_buildo.json, ai_scenarios_buildp_published.json and",
+        "% transfer_detail_buildp_published.json. DO NOT EDIT BY HAND.",
     ]
     for k, v in V.items():
         lines.append(rf"\newcommand{{\gen{k}}}{{{v}}}")
-    os.makedirs(PAPER, exist_ok=True)
-    with open(os.path.join(PAPER, "values_generated.tex"), "w") as fh:
+    os.makedirs(paper_dir, exist_ok=True)
+    with open(os.path.join(paper_dir, "values_generated.tex"), "w") as fh:
         fh.write("\n".join(lines) + "\n")
 
     # ---------------- tables_generated.tex ----------------
@@ -850,7 +890,7 @@ def main():
     T.append(r"\bottomrule")
     T.append(r"\end{tabular}}")
 
-    with open(os.path.join(PAPER, "tables_generated.tex"), "w") as fh:
+    with open(os.path.join(paper_dir, "tables_generated.tex"), "w") as fh:
         fh.write("\n".join(T) + "\n")
 
     print(f"wrote {len(V)} macros and 8 tables to paper/")

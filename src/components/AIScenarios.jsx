@@ -403,6 +403,11 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
           calibrated by Yale&apos;s Budget Lab, run through PolicyEngine&apos;s
           full tax and benefit model for {scenariosData.year}.
         </p>
+        <p className="analysis-subtitle">
+          Updated 16 October 2026 for the Budget Lab&apos;s 9 October revision,
+          which raised the Moderate and Rapid labor shares;{" "}
+          <Link to="/budget-lab">the write-up</Link> lists what changed.
+        </p>
       </div>
 
       <div className="analysis-card">
@@ -504,7 +509,7 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
           transfers: refundable credits (EITC, refundable CTC) and benefit
           outlays (SNAP, SSI, TANF, WIC, state-funded benefits) are netted out,
           so a scenario that raises taxes and benefit spending together shows
-          the difference. Under {scenarioName} / proportional, state income tax
+          the difference. Under {scenarioName} / {variantKey}, state income tax
           is {fmtBillions(selected.stateTaxChange)} of it.
         </p>
 
@@ -513,7 +518,7 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
             Under this variant, workers earning below{" "}
             <strong>${Math.round(crossover).toLocaleString("en-US")}</strong>{" "}
             {variantKey === "expansive" ? "lose" : "gain"} wage income relative
-            to the proportional case.
+            to the current-law baseline.
           </p>
         )}
 

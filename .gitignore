@@ -38,6 +38,9 @@ analysis/outputs/*
 !analysis/outputs/ai_scenarios_buildp_published.json
 !analysis/outputs/transfer_detail_buildp_published.json
 !analysis/outputs/yale_publishable_2030.xlsx
+!analysis/outputs/ai_scenarios_v1_0_0_inputs.json
+!analysis/outputs/yale_publishable_2030_v1_0_0.xlsx
+.venv-test/
 .venv/
 .venv312/
 .pytest_cache/

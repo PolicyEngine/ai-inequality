@@ -103,6 +103,38 @@ describe("AIScenarios", () => {
     ).toBeTruthy();
   });
 
+  it("labels the state-tax figure with the selected variant", () => {
+    render(
+      <MemoryRouter>
+        <AIScenarios />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Wages spread" }));
+    const expansive = scenariosData.scenarios.find(
+      (r) =>
+        r.name === "Rapid" &&
+        r.inequality === "expansive" &&
+        !r.holdSharesFixed,
+    );
+    expect(
+      screen.getByText(
+        new RegExp(
+          `Under Rapid / expansive, state income tax is \\${fmtBillions(expansive.stateTaxChange).replace("$", "\\$")}`,
+        ),
+      ),
+    ).toBeTruthy();
+  });
+
+  it("links the October revision notice to the write-up", () => {
+    render(
+      <MemoryRouter>
+        <AIScenarios />
+      </MemoryRouter>,
+    );
+    const link = screen.getByRole("link", { name: "the write-up" });
+    expect(link.getAttribute("href")).toBe("/budget-lab");
+  });
+
   it("switches scenario when a tab is clicked", () => {
     render(
       <MemoryRouter>

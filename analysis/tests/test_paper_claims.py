@@ -98,17 +98,31 @@ def test_excluding_retirement_cuts_rapid_by_a_third_and_flips_slow(v):
     assert v.num("SlowScopeFull") > 0 > v.num("SlowScopeExcl")
 
 
-def test_definitional_choices_span_nearly_the_scenario_range(v):
-    """Intro, sensitivity: the two tax-base choices move the Rapid estimate
+def test_realization_spans_nearly_the_scenario_range(v):
+    """Intro, sensitivity, memo: realization alone moves the Rapid estimate
     nearly as much as moving from Slow to Rapid (more than it, on the July
-    inputs)."""
-    ratio = v.num("DefinitionalSpanB") / v.num("ScenarioSpanB")
+    inputs), and the retirement-scope case lies inside that range."""
+    ratio = v.num("RealFullLessZeroB") / v.num("ScenarioSpanB")
     assert 0.8 <= ratio < 1
+    assert v.num("RealZeroRev") < v.num("RapidScopeExcl") < v.num("RealFullRev")
 
 
-def test_average_tax_rate_is_inside_their_band(v):
-    """Sensitivity: inside the 21-32% band the revised report states."""
-    assert 21 <= v.num("RapidPropATRPct") <= 32
+def test_average_tax_rates_on_a_matched_numerator(v):
+    """Sensitivity, memo: their Rapid band (21% to 32%) reproduces from their
+    grid, and on the same numerator ours is higher in every cell."""
+    ours = v.triplet("AtrOursMatchedTriplet")
+    theirs = v.triplet("AtrTheirsTriplet")
+    assert theirs[0] == 21 and theirs[2] == 32
+    assert all(o > t for o, t in zip(ours, theirs))
+    assert ours == sorted(ours) and theirs == sorted(theirs)
+
+
+def test_tilt_costs_about_as_much_as_growth_adds_and_more_for_poverty(v):
+    """Intro: the tilt matters about as much as the growth rate for revenue,
+    and more for poverty."""
+    ratio = v.num("RapidTiltCostB") / v.num("ScenarioSpanB")
+    assert 0.8 <= ratio <= 1.25
+    assert v.num("RapidTiltPovPp") > 2 * v.num("GrowthPovPp")
 
 
 def test_forecast_range_is_the_first_decade_of_the_sweep(v):
@@ -164,10 +178,16 @@ def test_slow_compressive_reproduces_in_direction(v):
     assert v.num("SlowCompTheirsLowerPct") > 0
 
 
-def test_washington_out_collects_the_seven_zero_states(v):
-    """Results: "more than the seven zero-collecting states combined"."""
+def test_washington_collects_while_the_seven_zero_states_collect_nothing(v):
+    """Results, memo: Washington collects; the seven zero states collect
+    nothing."""
     assert int(v["NZeroStates"]) == 7
     assert v.num("WAState") > 0
+
+
+def test_payroll_agrees_to_about_five_billion(v):
+    """Abstract, intro, reconciliation: payroll agrees to about $5B."""
+    assert 4 <= v.num("PayrollMaxCellGap") <= 6
 
 
 def test_site_panel_federal_keep_rate_matches_the_paper(v):

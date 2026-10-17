@@ -341,3 +341,37 @@ class TestUnitBudget:
         )
         assert status == runner.EXIT_MORE_UNITS
         assert not (tmp_path / "out.json").exists()
+
+
+class TestCheckpointKeysCoverTheShockSettings:
+    def test_year_is_part_of_the_key(self):
+        from analysis.ai_scenarios import CAPITAL_INCOME_VARS, build_scenario
+        from analysis.compute_ai_scenarios import scenario_checkpoint_key
+
+        scenario = build_scenario("Rapid")
+        assert scenario_checkpoint_key(
+            "u", scenario, CAPITAL_INCOME_VARS, 2030
+        ) != scenario_checkpoint_key("u", scenario, CAPITAL_INCOME_VARS, 2031)
+
+    def test_baseline_key_depends_on_year_and_capital_set(self):
+        from analysis.ai_scenarios import (
+            CAPITAL_INCOME_VARS,
+            CAPITAL_INCOME_VARS_EXCL_RETIREMENT,
+        )
+        from analysis.compute_ai_scenarios import BASELINE_KEY, baseline_checkpoint_key
+
+        key = baseline_checkpoint_key(2030, CAPITAL_INCOME_VARS)
+        assert key.startswith(f"{BASELINE_KEY}@")
+        assert key != BASELINE_KEY
+        assert key != baseline_checkpoint_key(2031, CAPITAL_INCOME_VARS)
+        assert key != baseline_checkpoint_key(2030, CAPITAL_INCOME_VARS_EXCL_RETIREMENT)
+
+    @pytest.mark.parametrize("value", ["0", "-1"])
+    def test_max_new_units_must_be_positive(self, value, tmp_path):
+        from analysis import compute_ai_scenarios as runner
+
+        with pytest.raises(SystemExit) as raised:
+            runner.main(
+                ["--max-new-units", value, "--checkpoint", str(tmp_path / "c.jsonl")]
+            )
+        assert raised.value.code == 2
