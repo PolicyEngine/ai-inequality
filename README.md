@@ -132,7 +132,7 @@ ai-inequality/
 
 ## Live Site
 
-**https://policyengine.github.io/ai-inequality/**
+**https://policyengine.org/us/ai-inequality**
 
 The site automatically deploys to GitHub Pages on every push to `main`.
 
