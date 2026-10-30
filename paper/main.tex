@@ -50,17 +50,17 @@ revenue gain that shares-fixed growth would deliver on the federal basis
 comparable to the Budget Lab's (they get \genKeptTheirsRapidPct\%), and
 \genKeptHouseholdRapidPct\% on the all-government household basis, which
 adds states and transfers but has no corporate wedge
-(\genRapidPropRev B against \genRapidFixedRev B); it also turns growth's
-poverty gain into a marginal loss (\genRapidFixedPovPp pp becomes
+(\genRapidPropRev B against \genRapidFixedRev B); it also erodes most of
+growth's poverty gain (\genRapidFixedPovPp pp becomes
 \genRapidPropPovPp pp). Across the wage-inequality variants, net revenue
 stays within \genRapidCompRev B--\genRapidExpRev B while the poverty outcome
 flips sign, from \genRapidCompPovPp pp to \genRapidExpPovPp pp; automatic
 transfer responses absorb \genTransferAbsorbPct\% of the gross-tax swing
 across those variants, \$\genBenefitSwing B of it in programs outside a
-tax-only model, and state tax doubles from \genRapidCompState B to
-\genRapidExpState B. Below a realized share of roughly
-\genRealBreakevenPct\% of the incremental capital income, the household
-sector loses revenue on Rapid AI growth. Reconciled cell by cell against the
+tax-only model, and state tax nearly doubles from \genRapidCompState B to
+\genRapidExpState B. If none of the incremental capital income reaches a tax
+return, the household sector's Rapid gain falls from \genRealFullRev B to
+\genRealZeroRev B. Reconciled cell by cell against the
 Budget Lab's published grid, payroll responses agree in all nine as-forecast
 cells to within \$\genPayrollMaxCellGap B, while the bridged headline is
 \genBridgeOursTotal B against their \genBridgeTheirsTotal B
@@ -76,6 +76,37 @@ microsimulation, taxation, transfers, poverty, inequality, state taxes
 \noindent\textbf{JEL codes:} H24, H53, H71, D31, I32, O33, C63
 
 \newpage
+\noindent\textbf{Revision (October 2026).} The Budget Lab revised
+\citet{iselinnunn2026} on 9 October 2026. As first published, their report
+took GDP growth from the economist respondents of the \citet{karger2026}
+survey but the 2030 labor shares from all respondents pooled; the revision
+takes both from the economists, raising the Moderate labor share from
+\genRevModLaborShareOld\% to \genRevModLaborShareNew\% and the Rapid share
+from \genRevRapidLaborShareOld\% to \genRevRapidLaborShareNew\%. It also
+replaces CBO's rounded 2030 ratios, which moves their corporate anchor from
+\$\genRevTheirCitAnchorOldB B to \$\genRevTheirCitAnchorNewB B. This version
+reruns every calibrated scenario on the same model and data with the revised
+inputs, takes the CBO growth factor from the path their report states rather
+than from a rounded inversion of their July table, and reconciles against
+their revised result grid. Rapid capital income now grows
+\genRevRapidCapGrowthNew\% above baseline rather than
+\genRevRapidCapGrowthOld\%, and Rapid labor income changes by
+\genRevRapidLaborGrowthNew\% rather than \genRevRapidLaborGrowthOld\%.
+Rapid~/~proportional net revenue moves from \genRevRapidPropRevOld B to
+\genRevRapidPropRevNew B, the household keep-rate from
+\genRevKeptHouseholdRapidOldPct\% to \genRevKeptHouseholdRapidNewPct\%, and
+its poverty change from \genRevRapidPropPovPpOld~pp to
+\genRevRapidPropPovPpNew~pp: the tilt now erodes growth's poverty gain rather
+than reversing it. With Rapid labor income growing, the household sector also
+stays in surplus at every realized share of the new capital income
+(\genRevRealZeroRevNew B at 0\%, where the July inputs gave
+\genRevRealZeroRevOld B and a breakeven near \genRevRealBreakevenOldPct\%). The bridged Rapid~/~expansive headline moves
+from \genRevBridgeOursOld B to \genRevBridgeOursNew B, against their
+\genRevBridgeTheirsOld B and \genRevBridgeTheirsNew B. Slow and the
+shares-fixed counterfactuals move by at most \$\genRevUntouchedMaxMoveB B.
+The September correction note below describes the run before this revision.
+
+\medskip
 \noindent\textbf{Correction (September 2026).} Earlier versions of this paper
 counted Head Start and Early Head Start in household net income.
 policyengine-us \genModelVersion{} values both programs at their per-enrollee
@@ -90,7 +121,7 @@ does. Neither program counts toward SPM resources, so the poverty results are
 unchanged. Every tax cell is also unchanged. Net revenue cells move by at most
 \$\genCorrMaxRevMoveB B, net Gini levels rise by about 0.005 (baseline
 \genPubBaselineGini{} to \genBaselineGini{}), and transfers absorb
-\genTransferAbsorbPct\% of the Rapid gross-tax swing (\$\genTransferSwing B),
+\genCorrTransferAbsorbPct\% of the Rapid gross-tax swing (\$\genCorrTransferSwing B),
 where earlier versions reported \genPubTransferAbsorbPct\%
 (\$\genPubTransferSwing B). The mechanism sweep of Section~\ref{sec:sweep} has
 not been rerun and still counts both programs in benefit outlays and net

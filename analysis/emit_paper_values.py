@@ -27,12 +27,25 @@ import os
 
 import pandas as pd
 
+try:
+    from analysis.reconcile_budget_lab import their_anchors
+except ModuleNotFoundError:  # run as a script: python analysis/emit_paper_values.py
+    from reconcile_budget_lab import their_anchors
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "analysis", "outputs")
 PAPER = os.path.join(ROOT, "paper")
 
-#: CBO 2030 corporate income tax anchor, from their corporate_tax sheet.
-CBO_CIT_ANCHOR_B = 486.0
+XLSX_PATH = os.path.join(OUT, "yale_publishable_2030.xlsx")
+
+#: The Budget Lab's v1.0.0 (July) publishable workbook, the bridge's other
+#: side before their 2026-10-09 revision; yale_publishable_2030.xlsx is v1.0.1.
+JULY_WORKBOOK = os.path.join(OUT, "yale_publishable_2030_v1_0_0.xlsx")
+
+#: The corrected build-p run on the Budget Lab's July (v1.0.0) scenario
+#: inputs, committed 2026-09-26 as ai_scenarios.json. Kept because the Head
+#: Start correction and the October revision are each measured against it.
+JULY_INPUTS_FILE = "ai_scenarios_v1_0_0_inputs.json"
 
 VARIANT = {"Slow": "S", "Moderate": "M", "Rapid": "R"}
 LABOR = {"proportional": "S0", "compressive": "S2", "expansive": "S3"}
@@ -98,6 +111,75 @@ def net_income_accounting(metadata):
     )
 
 
+def revision_values(current, july, current_workbook_path, july_workbook_path):
+    """Macros for the October 2026 revision note: July inputs against now."""
+    theirs_current = pd.read_excel(
+        current_workbook_path, sheet_name="revenue_grid_wide", engine="openpyxl"
+    ).set_index("scenario_id")
+    theirs_july = pd.read_excel(
+        july_workbook_path, sheet_name="revenue_grid_wide", engine="openpyxl"
+    ).set_index("scenario_id")
+    july_anchors = their_anchors(july_workbook_path)
+    out = {}
+    for tag, doc in (("Old", july), ("New", current)):
+        for name, macro in (("Moderate", "Mod"), ("Rapid", "Rapid")):
+            s = our_row(doc, name, "proportional")["scenario"]
+            out[f"Rev{macro}LaborShare{tag}"] = fmt(100 * s["target_labor_share"], 1)
+            out[f"Rev{macro}CapGrowth{tag}"] = fmt(100 * s["capital_growth"], 2)
+            out[f"Rev{macro}LaborGrowth{tag}"] = sfmt(100 * s["labor_growth"], 2)
+        for variant, macro in (("proportional", "Prop"), ("expansive", "Exp")):
+            out[f"RevRapid{macro}Rev{tag}"] = sfmt(
+                our_row(doc, "Rapid", variant)["total_rev_change_b"]
+            )
+        fixed = our_row(doc, "Rapid", "none", shares_fixed=True)
+        prop = our_row(doc, "Rapid", "proportional")
+        out[f"RevKeptHouseholdRapid{tag}Pct"] = fmt(
+            100 * prop["total_rev_change_b"] / fixed["total_rev_change_b"], 0
+        )
+        out[f"RevRapidPropPovPp{tag}"] = sfmt(
+            100 * (prop["spm_poverty_rate"] - doc["baseline"]["spm_poverty_rate"]), 2
+        )
+        real = sorted(
+            (r["scenario"]["realization_rate"], r["total_rev_change_b"])
+            for r in doc["sensitivities"]["realization"]
+        )
+        out[f"RevRealZeroRev{tag}"] = sfmt(real[0][1])
+        for (x0, y0), (x1, y1) in zip(real, real[1:]):
+            if y0 <= 0 <= y1:
+                out[f"RevRealBreakeven{tag}Pct"] = fmt(
+                    100 * (x0 + (0 - y0) * (x1 - x0) / (y1 - y0)), 1
+                )
+                break
+    for tag, doc, grid, anchors in (
+        ("Old", july, theirs_july, july_anchors),
+        ("New", current, theirs_current, None),
+    ):
+        cell = grid.loc["ai_R_R_S3_V1"]
+        bridged = our_side(our_row(doc, "Rapid", "expansive"))["total"] + (
+            cell.macro_cit_delta
+        )
+        out[f"RevBridgeOurs{tag}"] = sfmt(bridged)
+        out[f"RevBridgeTheirs{tag}"] = sfmt(cell.total_with_macro_cit)
+        if anchors is not None:
+            out[f"RevTheirCitAnchor{tag}B"] = fmt(anchors["cit_b"], 1)
+    out["RevTheirCitAnchorNewB"] = fmt(their_anchors(current_workbook_path)["cit_b"], 1)
+
+    # Cells the labor-share revision leaves alone (Slow and every shares-fixed
+    # counterfactual) move only through the CBO growth factor's last digits.
+    def key(row):
+        s = row["scenario"]
+        return (s["name"], s["inequality"], bool(s.get("hold_shares_fixed")))
+
+    july_rows = {key(r): r for r in july["scenarios"]}
+    untouched = [
+        abs(r["total_rev_change_b"] - july_rows[key(r)]["total_rev_change_b"])
+        for r in current["scenarios"]
+        if r["scenario"]["name"] == "Slow" or r["scenario"].get("hold_shares_fixed")
+    ]
+    out["RevUntouchedMaxMoveB"] = fmt(max(untouched), 2)
+    return out
+
+
 def fmt(x, nd=1):
     return f"{x:.{nd}f}"
 
@@ -106,12 +188,13 @@ def sfmt(x, nd=0):
     return f"{x:+.{nd}f}"
 
 
-def main():
+def main(paper_dir=PAPER):
+    """Write values_generated.tex and tables_generated.tex into paper_dir."""
     with open(os.path.join(OUT, "ai_scenarios.json")) as fh:
         sc = json.load(fh)
     with open(os.path.join(ROOT, "src", "data", "shiftSweepData.json")) as fh:
         sweep = json.load(fh)
-    xlsx = os.path.join(OUT, "yale_publishable_2030.xlsx")
+    xlsx = XLSX_PATH
     theirs = pd.read_excel(
         xlsx, sheet_name="revenue_grid_wide", engine="openpyxl"
     ).set_index("scenario_id")
@@ -120,11 +203,19 @@ def main():
     rev_gdp = pd.read_excel(xlsx, sheet_name="revenue_to_gdp", engine="openpyxl")
     their_cbo_rev = float(rev_gdp["baseline_revenue_B_cbo"].dropna().unique()[0])
     cell_params = pd.read_excel(xlsx, sheet_name="cell_params", engine="openpyxl")
-    their_y0k = float(cell_params["y0_k_B"].dropna().unique()[0])
+    (their_y0k,) = cell_params["y0_k_B"].dropna().unique()
+    their_y0k = float(their_y0k)
+    their_cit_anchor = their_anchors(xlsx)["cit_b"]
 
     V = {}  # macro name -> string value
     base = sc["baseline"]
     meta = sc["metadata"]
+
+    # --- Scenario inputs, from the run itself ---
+    for name, macro in (("Slow", "Slow"), ("Moderate", "Mod"), ("Rapid", "Rapid")):
+        s = our_row(sc, name, "proportional")["scenario"]
+        V[f"Input{macro}GrowthPct"] = fmt(100 * s["annual_gdp_growth"], 1)
+        V[f"Input{macro}LaborSharePct"] = fmt(100 * s["target_labor_share"], 1)
 
     # --- Baseline (2030) ---
     V["BaselinePovertyPct"] = fmt(100 * base["spm_poverty_rate"], 2)
@@ -160,6 +251,13 @@ def main():
     )
     V["RapidExpPovPp"] = sfmt(
         100 * (re_["spm_poverty_rate"] - base["spm_poverty_rate"]), 2
+    )
+    # Share of shares-fixed growth's poverty change the forecast tilt keeps.
+    V["RapidPovGainKeptPct"] = fmt(
+        100
+        * (rp["spm_poverty_rate"] - base["spm_poverty_rate"])
+        / (rf["spm_poverty_rate"] - base["spm_poverty_rate"]),
+        0,
     )
     V["RapidPovSpanPp"] = fmt(
         100 * (re_["spm_poverty_rate"] - rc["spm_poverty_rate"]), 2
@@ -224,6 +322,9 @@ def main():
         re_["state_tax_change_b"] - re_["state_refundable_credits_change_b"]
     )
     V["RapidExpStateNet"] = sfmt(exp_state_net)
+    V["RapidStateSpanRatio"] = fmt(
+        re_["state_tax_change_b"] / rc["state_tax_change_b"], 2
+    )
     sn = state_net(rp["state_deltas"])
     top5 = sorted(sn.items(), key=lambda kv: kv[1], reverse=True)[:5]
     V["StateTopFiveSharePct"] = fmt(
@@ -260,8 +361,19 @@ def main():
         if y0 <= 0 <= y1:
             breakeven = x0 + (0 - y0) * (x1 - x0) / (y1 - y0)
             break
-    V["RealBreakevenPct"] = fmt(100 * breakeven, 1)
+    # Revenue may stay positive at every realized share, in which case there
+    # is no breakeven to report and the prose must not cite one.
+    if breakeven is not None:
+        V["RealBreakevenPct"] = fmt(100 * breakeven, 1)
     V["RealGridStepPct"] = fmt(100 * (grid[1][0] - grid[0][0]), 0)
+    # Largest gap between the sweep and the straight line through its ends, as
+    # a share of the revenue range: the "linear to within a percent" check.
+    (x_lo, y_lo), (x_hi, y_hi) = grid[0], grid[-1]
+    line_gap = max(
+        abs(y - (y_lo + (x - x_lo) * (y_hi - y_lo) / (x_hi - x_lo))) for x, y in grid
+    )
+    V["RealLineMaxGapPct"] = fmt(100 * line_gap / abs(y_hi - y_lo), 1)
+    V["RealFullLessZeroB"] = fmt(revs[1.0] - revs[0.0], 0)
     V["RealQuarterRev"] = sfmt(revs[0.25])
     povs = [r["spm_poverty_rate"] for r in real] + [rp["spm_poverty_rate"]]
     V["RealPovMinPct"] = fmt(100 * min(povs), 2)
@@ -269,13 +381,15 @@ def main():
     V["RealPovSpanPp"] = fmt(100 * (max(povs) - min(povs)), 2)
     their_rapid_cit = theirs.loc["ai_R_R_S0_V1", "macro_cit_delta"]
     V["TheirRapidCit"] = sfmt(their_rapid_cit)
-    # Their wedge equals g_K x $486B on every committed cell (the base cancels):
-    # verify against their own per-cell g_k rather than asserting it.
+    # Their wedge equals g_K times their CBO 2030 CIT level on every committed
+    # cell (the base cancels): verify against their own per-cell g_k rather
+    # than asserting it.
     n_cells = len(cell_params)
     cit_dev = max(
-        abs(row.delta_R_CIT_B - row.g_k * CBO_CIT_ANCHOR_B)
+        abs(row.delta_R_CIT_B - row.g_k * their_cit_anchor)
         for row in cell_params.itertuples()
     )
+    V["TheirCitAnchorB"] = fmt(their_cit_anchor, 1)
     V["CitWedgeMaxDevB"] = fmt(cit_dev, 3)
     V["TheirNCells"] = str(n_cells)
     V["RealZeroAllIn"] = sfmt(revs[0.0] + their_rapid_cit)
@@ -296,12 +410,45 @@ def main():
     )
     V["RapidScopeDiff"] = sfmt(scope_diff)
     V["RapidScopeDiffAbs"] = fmt(abs(scope_diff), 0)
+    V["RapidScopeCutPct"] = fmt(
+        100 * -scope_diff / rows[("Rapid", "proportional")]["total_rev_change_b"], 0
+    )
+    # The span between the Slow and Rapid headlines, against which the
+    # realization span (RealFullLessZeroB) is compared.
+    V["ScenarioSpanB"] = fmt(
+        rows[("Rapid", "proportional")]["total_rev_change_b"]
+        - rows[("Slow", "proportional")]["total_rev_change_b"],
+        0,
+    )
 
     # --- Average tax rate cross-check ---
     V["RapidPropMarketDelta"] = sfmt(rp["market_income_change_b"])
     V["RapidPropATRPct"] = fmt(
         100 * rp["total_rev_change_b"] / rp["market_income_change_b"], 1
     )
+    # Their report's Rapid band (21% to 32%) is federal revenue including
+    # their corporate wedge over the gross factor income the shock adds, the
+    # capital flow X plus the change in labor income. On the same numerator
+    # (our federal microsimulation total plus their wedge) over the market
+    # income our shock adds, per wage-spread variant.
+    rapid_cell = cell_params[
+        (cell_params["variant"] == "R")
+        & (cell_params["share_mode"] == "R")
+        & (cell_params["labor_scenario"] == "S0")
+    ].iloc[0]
+    their_gross = rapid_cell.X_B + rapid_cell.y1_l_B - rapid_cell.y0_l_B
+    V["TheirRapidGrossIncomeB"] = fmt(their_gross, 0)
+    atr_ours, atr_theirs = [], []
+    for var in ("compressive", "proportional", "expansive"):
+        row = rows[("Rapid", var)]
+        cell = theirs.loc[f"ai_R_R_{LABOR[var]}_V1"]
+        atr_ours.append(
+            100 * (our_side(row)["total"] + cell.macro_cit_delta)
+            / row["market_income_change_b"]
+        )
+        atr_theirs.append(100 * cell.total_with_macro_cit / their_gross)
+    V["AtrOursMatchedTriplet"] = "/".join(f"{x:.0f}" for x in atr_ours)
+    V["AtrTheirsTriplet"] = "/".join(f"{x:.0f}" for x in atr_theirs)
 
     # --- Reconciliation with their committed grid ---
     us = our_side(re_)
@@ -352,7 +499,17 @@ def main():
             for n in ("Slow", "Moderate", "Rapid")
             for v in ("compressive", "proportional", "expansive")
         ),
-        0,
+        1,
+    )
+
+    # Payroll in the shares-fixed counterfactuals, where labor income grows with
+    # output: the level response, which the as-forecast cells (small aggregate
+    # labor growth) do not test.
+    fixed_cell = theirs.loc["ai_R_F_S0_V1"]
+    V["PayrollFixedRapidOurs"] = sfmt(our_side(rf)["payroll"])
+    V["PayrollFixedRapidTheirs"] = sfmt(fixed_cell.revenues_payroll_tax)
+    V["PayrollFixedRapidRatio"] = fmt(
+        our_side(rf)["payroll"] / fixed_cell.revenues_payroll_tax, 1
     )
 
     # Market-income deltas behind the tilt (Section: national vs modelled shares).
@@ -374,6 +531,11 @@ def main():
             rows[(name, "fixed")]["total_rev_change_b"]
             / rows[(name, "proportional")]["total_rev_change_b"],
             2,
+        )
+        # The federal microsimulation total without their wedge: separates the
+        # wedge's effect on the keep-rate from that of states and transfers.
+        V[f"KeptFederalNoWedge{macro}Pct"] = fmt(
+            100 * or_["total"] / of_["total"], 0
         )
         # Keep-rates (inverse tilt ratios), so the paper can state the basis.
         V[f"KeptMatched{macro}Pct"] = fmt(100 * or_tot / of_tot, 0)
@@ -509,12 +671,31 @@ def main():
     V["StabNYOld"] = fmt(ny_old, 1)
     V["StabNYNew"] = fmt(ny_pub, 1)
 
-    # --- Head Start correction (build p as published vs this run) ---
+    # --- Head Start correction (build p as published vs the corrected run) ---
+    # The correction is measured on the run it produced: the same July
+    # scenario inputs with the two programs kept out of net income. The
+    # headline file now carries the Budget Lab's revised inputs as well, so
+    # comparing it with the published run would mix the two changes.
+    with open(os.path.join(OUT, JULY_INPUTS_FILE)) as fh:
+        july = json.load(fh)
+    assert net_income_accounting(july["metadata"]) == net_income_accounting(meta), (
+        "July-inputs run and headline run count net income differently"
+    )
+    jrows = {skey(r): r for r in july["scenarios"]}
     V["CorrMaxRevMoveB"] = fmt(
         max(
             abs(r["total_rev_change_b"] - prows[skey(r)]["total_rev_change_b"])
-            for r in sc["scenarios"]
+            for r in july["scenarios"]
         ),
+        0,
+    )
+    jtc = transfers(jrows[("Rapid", "compressive", False)])
+    jte = transfers(jrows[("Rapid", "expansive", False)])
+    V["CorrTransferSwing"] = fmt(jte["transfers"] - jtc["transfers"], 0)
+    V["CorrTransferAbsorbPct"] = fmt(
+        100
+        * (jte["transfers"] - jtc["transfers"])
+        / (jte["gross_tax"] - jtc["gross_tax"]),
         0,
     )
     ptc = transfers(prows[("Rapid", "compressive", False)])
@@ -546,16 +727,24 @@ def main():
     V["PubEarlyHeadStartB"] = fmt(pub_totals["early_head_start"] / 1e9, 0)
     V["PubHeadStartB"] = fmt(pub_totals["head_start"] / 1e9, 0)
 
+    # --- The Budget Lab's 2026-10-09 revision (July inputs vs this run) ---
+    # Both runs use the same runtime, data and accounting; the July one is the
+    # corrected run on their v1.0.0 inputs, bridged to their v1.0.0 workbook.
+    V.update(revision_values(sc, july, xlsx, JULY_WORKBOOK))
+
     # ---------------- values_generated.tex ----------------
     lines = [
         "% values_generated.tex — machine-generated by analysis/emit_paper_values.py",
-        "% from analysis/outputs/ai_scenarios.json, src/data/shiftSweepData.json and",
-        "% analysis/outputs/yale_publishable_2030.xlsx. DO NOT EDIT BY HAND.",
+        "% from analysis/outputs/ai_scenarios.json, src/data/shiftSweepData.json,",
+        "% analysis/outputs/yale_publishable_2030.xlsx and the comparison files",
+        "% ai_scenarios_v1_0_0_inputs.json, yale_publishable_2030_v1_0_0.xlsx,",
+        "% ai_scenarios_buildo.json, ai_scenarios_buildp_published.json and",
+        "% transfer_detail_buildp_published.json. DO NOT EDIT BY HAND.",
     ]
     for k, v in V.items():
         lines.append(rf"\newcommand{{\gen{k}}}{{{v}}}")
-    os.makedirs(PAPER, exist_ok=True)
-    with open(os.path.join(PAPER, "values_generated.tex"), "w") as fh:
+    os.makedirs(paper_dir, exist_ok=True)
+    with open(os.path.join(paper_dir, "values_generated.tex"), "w") as fh:
         fh.write("\n".join(lines) + "\n")
 
     # ---------------- tables_generated.tex ----------------
@@ -706,7 +895,7 @@ def main():
     T.append(r"\bottomrule")
     T.append(r"\end{tabular}}")
 
-    with open(os.path.join(PAPER, "tables_generated.tex"), "w") as fh:
+    with open(os.path.join(paper_dir, "tables_generated.tex"), "w") as fh:
         fh.write("\n".join(T) + "\n")
 
     print(f"wrote {len(V)} macros and 8 tables to paper/")

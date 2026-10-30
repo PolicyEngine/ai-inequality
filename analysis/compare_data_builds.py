@@ -2,7 +2,11 @@
 
 Both runs use the same policyengine-us version, so every difference here is
 attributable to the data build alone — the decomposition the o->p step makes
-possible that the vintage change from policyengine-us-data could not.
+possible that the vintage change from policyengine-us-data could not. That
+holds only for a pair that also shares scenario inputs and net-income
+accounting, so the default pair is build o against build p as first
+published (the pair the paper's stability section uses); the script warns
+when a given pair differs in either.
 
 Usage:
     python analysis/compare_data_builds.py [old.json] [new.json]
@@ -16,7 +20,26 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs")
 OLD = (
     sys.argv[1] if len(sys.argv) > 1 else os.path.join(OUT, "ai_scenarios_buildo.json")
 )
-NEW = sys.argv[2] if len(sys.argv) > 2 else os.path.join(OUT, "ai_scenarios.json")
+NEW = (
+    sys.argv[2]
+    if len(sys.argv) > 2
+    else os.path.join(OUT, "ai_scenarios_buildp_published.json")
+)
+
+
+def scenario_inputs(payload):
+    return sorted(
+        (
+            row["scenario"]["label"],
+            row["scenario"].get("target_labor_share"),
+            row["scenario"].get("gdp_growth"),
+        )
+        for row in payload.get("scenarios", [])
+    )
+
+
+def excluded_benefits(payload):
+    return sorted((payload.get("metadata") or {}).get("net_income_excluded_benefits") or ())
 
 
 def build_id(payload):
@@ -43,6 +66,10 @@ def main():
     print(f"  new: {build_id(new)}  @ policyengine-us {model_version(new)}")
     if model_version(old) != model_version(new):
         print("  WARNING: model versions differ; this is NOT a data-only diff.")
+    if scenario_inputs(old) != scenario_inputs(new):
+        print("  WARNING: scenario inputs differ; this is NOT a data-only diff.")
+    if excluded_benefits(old) != excluded_benefits(new):
+        print("  WARNING: net-income accounting differs; this is NOT a data-only diff.")
     print("=" * 96)
 
     old_base, new_base = old["baseline"], new["baseline"]

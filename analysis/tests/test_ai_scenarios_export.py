@@ -99,6 +99,13 @@ class TestAIScenarioPayload:
         assert scenario["capitalGrowth"] == pytest.approx(0.1728)
         assert scenario["label"] == "Rapid / proportional"
 
+    def test_survey_inputs_are_carried_so_the_site_cannot_restate_them(self):
+        row = _scenario_row()
+        row["scenario"].update(annual_gdp_growth=0.033, target_labor_share=0.52)
+        scenario = ai_scenarios_website_payload(_result(scenarios=[row]))["scenarios"][0]
+        assert scenario["annualGdpGrowth"] == pytest.approx(0.033)
+        assert scenario["targetLaborShare"] == pytest.approx(0.52)
+
     def test_poverty_and_gini_changes_are_computed_against_baseline(self):
         scenario = ai_scenarios_website_payload(_result())["scenarios"][0]
         assert scenario["povertyRateChange"] == pytest.approx(0.1258 - 0.1250)
@@ -183,3 +190,188 @@ class TestCheckpointRoundTrip:
         append_checkpoint(path, "grid:Rapid / proportional", {"revenue": 1.0})
         append_checkpoint(path, "grid:Rapid / proportional", {"revenue": 2.0})
         assert load_checkpoint(path)["grid:Rapid / proportional"] == {"revenue": 2.0}
+
+
+class TestCheckpointKeysCarryScenarioInputs:
+    """A resumed unit must have been computed from the inputs being asked for.
+
+    The Budget Lab's 2026-10-09 revision changed the Moderate and Rapid labor
+    shares but no scenario label. A store keyed by label alone would have
+    handed the July cells back to a rerun on the revised inputs.
+    """
+
+    def test_same_label_different_inputs_get_different_keys(self):
+        from analysis.ai_scenarios import CAPITAL_INCOME_VARS, build_scenario
+        from analysis.compute_ai_scenarios import scenario_checkpoint_key
+
+        revised = build_scenario("Rapid")
+        july = build_scenario("Rapid", target_labor_share=0.513)
+        assert revised.label == july.label
+        assert scenario_checkpoint_key(
+            "grid:Rapid / proportional", revised, CAPITAL_INCOME_VARS
+        ) != scenario_checkpoint_key(
+            "grid:Rapid / proportional", july, CAPITAL_INCOME_VARS
+        )
+
+    def test_key_is_deterministic(self):
+        from analysis.ai_scenarios import CAPITAL_INCOME_VARS, build_scenario
+        from analysis.compute_ai_scenarios import scenario_checkpoint_key
+
+        first = scenario_checkpoint_key(
+            "grid:x", build_scenario("Moderate"), CAPITAL_INCOME_VARS
+        )
+        second = scenario_checkpoint_key(
+            "grid:x", build_scenario("Moderate"), tuple(CAPITAL_INCOME_VARS)
+        )
+        assert first == second
+        assert first.startswith("grid:x@")
+
+    def test_capital_scope_is_part_of_the_key(self):
+        from analysis.ai_scenarios import (
+            CAPITAL_INCOME_VARS,
+            CAPITAL_INCOME_VARS_EXCL_RETIREMENT,
+            build_scenario,
+        )
+        from analysis.compute_ai_scenarios import scenario_checkpoint_key
+
+        scenario = build_scenario("Slow")
+        assert scenario_checkpoint_key(
+            "u", scenario, CAPITAL_INCOME_VARS
+        ) != scenario_checkpoint_key("u", scenario, CAPITAL_INCOME_VARS_EXCL_RETIREMENT)
+
+    def test_a_label_only_match_is_recomputed_and_an_exact_match_is_reused(self):
+        from analysis.ai_scenarios import CAPITAL_INCOME_VARS, build_scenario
+        from analysis.compute_ai_scenarios import _run_one, scenario_checkpoint_key
+
+        class Recomputed(Exception):
+            pass
+
+        def factory():
+            raise Recomputed
+
+        revised = build_scenario("Rapid")
+        july = build_scenario("Rapid", target_labor_share=0.513)
+        stale = {
+            "grid:Rapid / proportional": {"revenue": "July, keyed by label"},
+            scenario_checkpoint_key(
+                "grid:Rapid / proportional", july, CAPITAL_INCOME_VARS
+            ): {"revenue": "July, keyed by July inputs"},
+        }
+        args = (revised, {}, {}, factory, 2030, CAPITAL_INCOME_VARS, False)
+        with pytest.raises(Recomputed):
+            _run_one(
+                *args,
+                checkpoint=stale,
+                checkpoint_key="grid:Rapid / proportional",
+            )
+
+        fresh = {
+            scenario_checkpoint_key(
+                "grid:Rapid / proportional", revised, CAPITAL_INCOME_VARS
+            ): {"revenue": "revised"}
+        }
+        assert _run_one(
+            *args, checkpoint=fresh, checkpoint_key="grid:Rapid / proportional"
+        ) == {"revenue": "revised"}
+
+
+class TestUnitBudget:
+    """One simulation per process: the run stops before exceeding its budget."""
+
+    def test_budget_counts_and_then_refuses(self):
+        from analysis.compute_ai_scenarios import UnitBudget, UnitBudgetExhausted
+
+        budget = UnitBudget(2)
+        budget.spend()
+        budget.spend()
+        with pytest.raises(UnitBudgetExhausted):
+            budget.spend()
+        assert budget.spent == 2
+
+    def test_no_limit_never_refuses(self):
+        from analysis.compute_ai_scenarios import UnitBudget
+
+        budget = UnitBudget(None)
+        for _ in range(100):
+            budget.spend()
+        assert budget.spent == 100
+
+    def test_resumed_units_do_not_spend_the_budget(self):
+        from analysis.ai_scenarios import CAPITAL_INCOME_VARS, build_scenario
+        from analysis.compute_ai_scenarios import (
+            UnitBudget,
+            UnitBudgetExhausted,
+            _run_one,
+            scenario_checkpoint_key,
+        )
+
+        def factory():
+            raise AssertionError("a simulation started")
+
+        scenario = build_scenario("Moderate")
+        key = scenario_checkpoint_key("grid:x", scenario, CAPITAL_INCOME_VARS)
+        budget = UnitBudget(0)
+        args = (scenario, {}, {}, factory, 2030, CAPITAL_INCOME_VARS, False)
+        assert _run_one(
+            *args, checkpoint={key: {"ok": 1}}, checkpoint_key="grid:x",
+            unit_budget=budget,
+        ) == {"ok": 1}
+        # A unit not in the checkpoint is refused before any simulation starts.
+        with pytest.raises(UnitBudgetExhausted):
+            _run_one(*args, checkpoint={}, checkpoint_key="grid:x", unit_budget=budget)
+
+    def test_main_exits_with_the_relaunch_status(self, monkeypatch, tmp_path):
+        from analysis import compute_ai_scenarios as runner
+
+        def exhausted(**kwargs):
+            assert kwargs["max_new_units"] == 1
+            raise runner.UnitBudgetExhausted
+
+        monkeypatch.setattr(runner, "run_ai_scenarios", exhausted)
+        status = runner.main(
+            [
+                "--max-new-units",
+                "1",
+                "--checkpoint",
+                str(tmp_path / "c.jsonl"),
+                "--output",
+                str(tmp_path / "out.json"),
+                "--no-website",
+            ]
+        )
+        assert status == runner.EXIT_MORE_UNITS
+        assert not (tmp_path / "out.json").exists()
+
+
+class TestCheckpointKeysCoverTheShockSettings:
+    def test_year_is_part_of_the_key(self):
+        from analysis.ai_scenarios import CAPITAL_INCOME_VARS, build_scenario
+        from analysis.compute_ai_scenarios import scenario_checkpoint_key
+
+        scenario = build_scenario("Rapid")
+        assert scenario_checkpoint_key(
+            "u", scenario, CAPITAL_INCOME_VARS, 2030
+        ) != scenario_checkpoint_key("u", scenario, CAPITAL_INCOME_VARS, 2031)
+
+    def test_baseline_key_depends_on_year_and_capital_set(self):
+        from analysis.ai_scenarios import (
+            CAPITAL_INCOME_VARS,
+            CAPITAL_INCOME_VARS_EXCL_RETIREMENT,
+        )
+        from analysis.compute_ai_scenarios import BASELINE_KEY, baseline_checkpoint_key
+
+        key = baseline_checkpoint_key(2030, CAPITAL_INCOME_VARS)
+        assert key.startswith(f"{BASELINE_KEY}@")
+        assert key != BASELINE_KEY
+        assert key != baseline_checkpoint_key(2031, CAPITAL_INCOME_VARS)
+        assert key != baseline_checkpoint_key(2030, CAPITAL_INCOME_VARS_EXCL_RETIREMENT)
+
+    @pytest.mark.parametrize("value", ["0", "-1"])
+    def test_max_new_units_must_be_positive(self, value, tmp_path):
+        from analysis import compute_ai_scenarios as runner
+
+        with pytest.raises(SystemExit) as raised:
+            runner.main(
+                ["--max-new-units", value, "--checkpoint", str(tmp_path / "c.jsonl")]
+            )
+        assert raised.value.code == 2

@@ -22,8 +22,9 @@ effect cleanly, but two things limit what it can support:
 do?") and adds a scenario set calibrated to the same forecasts The Budget Lab
 used in [How potential AI futures would play out in the current tax
 system](https://budgetlab.yale.edu/research/how-potential-ai-futures-would-play-out-current-tax-system)
-(Iselin and Nunn, 20 July 2026), whose macro inputs come from the forecaster
-survey in Karger et al. (2026), [NBER w35046](https://www.nber.org/papers/w35046).
+(Iselin and Nunn, 20 July 2026, revised 9 October 2026), whose macro inputs
+come from the forecaster survey in Karger et al. (2026),
+[NBER w35046](https://www.nber.org/papers/w35046).
 
 Matching their calibration is deliberate: it makes the remaining differences
 differences in *model coverage*, not in assumptions.
@@ -56,24 +57,37 @@ margin the payroll result turns on — is a per-person threshold.
 | | Slow | Moderate | Rapid |
 | --- | --- | --- | --- |
 | Annual real GDP growth under AI | 2.0% | 2.6% | 3.3% |
-| 2030 labor share of factor income | 55.0% | 53.8% | 51.3% |
+| 2030 labor share of factor income | 55.0% | 54.0% | 52.0% |
 
-## Two recovered constants
+Both rows are the medians of the survey's economist respondents (Karger et al.
+Table 19 and Table 39, Economists column). The report as first published, and
+this repo until October 2026, took the labor shares from the pooled Total column
+instead: 53.8% for Moderate and 51.3% for Rapid. The Budget Lab corrected that
+on 9 October 2026 (their AI-Fiscal release v1.0.1). The run on the July inputs
+is kept as `analysis/outputs/ai_scenarios_v1_0_0_inputs.json`.
 
-The report prints its derived growth rates but not two inputs they depend on:
-the cumulative CBO baseline growth factor and the pre-shock factor shares. Both
-are recoverable by inverting the published formulas against the nine derived
-values in their Table 1:
+## Two calibration constants
 
-- `CBO_CUMULATIVE_GROWTH_FACTOR = 1.0976` — the report states 9.7% cumulative.
-- `BASELINE_LABOR_SHARE = 0.5550` — least-squares fit over all six published
-  factor growth rates.
+Two inputs sit outside their Table 1: the cumulative CBO baseline growth factor
+and the pre-shock factor shares.
 
-`test_ai_scenarios.py` reproduces all nine published values from these two
-constants to within 0.005 percentage points, and re-derives the labor share by
-grid search so the constants cannot be quietly nudged. Note that 55.5% is *not*
-the 53.7% nonfarm business labor share the report cites for historical context;
-that series has a narrower denominator.
+- `CBO_CUMULATIVE_GROWTH_FACTOR = 1.022 * 1.018**4` (1.09759...), the CBO path
+  the report states: 2.2% in 2026 and 1.8% a year after. AI-Fiscal computes it
+  the same way. This repo first used 1.0976, recovered by inverting the July
+  Table 1; that rounding puts the revised Rapid capital growth at 15.5949%,
+  which rounds to 15.59% rather than the published 15.60%.
+- `BASELINE_LABOR_SHARE = 0.555`, the value AI-Fiscal commits
+  (`shock.baseline_labor_share`). Their v1.0.1 config sources it to Karger et
+  al. Sec. 3, the 2025 nonfarm-business labor share baseline (55.48%), rounded.
+  The 53.7% the report cites is the measured share in the first quarter of
+  2026, shown for historical context; it is not a model input.
+
+`test_ai_scenarios.py` checks the per-cell `g_y`, `g_k`, `g_l` and `lambda`
+against AI-Fiscal's committed `cell_params` for both releases, all eighteen
+cells, to 1e-12; that differential test is what pins both constants (the
+four-decimal 1.0976 fails it). It also reproduces the rounded Table 1 of both
+versions to within 0.005 percentage points, and a grid search confirms both
+constants are least-squares fits to it.
 
 ## Every shocked variable reaches the tax base
 
@@ -149,7 +163,8 @@ rather than chosen.
 
 **Shares-fixed counterfactual.** Both factors grown at `g_Y`, isolating what the
 composition tilt costs. This is the comparison behind their finding that revenue
-gains would be roughly twice as large with shares held at 2026 levels.
+gains would be nearly twice as large with shares held at 2026 levels ("roughly
+twice" before the October revision).
 
 ## What this model cannot say
 
@@ -216,18 +231,20 @@ builds one, using only our run output and parameters they publish.
 
 The bridge rests on their corporate wedge, which their methodology document
 states in full: `dR_CIT = X * (R_CIT_CBO / Y0_K) = X * tau_stat * eta * kappa`,
-with a 21% statutory rate, `kappa` about 0.50 from NIPA, a CBO 2030 CIT anchor
-near $486B, and `eta` "roughly one in practice" — an effective 10.5% on the
-excess capital flow. Applying their formula to our capital flow estimates what
-their corporate line would add to our estimate. It is not PolicyEngine
-modelling corporate tax, and it inherits every constant-rate assumption they
-list.
+with a 21% statutory rate and `kappa` about 0.50 from NIPA. Because
+`X = Y0_K * g_K`, the capital base cancels and the wedge is `g_K` times CBO's
+2030 corporate income tax. Their committed workbook records that anchor:
+$477.3B in v1.0.1, which uses CBO's unrounded FY2030 figure, and $486.1B in
+v1.0.0, from the rounded 1.3% of GDP. `reconcile_budget_lab.py` reads it from
+the workbook, and adds their wedge for each cell to our federal microsimulation
+total. It is not PolicyEngine modelling corporate tax, and it inherits every
+constant-rate assumption they list.
 
-Inverting the same identity recovers the baseline realized taxable capital
-income their run starts from, which they do not publish: about **$4.6T** against
-our **$5.3T**, so our capital base is roughly 14% larger. That is the single
-most useful cross-check available on our capital aggregate, and it explains most
-of why our bridged totals exceed theirs.
+Because the base cancels, the wedge cannot reveal their capital base. Their
+committed `cell_params` sheet records it directly instead: $4.51T of baseline
+realized taxable capital income (`y0_k_B`), against our $5.27T. That is the
+single most useful cross-check available on our capital aggregate, and it
+explains much of why our bridged totals exceed theirs.
 
 ## Identified next steps
 
@@ -268,7 +285,44 @@ python -m analysis.compute_ai_scenarios
 Writes `analysis/outputs/ai_scenarios.json`: per scenario, the revenue
 decomposition, inequality and poverty metrics, decile shares, per-state deltas,
 Social Security cap diagnostics, and the shock diagnostics needed to confirm the
-labor aggregate landed on its target.
+labor aggregate landed on its target. It also writes the site payload,
+`src/data/aiScenariosData.json`.
+
+One simulation of this pipeline peaks near 80 GB of memory footprint, and a
+process does not hand it all back between units. On a shared host, run one unit
+per process: `--max-new-units 1` computes one unit not already in the
+checkpoint (`analysis/outputs/ai_scenarios_checkpoint.jsonl`) and exits with
+status 3 while work remains, so relaunch until it exits 0:
+
+```bash
+while true; do
+  python -m analysis.compute_ai_scenarios --max-new-units 1; status=$?
+  [ $status -eq 3 ] || break
+done
+[ $status -eq 0 ]
+```
+
+Each checkpoint record carries the runtime fingerprint, and only records from
+the current runtime are loaded; each key carries a digest of the unit's scenario
+and shock settings. So a resumed unit is always one computed from the same
+inputs on the same runtime.
+
+Then regenerate what derives from the run:
+
+```bash
+python -m analysis.compute_state_exposure     # src/data/stateExposureData.json
+python analysis/emit_paper_values.py          # paper/values_generated.tex, tables_generated.tex
+python analysis/paper_figures.py              # paper/figures/*.pdf
+make paper                                    # paper/main.pdf
+bun run build:memo                            # src/data/memoContent.js, after editing the memo
+python -m analysis.compare_scenario_vintages  # before/after table against the July-inputs run
+```
+
+The memo, `ai-scenarios-memo.md`, is written by hand: update its figures from
+the run, then `analysis/tests/test_memo_tables.py` and
+`test_paper_claims.py` check the memo's tables and the paper's qualitative
+claims against the outputs, and `test_generated_files_in_sync.py` checks every
+generated file against its source.
 
 Unit tests need no PolicyEngine install:
 

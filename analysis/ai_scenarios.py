@@ -9,10 +9,16 @@ its composition toward capital.
 
 This module replaces the arbitrary grid with the scenario set The Budget Lab
 used in "How potential AI futures would play out in the current tax system"
-(Iselin & Nunn, 2026-07-20), which in turn draws its macro inputs from the
-forecaster survey in Karger et al. (2026). Matching their calibration lets our
-results sit next to theirs; the differences that remain are differences in
-model coverage, not in assumptions.
+(Iselin & Nunn, first published 2026-07-20, revised 2026-10-09), which in turn
+draws its macro inputs from the forecaster survey in Karger et al. (2026).
+Matching their calibration lets our results sit next to theirs; the
+differences that remain are differences in model coverage, not in assumptions.
+
+The 2026-10-09 revision (their AI-Fiscal release v1.0.1) corrected the 2030
+labor shares. Version 1.0.0 took GDP growth from the Economists column of
+Karger et al. Table 19 but the labor share from the pooled Total column of
+Table 39 (Moderate 53.8%, Rapid 51.3%); v1.0.1 takes both from the Economists
+column (Moderate 54.0%, Rapid 52.0%). Slow is 55.0% in both columns.
 
 Three channels, following their Table 1:
 
@@ -26,11 +32,14 @@ Three channels, following their Table 1:
    inequality  ln Y1_i = mu1 + lambda (ln Y0_i - mu0),
              compressive below 1, expansive above 1.
 
-Two calibration inputs are not printed in the report -- the CBO cumulative
-baseline and the pre-shock factor shares. Both are recoverable by inverting the
-published formulas against the nine derived values in their Table 1; see
-`tests/test_ai_scenarios.py::test_calibration_reproduces_budget_lab_table_1`,
-which pins the recovered values by reproducing all nine to within 0.005pp.
+Two calibration inputs sit outside their Table 1: the CBO cumulative baseline
+and the pre-shock factor shares. The report gives the CBO path (2.2% growth in
+2026, 1.8% a year after), and their AI-Fiscal repository commits both inputs
+in `config/scenario_params.yaml`. With those values this module reproduces the
+per-cell g_Y, g_K, g_L and lambda in their committed `cell_params` to machine
+precision, for v1.0.0 and v1.0.1 alike; `tests/test_ai_scenarios.py` checks
+that to 1e-12, which is what pins both constants, and also checks the rounded
+Table 1 of both versions.
 
 Two things we model that the Budget Lab analysis does not, and one it models
 that we cannot:
@@ -65,15 +74,26 @@ import numpy as np
 # Calibration
 # ---------------------------------------------------------------------------
 
-#: Cumulative CBO real GDP growth factor over the 2026-2030 window. Recovered
-#: from the Budget Lab's published g_Y values; the report states 9.7%.
-CBO_CUMULATIVE_GROWTH_FACTOR = 1.0976
+#: CBO baseline real GDP growth: 2.2% in 2026 and 1.8% in each later year
+#: (CBO publication 62105), as the Budget Lab report states and as AI-Fiscal
+#: commits them (`cbo_baseline.g_2026`, `cbo_baseline.g_2027plus`).
+CBO_GROWTH_2026 = 0.022
+CBO_GROWTH_2027_ON = 0.018
 
-#: Pre-shock labor share of factor income. Recovered from the published capital
-#: and labor growth rates. Distinct from the 53.7% nonfarm business labor share
-#: the report cites for historical context -- that series has a narrower
-#: denominator.
-BASELINE_LABOR_SHARE = 0.5550
+#: Cumulative CBO real GDP growth factor over the 2025-2030 window,
+#: (1 + g_2026) (1 + g_2027+)^4 = 1.0975947..., which the report describes as
+#: 9.7% cumulative growth. AI-Fiscal computes it the same way (`cum_base` in
+#: `code/02_params.R`). The four-decimal 1.0976 this module used before
+#: reproduced the July Table 1, but it puts the revised Rapid capital growth at
+#: 15.5949%, which rounds to 15.59% rather than the published 15.60%.
+CBO_CUMULATIVE_GROWTH_FACTOR = (1 + CBO_GROWTH_2026) * (1 + CBO_GROWTH_2027_ON) ** 4
+
+#: Pre-shock labor share of factor income, AI-Fiscal's
+#: `shock.baseline_labor_share`. Their v1.0.1 config sources it to Karger et
+#: al. (2026) Sec. 3, the 2025 nonfarm-business labor share baseline (55.48%),
+#: rounded. The 53.7% the report cites is the measured share in the first
+#: quarter of 2026, shown for historical context; it is not a model input.
+BASELINE_LABOR_SHARE = 0.555
 
 #: Horizon in years between the baseline and the scenario target year.
 HORIZON_YEARS = 5
@@ -254,11 +274,16 @@ class AIScenario:
         }
 
 
-#: The three survey scenarios, before choosing an inequality variant.
+#: The three survey scenarios, before choosing an inequality variant. Median
+#: forecasts from the Economists column of Karger et al. (2026): Table 19 for
+#: annualised 2025-30 GDP growth under AI, Table 39 for the 2030 labor share.
+#: These are the Budget Lab's revised (2026-10-09, AI-Fiscal v1.0.1) inputs;
+#: the July version used the Total column's labor shares, 53.8% for Moderate
+#: and 51.3% for Rapid.
 SCENARIO_INPUTS = {
     "Slow": {"annual_gdp_growth": 0.020, "target_labor_share": 0.550},
-    "Moderate": {"annual_gdp_growth": 0.026, "target_labor_share": 0.538},
-    "Rapid": {"annual_gdp_growth": 0.033, "target_labor_share": 0.513},
+    "Moderate": {"annual_gdp_growth": 0.026, "target_labor_share": 0.540},
+    "Rapid": {"annual_gdp_growth": 0.033, "target_labor_share": 0.520},
 }
 
 

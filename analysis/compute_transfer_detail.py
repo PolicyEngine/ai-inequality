@@ -7,10 +7,11 @@ leaves two gaps this script closes:
   1. Part of the non-credit benefit swing across the Rapid wage-inequality
      variants sits in programs the headline run never separated (school
      meals, housing, the commodity food program and others). The swing less
-     the five named components is $4.3B of $27.8B once Head Start and Early
-     Head Start are out of net income (`NET_INCOME_EXCLUDED_BENEFITS`,
-     `analysis/outputs/ai_scenarios.json`), against $18.6B of $42.1B when the
-     published run still counted them
+     the five named components is $4.4B of $27.8B with Head Start and Early
+     Head Start out of net income (`NET_INCOME_EXCLUDED_BENEFITS`,
+     `analysis/outputs/ai_scenarios.json`; $4.3B of $27.8B on the Budget
+     Lab's July inputs, `ai_scenarios_v1_0_0_inputs.json`), against $18.6B of
+     $42.1B when the published run still counted them
      (`analysis/outputs/ai_scenarios_buildp_published.json`).
 
   2. Health programs are absent from `household_benefits` entirely: the
@@ -52,6 +53,7 @@ from .compute_ai_scenarios import (
     _package_version,
     append_checkpoint,
     load_checkpoint,
+    scenario_checkpoint_key,
 )
 from .policyengine_runtime import (
     managed_us_microsimulation,
@@ -177,10 +179,13 @@ def run(year=TARGET_YEAR, verbose=True, output_path=None, checkpoint_path=None):
     stamp = fingerprint["digest"] if checkpoint_path else None
     checkpoint = load_checkpoint(checkpoint_path, stamp)
 
-    if "baseline" in checkpoint and "programs" in checkpoint:
-        baseline_totals = checkpoint["baseline"]
-        programs = checkpoint["programs"]
-        bundle = checkpoint.get("bundle") or {}
+    baseline_key, programs_key, bundle_key = (
+        f"{name}@{year}" for name in ("baseline", "programs", "bundle")
+    )
+    if baseline_key in checkpoint and programs_key in checkpoint:
+        baseline_totals = checkpoint[baseline_key]
+        programs = checkpoint[programs_key]
+        bundle = checkpoint.get(bundle_key) or {}
         if verbose:
             print("baseline ... (from checkpoint)", flush=True)
     else:
@@ -190,15 +195,18 @@ def run(year=TARGET_YEAR, verbose=True, output_path=None, checkpoint_path=None):
         programs = benefit_programs(sim, year)
         baseline_totals = program_totals(sim, year, programs)
         bundle = policyengine_bundle(sim)
-        append_checkpoint(checkpoint_path, "baseline", baseline_totals, stamp)
-        append_checkpoint(checkpoint_path, "programs", programs, stamp)
-        append_checkpoint(checkpoint_path, "bundle", bundle or {}, stamp)
+        append_checkpoint(checkpoint_path, baseline_key, baseline_totals, stamp)
+        append_checkpoint(checkpoint_path, programs_key, programs, stamp)
+        append_checkpoint(checkpoint_path, bundle_key, bundle or {}, stamp)
         del sim
         gc.collect()
 
     rows = {}
     for variant in VARIANTS:
-        key = f"rapid:{variant}"
+        scenario = build_scenario("Rapid", inequality=variant)
+        key = scenario_checkpoint_key(
+            f"rapid:{variant}", scenario, CAPITAL_INCOME_VARS, year
+        )
         if key in checkpoint:
             rows[variant] = checkpoint[key]
             if verbose:
@@ -207,7 +215,6 @@ def run(year=TARGET_YEAR, verbose=True, output_path=None, checkpoint_path=None):
 
         if verbose:
             print(f"Rapid / {variant} ...", flush=True)
-        scenario = build_scenario("Rapid", inequality=variant)
         sim = managed_us_microsimulation()
         branch, _diagnostics = apply_ai_scenario(
             sim,

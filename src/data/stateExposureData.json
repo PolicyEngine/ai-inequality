@@ -11,38 +11,58 @@
       "state": "WA",
       "baseline_net_revenue_b": 3.574481876047828,
       "deltas_b": {
-        "compressive": 0.8839006754210532,
-        "proportional": 1.1329183963885583,
-        "expansive": 1.4157093782702885
+        "compressive": 0.8134896213916283,
+        "proportional": 1.0660723487926749,
+        "expansive": 1.35573203278847
       },
       "exposure_pct": {
-        "compressive": 24.728078252234685,
-        "proportional": 31.694618567801612,
-        "expansive": 39.606002418330505
+        "compressive": 22.75825279301943,
+        "proportional": 29.82452802282471,
+        "expansive": 37.928071250635426
       },
-      "exposure_pct_proportional": 31.694618567801612,
-      "exposure_pct_min": 24.728078252234685,
-      "exposure_pct_max": 39.606002418330505,
+      "exposure_pct_proportional": 29.82452802282471,
+      "exposure_pct_min": 22.75825279301943,
+      "exposure_pct_max": 37.928071250635426,
       "modelled_base_per_household": 1239.4473752302372,
       "modelled_base_kind": "capital_only",
       "comparable_percentage": false
     },
     {
+      "state": "CO",
+      "baseline_net_revenue_b": 10.431747422319347,
+      "deltas_b": {
+        "compressive": 0.9183260598575652,
+        "proportional": 0.8002968700133752,
+        "expansive": 0.655402944218893
+      },
+      "exposure_pct": {
+        "compressive": 8.803185340672183,
+        "proportional": 7.671743166452556,
+        "expansive": 6.282772364835245
+      },
+      "exposure_pct_proportional": 7.671743166452556,
+      "exposure_pct_min": 6.282772364835245,
+      "exposure_pct_max": 8.803185340672183,
+      "modelled_base_per_household": 4798.211707965785,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
       "state": "NM",
       "baseline_net_revenue_b": 2.885267234076006,
       "deltas_b": {
-        "compressive": 0.24038234825909996,
-        "proportional": 0.19217014346270764,
-        "expansive": 0.14652714579026055
+        "compressive": 0.26845418204609844,
+        "proportional": 0.2170075412445761,
+        "expansive": 0.17304699418483793
       },
       "exposure_pct": {
-        "compressive": 8.331372062182009,
-        "proportional": 6.660393227813064,
-        "expansive": 5.078460118346203
+        "compressive": 9.304309107855298,
+        "proportional": 7.521228490783863,
+        "expansive": 5.997607158917308
       },
-      "exposure_pct_proportional": 6.660393227813064,
-      "exposure_pct_min": 5.078460118346203,
-      "exposure_pct_max": 8.331372062182009,
+      "exposure_pct_proportional": 7.521228490783863,
+      "exposure_pct_min": 5.997607158917308,
+      "exposure_pct_max": 9.304309107855298,
       "modelled_base_per_household": 3478.0072050874446,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
@@ -51,99 +71,19 @@
       "state": "NY",
       "baseline_net_revenue_b": 88.21006001180409,
       "deltas_b": {
-        "compressive": 2.829875225703686,
-        "proportional": 5.821666032765434,
-        "expansive": 8.627873478401114
+        "compressive": 3.3982397850148143,
+        "proportional": 6.428053652739498,
+        "expansive": 9.676230457031368
       },
       "exposure_pct": {
-        "compressive": 3.2081093985481903,
-        "proportional": 6.599775617414149,
-        "expansive": 9.781053858535579
+        "compressive": 3.852440169023883,
+        "proportional": 7.287211517461058,
+        "expansive": 10.969531656294661
       },
-      "exposure_pct_proportional": 6.599775617414149,
-      "exposure_pct_min": 3.2081093985481903,
-      "exposure_pct_max": 9.781053858535579,
+      "exposure_pct_proportional": 7.287211517461058,
+      "exposure_pct_min": 3.852440169023883,
+      "exposure_pct_max": 10.969531656294661,
       "modelled_base_per_household": 11332.717052511805,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "CO",
-      "baseline_net_revenue_b": 10.431747422319347,
-      "deltas_b": {
-        "compressive": 0.7804550761788636,
-        "proportional": 0.6688988016261825,
-        "expansive": 0.5312258989470162
-      },
-      "exposure_pct": {
-        "compressive": 7.481537316643934,
-        "proportional": 6.412145295955245,
-        "expansive": 5.092396100488655
-      },
-      "exposure_pct_proportional": 6.412145295955245,
-      "exposure_pct_min": 5.092396100488655,
-      "exposure_pct_max": 7.481537316643934,
-      "modelled_base_per_household": 4798.211707965785,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "MT",
-      "baseline_net_revenue_b": 2.6332392855773805,
-      "deltas_b": {
-        "compressive": 0.1788326858319112,
-        "proportional": 0.15828519017351292,
-        "expansive": 0.13897559345695268
-      },
-      "exposure_pct": {
-        "compressive": 6.79135720066926,
-        "proportional": 6.0110446870690035,
-        "expansive": 5.277742672993731
-      },
-      "exposure_pct_proportional": 6.0110446870690035,
-      "exposure_pct_min": 5.277742672993731,
-      "exposure_pct_max": 6.79135720066926,
-      "modelled_base_per_household": 6125.130305475587,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "VT",
-      "baseline_net_revenue_b": 1.7644825557554167,
-      "deltas_b": {
-        "compressive": 0.07803768677087572,
-        "proportional": 0.10546410071071034,
-        "expansive": 0.1363477808272148
-      },
-      "exposure_pct": {
-        "compressive": 4.422695283460365,
-        "proportional": 5.9770554470321,
-        "expansive": 7.727352156725692
-      },
-      "exposure_pct_proportional": 5.9770554470321,
-      "exposure_pct_min": 4.422695283460365,
-      "exposure_pct_max": 7.727352156725692,
-      "modelled_base_per_household": 6505.576516179498,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "CA",
-      "baseline_net_revenue_b": 169.2420600265412,
-      "deltas_b": {
-        "compressive": 3.0804569345921355,
-        "proportional": 10.007953305753682,
-        "expansive": 17.51142582981801
-      },
-      "exposure_pct": {
-        "compressive": 1.8201485695157849,
-        "proportional": 5.9133960578027684,
-        "expansive": 10.346970384945562
-      },
-      "exposure_pct_proportional": 5.9133960578027684,
-      "exposure_pct_min": 1.8201485695157849,
-      "exposure_pct_max": 10.346970384945562,
-      "modelled_base_per_household": 12040.336399821306,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -151,19 +91,79 @@
       "state": "ND",
       "baseline_net_revenue_b": 0.41912272065654216,
       "deltas_b": {
-        "compressive": 0.0024578994415320157,
-        "proportional": 0.02381281940114087,
-        "expansive": 0.047118650546984435
+        "compressive": 0.0076235184774101974,
+        "proportional": 0.029290756870975317,
+        "expansive": 0.053183793528306184
       },
       "exposure_pct": {
-        "compressive": 0.5864390834459644,
-        "proportional": 5.6815863773357025,
-        "expansive": 11.242208600186265
+        "compressive": 1.8189227406875492,
+        "proportional": 6.988587215002875,
+        "expansive": 12.689312916511778
       },
-      "exposure_pct_proportional": 5.6815863773357025,
-      "exposure_pct_min": 0.5864390834459644,
-      "exposure_pct_max": 11.242208600186265,
+      "exposure_pct_proportional": 6.988587215002875,
+      "exposure_pct_min": 1.8189227406875492,
+      "exposure_pct_max": 12.689312916511778,
       "modelled_base_per_household": 1404.6157613055705,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "CA",
+      "baseline_net_revenue_b": 169.2420600265412,
+      "deltas_b": {
+        "compressive": 4.5318863098778435,
+        "proportional": 11.590537772842286,
+        "expansive": 19.20363021434899
+      },
+      "exposure_pct": {
+        "compressive": 2.677754164164118,
+        "proportional": 6.848497218141054,
+        "expansive": 11.346842629626112
+      },
+      "exposure_pct_proportional": 6.848497218141054,
+      "exposure_pct_min": 2.677754164164118,
+      "exposure_pct_max": 11.346842629626112,
+      "modelled_base_per_household": 12040.336399821306,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "VT",
+      "baseline_net_revenue_b": 1.7644825557554167,
+      "deltas_b": {
+        "compressive": 0.09004110725961838,
+        "proportional": 0.11795392832460436,
+        "expansive": 0.14967399914701124
+      },
+      "exposure_pct": {
+        "compressive": 5.102975201762176,
+        "proportional": 6.684901924355127,
+        "expansive": 8.482600106121891
+      },
+      "exposure_pct_proportional": 6.684901924355127,
+      "exposure_pct_min": 5.102975201762176,
+      "exposure_pct_max": 8.482600106121891,
+      "modelled_base_per_household": 6505.576516179498,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "MT",
+      "baseline_net_revenue_b": 2.6332392855773805,
+      "deltas_b": {
+        "compressive": 0.19267628357811614,
+        "proportional": 0.17183293369876074,
+        "expansive": 0.15212005168623427
+      },
+      "exposure_pct": {
+        "compressive": 7.317082220116913,
+        "proportional": 6.525534334836706,
+        "expansive": 5.77691714229759
+      },
+      "exposure_pct_proportional": 6.525534334836706,
+      "exposure_pct_min": 5.77691714229759,
+      "exposure_pct_max": 7.317082220116913,
+      "modelled_base_per_household": 6125.130305475587,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -171,18 +171,18 @@
       "state": "DC",
       "baseline_net_revenue_b": 4.396908391727498,
       "deltas_b": {
-        "compressive": 0.10589821966215676,
-        "proportional": 0.2408365314706844,
-        "expansive": 0.3835926817147205
+        "compressive": 0.14157639624673338,
+        "proportional": 0.2767314899246363,
+        "expansive": 0.4209708425174441
       },
       "exposure_pct": {
-        "compressive": 2.408470002727314,
-        "proportional": 5.47740616847517,
-        "expansive": 8.724145411726694
+        "compressive": 3.2199077996052936,
+        "proportional": 6.293774290255601,
+        "expansive": 9.574246379785256
       },
-      "exposure_pct_proportional": 5.47740616847517,
-      "exposure_pct_min": 2.408470002727314,
-      "exposure_pct_max": 8.724145411726694,
+      "exposure_pct_proportional": 6.293774290255601,
+      "exposure_pct_min": 3.2199077996052936,
+      "exposure_pct_max": 9.574246379785256,
       "modelled_base_per_household": 14942.4843459227,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
@@ -191,18 +191,18 @@
       "state": "ME",
       "baseline_net_revenue_b": 3.5661840494347476,
       "deltas_b": {
-        "compressive": 0.2311308515604962,
-        "proportional": 0.1878212755584336,
-        "expansive": 0.142215512456039
+        "compressive": 0.2667298789849122,
+        "proportional": 0.22200089650491608,
+        "expansive": 0.17510204521148234
       },
       "exposure_pct": {
-        "compressive": 6.481181239008997,
-        "proportional": 5.266729730009417,
-        "expansive": 3.9878904309097742
+        "compressive": 7.479419886564457,
+        "proportional": 6.225166548543785,
+        "expansive": 4.910067533929905
       },
-      "exposure_pct_proportional": 5.266729730009417,
-      "exposure_pct_min": 3.9878904309097742,
-      "exposure_pct_max": 6.481181239008997,
+      "exposure_pct_proportional": 6.225166548543785,
+      "exposure_pct_min": 4.910067533929905,
+      "exposure_pct_max": 7.479419886564457,
       "modelled_base_per_household": 6359.433768487853,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
@@ -211,59 +211,19 @@
       "state": "ID",
       "baseline_net_revenue_b": 3.5639108186330892,
       "deltas_b": {
-        "compressive": 0.2172379815518285,
-        "proportional": 0.18535309002207065,
-        "expansive": 0.15217926614330263
+        "compressive": 0.24717384075614857,
+        "proportional": 0.21303566170450497,
+        "expansive": 0.18015635120180934
       },
       "exposure_pct": {
-        "compressive": 6.0954943209030255,
-        "proportional": 5.200834124495893,
-        "expansive": 4.270007693449238
+        "compressive": 6.9354664955098455,
+        "proportional": 5.977581161422361,
+        "expansive": 5.055018499899134
       },
-      "exposure_pct_proportional": 5.200834124495893,
-      "exposure_pct_min": 4.270007693449238,
-      "exposure_pct_max": 6.0954943209030255,
+      "exposure_pct_proportional": 5.977581161422361,
+      "exposure_pct_min": 5.055018499899134,
+      "exposure_pct_max": 6.9354664955098455,
       "modelled_base_per_household": 5184.024660274983,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "AR",
-      "baseline_net_revenue_b": 3.5050651790463427,
-      "deltas_b": {
-        "compressive": 0.24522218886984254,
-        "proportional": 0.17437360268173027,
-        "expansive": 0.10623254364481068
-      },
-      "exposure_pct": {
-        "compressive": 6.99622336086094,
-        "proportional": 4.974903283515367,
-        "expansive": 3.0308293346406296
-      },
-      "exposure_pct_proportional": 4.974903283515367,
-      "exposure_pct_min": 3.0308293346406296,
-      "exposure_pct_max": 6.99622336086094,
-      "modelled_base_per_household": 3131.3079870902657,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "CT",
-      "baseline_net_revenue_b": 17.642895965057857,
-      "deltas_b": {
-        "compressive": 0.5569914730349711,
-        "proportional": 0.8738204620783452,
-        "expansive": 1.2150269997690053
-      },
-      "exposure_pct": {
-        "compressive": 3.1570297423852915,
-        "proportional": 4.952817631577978,
-        "expansive": 6.886777557241129
-      },
-      "exposure_pct_proportional": 4.952817631577978,
-      "exposure_pct_min": 3.1570297423852915,
-      "exposure_pct_max": 6.886777557241129,
-      "modelled_base_per_household": 12579.458735299431,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -271,39 +231,39 @@
       "state": "RI",
       "baseline_net_revenue_b": 2.538538459563914,
       "deltas_b": {
-        "compressive": 0.09355986217969593,
-        "proportional": 0.12486635686425193,
-        "expansive": 0.15974259381850808
+        "compressive": 0.11956662915074785,
+        "proportional": 0.14789129767007672,
+        "expansive": 0.1884507655560432
       },
       "exposure_pct": {
-        "compressive": 3.6855798590409474,
-        "proportional": 4.918828643065043,
-        "expansive": 6.292699376551879
+        "compressive": 4.710057816941161,
+        "proportional": 5.825844281101907,
+        "expansive": 7.423593085464478
       },
-      "exposure_pct_proportional": 4.918828643065043,
-      "exposure_pct_min": 3.6855798590409474,
-      "exposure_pct_max": 6.292699376551879,
+      "exposure_pct_proportional": 5.825844281101907,
+      "exposure_pct_min": 4.710057816941161,
+      "exposure_pct_max": 7.423593085464478,
       "modelled_base_per_household": 5536.311143513113,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
     {
-      "state": "OR",
-      "baseline_net_revenue_b": 18.408995228104,
+      "state": "AR",
+      "baseline_net_revenue_b": 3.5050651790463427,
       "deltas_b": {
-        "compressive": 1.0044711044005032,
-        "proportional": 0.8933287868022773,
-        "expansive": 0.7451347065061309
+        "compressive": 0.2737379474033098,
+        "proportional": 0.2032279755415201,
+        "expansive": 0.13280411895185185
       },
       "exposure_pct": {
-        "compressive": 5.456414605763124,
-        "proportional": 4.852675421624758,
-        "expansive": 4.047666356980606
+        "compressive": 7.809781941852173,
+        "proportional": 5.7981225786167645,
+        "expansive": 3.7889200961445506
       },
-      "exposure_pct_proportional": 4.852675421624758,
-      "exposure_pct_min": 4.047666356980606,
-      "exposure_pct_max": 5.456414605763124,
-      "modelled_base_per_household": 11344.02269624499,
+      "exposure_pct_proportional": 5.7981225786167645,
+      "exposure_pct_min": 3.7889200961445506,
+      "exposure_pct_max": 7.809781941852173,
+      "modelled_base_per_household": 3131.3079870902657,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -311,99 +271,19 @@
       "state": "MN",
       "baseline_net_revenue_b": 21.147374150060678,
       "deltas_b": {
-        "compressive": 0.8776768927057667,
-        "proportional": 1.023862657807591,
-        "expansive": 1.1232969073244816
+        "compressive": 1.0760934603832675,
+        "proportional": 1.2251879402377563,
+        "expansive": 1.3196522918240774
       },
       "exposure_pct": {
-        "compressive": 4.150287815772383,
-        "proportional": 4.841559290256626,
-        "expansive": 5.311755962483212
+        "compressive": 5.088544103619502,
+        "proportional": 5.793570074203473,
+        "expansive": 6.24026549329431
       },
-      "exposure_pct_proportional": 4.841559290256626,
-      "exposure_pct_min": 4.150287815772383,
-      "exposure_pct_max": 5.311755962483212,
+      "exposure_pct_proportional": 5.793570074203473,
+      "exposure_pct_min": 5.088544103619502,
+      "exposure_pct_max": 6.24026549329431,
       "modelled_base_per_household": 9311.917263779687,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "DE",
-      "baseline_net_revenue_b": 2.962052234193416,
-      "deltas_b": {
-        "compressive": 0.14582250251605527,
-        "proportional": 0.14208395729847859,
-        "expansive": 0.14011226672427063
-      },
-      "exposure_pct": {
-        "compressive": 4.923022654114794,
-        "proportional": 4.796807958289394,
-        "expansive": 4.730242941256706
-      },
-      "exposure_pct_proportional": 4.796807958289394,
-      "exposure_pct_min": 4.730242941256706,
-      "exposure_pct_max": 4.923022654114794,
-      "modelled_base_per_household": 7606.868050026821,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "WI",
-      "baseline_net_revenue_b": 14.187746353178417,
-      "deltas_b": {
-        "compressive": 0.8273125581927939,
-        "proportional": 0.677540521074115,
-        "expansive": 0.49388304055877164
-      },
-      "exposure_pct": {
-        "compressive": 5.8311766900699835,
-        "proportional": 4.7755330847335635,
-        "expansive": 3.4810534969010725
-      },
-      "exposure_pct_proportional": 4.7755330847335635,
-      "exposure_pct_min": 3.4810534969010725,
-      "exposure_pct_max": 5.8311766900699835,
-      "modelled_base_per_household": 5880.113404256396,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "MA",
-      "baseline_net_revenue_b": 28.105986269529776,
-      "deltas_b": {
-        "compressive": 0.7189675124370082,
-        "proportional": 1.3322175322481074,
-        "expansive": 2.188274192799852
-      },
-      "exposure_pct": {
-        "compressive": 2.5580582924302298,
-        "proportional": 4.7399778804147115,
-        "expansive": 7.785794000661705
-      },
-      "exposure_pct_proportional": 4.7399778804147115,
-      "exposure_pct_min": 2.5580582924302298,
-      "exposure_pct_max": 7.785794000661705,
-      "modelled_base_per_household": 10283.863526392763,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "SC",
-      "baseline_net_revenue_b": 10.445962595807881,
-      "deltas_b": {
-        "compressive": 0.5616775901284561,
-        "proportional": 0.49167274906425856,
-        "expansive": 0.4296673722606106
-      },
-      "exposure_pct": {
-        "compressive": 5.3769825899421235,
-        "proportional": 4.706820884669586,
-        "expansive": 4.1132386634530205
-      },
-      "exposure_pct_proportional": 4.706820884669586,
-      "exposure_pct_min": 4.1132386634530205,
-      "exposure_pct_max": 5.3769825899421235,
-      "modelled_base_per_household": 4962.888808452096,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -411,19 +291,159 @@
       "state": "NJ",
       "baseline_net_revenue_b": 34.07101159028524,
       "deltas_b": {
-        "compressive": 0.5579030167266319,
-        "proportional": 1.578319607822429,
-        "expansive": 2.663862329103041
+        "compressive": 0.9024055045155613,
+        "proportional": 1.950919627877028,
+        "expansive": 3.0634411827493233
       },
       "exposure_pct": {
-        "compressive": 1.6374712422266569,
-        "proportional": 4.632441287045494,
-        "expansive": 7.818559545976602
+        "compressive": 2.6486020296880963,
+        "proportional": 5.726039635504392,
+        "expansive": 8.991342022914315
       },
-      "exposure_pct_proportional": 4.632441287045494,
-      "exposure_pct_min": 1.6374712422266569,
-      "exposure_pct_max": 7.818559545976602,
+      "exposure_pct_proportional": 5.726039635504392,
+      "exposure_pct_min": 2.6486020296880963,
+      "exposure_pct_max": 8.991342022914315,
       "modelled_base_per_household": 9601.701720988503,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "WI",
+      "baseline_net_revenue_b": 14.187746353178417,
+      "deltas_b": {
+        "compressive": 0.9513017250593538,
+        "proportional": 0.800047507831495,
+        "expansive": 0.617428394702395
+      },
+      "exposure_pct": {
+        "compressive": 6.705093968967368,
+        "proportional": 5.639003460562036,
+        "expansive": 4.351842634711857
+      },
+      "exposure_pct_proportional": 5.639003460562036,
+      "exposure_pct_min": 4.351842634711857,
+      "exposure_pct_max": 6.705093968967368,
+      "modelled_base_per_household": 5880.113404256396,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "CT",
+      "baseline_net_revenue_b": 17.642895965057857,
+      "deltas_b": {
+        "compressive": 0.6660124673179445,
+        "proportional": 0.9924021316797318,
+        "expansive": 1.333515850850562
+      },
+      "exposure_pct": {
+        "compressive": 3.774961143777058,
+        "proportional": 5.624938976261074,
+        "expansive": 7.558372806208343
+      },
+      "exposure_pct_proportional": 5.624938976261074,
+      "exposure_pct_min": 3.774961143777058,
+      "exposure_pct_max": 7.558372806208343,
+      "modelled_base_per_household": 12579.458735299431,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "OR",
+      "baseline_net_revenue_b": 18.408995228104,
+      "deltas_b": {
+        "compressive": 1.138022312627363,
+        "proportional": 1.0245975805692167,
+        "expansive": 0.8721464783124765
+      },
+      "exposure_pct": {
+        "compressive": 6.181881729699223,
+        "proportional": 5.565744180350593,
+        "expansive": 4.737610431779668
+      },
+      "exposure_pct_proportional": 5.565744180350593,
+      "exposure_pct_min": 4.737610431779668,
+      "exposure_pct_max": 6.181881729699223,
+      "modelled_base_per_household": 11344.02269624499,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "SC",
+      "baseline_net_revenue_b": 10.445962595807881,
+      "deltas_b": {
+        "compressive": 0.6514640966050759,
+        "proportional": 0.5783289540002251,
+        "expansive": 0.511532515578331
+      },
+      "exposure_pct": {
+        "compressive": 6.2365156933121515,
+        "proportional": 5.536387371636933,
+        "expansive": 4.896939950595042
+      },
+      "exposure_pct_proportional": 5.536387371636933,
+      "exposure_pct_min": 4.896939950595042,
+      "exposure_pct_max": 6.2365156933121515,
+      "modelled_base_per_household": 4962.888808452096,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "DE",
+      "baseline_net_revenue_b": 2.962052234193416,
+      "deltas_b": {
+        "compressive": 0.16772457783295278,
+        "proportional": 0.16347403784617337,
+        "expansive": 0.16128071167970487
+      },
+      "exposure_pct": {
+        "compressive": 5.662444973007883,
+        "proportional": 5.518945140772924,
+        "expansive": 5.444897622597885
+      },
+      "exposure_pct_proportional": 5.518945140772924,
+      "exposure_pct_min": 5.444897622597885,
+      "exposure_pct_max": 5.662444973007883,
+      "modelled_base_per_household": 7606.868050026821,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "MA",
+      "baseline_net_revenue_b": 28.105986269529776,
+      "deltas_b": {
+        "compressive": 0.8997717940765819,
+        "proportional": 1.5431589365841265,
+        "expansive": 2.415313397089602
+      },
+      "exposure_pct": {
+        "compressive": 3.2013528557510234,
+        "proportional": 5.490499147710372,
+        "expansive": 8.593590610652535
+      },
+      "exposure_pct_proportional": 5.490499147710372,
+      "exposure_pct_min": 3.2013528557510234,
+      "exposure_pct_max": 8.593590610652535,
+      "modelled_base_per_household": 10283.863526392763,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "HI",
+      "baseline_net_revenue_b": 3.113459536153853,
+      "deltas_b": {
+        "compressive": 0.21096796084737185,
+        "proportional": 0.17062762756238306,
+        "expansive": 0.12172160213913852
+      },
+      "exposure_pct": {
+        "compressive": 6.775998158883629,
+        "proportional": 5.480322630855975,
+        "expansive": 3.909528957280259
+      },
+      "exposure_pct_proportional": 5.480322630855975,
+      "exposure_pct_min": 3.909528957280259,
+      "exposure_pct_max": 6.775998158883629,
+      "modelled_base_per_household": 6567.17387275899,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -431,18 +451,18 @@
       "state": "NE",
       "baseline_net_revenue_b": 3.207119162743745,
       "deltas_b": {
-        "compressive": 0.18936562106520735,
-        "proportional": 0.1464527850286526,
-        "expansive": 0.10016364045923906
+        "compressive": 0.23216674016331282,
+        "proportional": 0.17413883288246135,
+        "expansive": 0.12727091157776516
       },
       "exposure_pct": {
-        "compressive": 5.904539602551027,
-        "proportional": 4.566490286047237,
-        "expansive": 3.123165538181854
+        "compressive": 7.239105514392244,
+        "proportional": 5.429758735047518,
+        "expansive": 3.9683873632211006
       },
-      "exposure_pct_proportional": 4.566490286047237,
-      "exposure_pct_min": 3.123165538181854,
-      "exposure_pct_max": 5.904539602551027,
+      "exposure_pct_proportional": 5.429758735047518,
+      "exposure_pct_min": 3.9683873632211006,
+      "exposure_pct_max": 7.239105514392244,
       "modelled_base_per_household": 4630.499684341302,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
@@ -451,18 +471,18 @@
       "state": "AZ",
       "baseline_net_revenue_b": 7.650029569747038,
       "deltas_b": {
-        "compressive": 0.43267237223904725,
-        "proportional": 0.3470918232346224,
-        "expansive": 0.24424452551154738
+        "compressive": 0.4919053318699258,
+        "proportional": 0.4063400555834698,
+        "expansive": 0.30003869552703066
       },
       "exposure_pct": {
-        "compressive": 5.655826141510644,
-        "proportional": 4.537130478648589,
-        "expansive": 3.1927265546455104
+        "compressive": 6.430110202648427,
+        "proportional": 5.311614182386829,
+        "expansive": 3.922059291294373
       },
-      "exposure_pct_proportional": 4.537130478648589,
-      "exposure_pct_min": 3.1927265546455104,
-      "exposure_pct_max": 5.655826141510644,
+      "exposure_pct_proportional": 5.311614182386829,
+      "exposure_pct_min": 3.922059291294373,
+      "exposure_pct_max": 6.430110202648427,
       "modelled_base_per_household": 2761.418501914091,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
@@ -471,79 +491,39 @@
       "state": "KS",
       "baseline_net_revenue_b": 6.796964089590956,
       "deltas_b": {
-        "compressive": 0.4083464391953237,
-        "proportional": 0.29807835690863155,
-        "expansive": 0.1847095082290528
+        "compressive": 0.4665835391917057,
+        "proportional": 0.35464683359290894,
+        "expansive": 0.23887368350781082
       },
       "exposure_pct": {
-        "compressive": 6.007776910586829,
-        "proportional": 4.385463171198982,
-        "expansive": 2.7175295587028576
+        "compressive": 6.864587381096269,
+        "proportional": 5.2177241032658115,
+        "expansive": 3.514417324546823
       },
-      "exposure_pct_proportional": 4.385463171198982,
-      "exposure_pct_min": 2.7175295587028576,
-      "exposure_pct_max": 6.007776910586829,
+      "exposure_pct_proportional": 5.2177241032658115,
+      "exposure_pct_min": 3.514417324546823,
+      "exposure_pct_max": 6.864587381096269,
       "modelled_base_per_household": 6034.74198669357,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
     {
-      "state": "HI",
-      "baseline_net_revenue_b": 3.113459536153853,
-      "deltas_b": {
-        "compressive": 0.17547112727536418,
-        "proportional": 0.13653334363872888,
-        "expansive": 0.08899643062362539
-      },
-      "exposure_pct": {
-        "compressive": 5.6358891206959045,
-        "proportional": 4.385261541166277,
-        "expansive": 2.8584418583311755
-      },
-      "exposure_pct_proportional": 4.385261541166277,
-      "exposure_pct_min": 2.8584418583311755,
-      "exposure_pct_max": 5.6358891206959045,
-      "modelled_base_per_household": 6567.17387275899,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
       "state": "OK",
-      "baseline_net_revenue_b": 6.579029408360801,
+      "baseline_net_revenue_b": 6.579029408389704,
       "deltas_b": {
-        "compressive": 0.387503989868369,
-        "proportional": 0.27608698263107617,
-        "expansive": 0.15417015012989968
+        "compressive": 0.44232705653157295,
+        "proportional": 0.32514734667643613,
+        "expansive": 0.2013408709724927
       },
       "exposure_pct": {
-        "compressive": 5.8899871974416,
-        "proportional": 4.196469805716595,
-        "expansive": 2.3433570601459275
+        "compressive": 6.723287419379963,
+        "proportional": 4.9421780401498445,
+        "expansive": 3.0603430760734858
       },
-      "exposure_pct_proportional": 4.196469805716595,
-      "exposure_pct_min": 2.3433570601459275,
-      "exposure_pct_max": 5.8899871974416,
-      "modelled_base_per_household": 4189.289147833509,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "OH",
-      "baseline_net_revenue_b": 13.85636607117537,
-      "deltas_b": {
-        "compressive": 0.6816705106456166,
-        "proportional": 0.5699046631628113,
-        "expansive": 0.444410332906414
-      },
-      "exposure_pct": {
-        "compressive": 4.9195475000018805,
-        "proportional": 4.112944622243724,
-        "expansive": 3.207264665379303
-      },
-      "exposure_pct_proportional": 4.112944622243724,
-      "exposure_pct_min": 3.207264665379303,
-      "exposure_pct_max": 4.9195475000018805,
-      "modelled_base_per_household": 3053.6604622403006,
+      "exposure_pct_proportional": 4.9421780401498445,
+      "exposure_pct_min": 3.0603430760734858,
+      "exposure_pct_max": 6.723287419379963,
+      "modelled_base_per_household": 4189.289147851912,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -551,19 +531,39 @@
       "state": "UT",
       "baseline_net_revenue_b": 8.023257626897031,
       "deltas_b": {
-        "compressive": 0.41590334592823885,
-        "proportional": 0.3277642620461683,
-        "expansive": 0.23270177376202678
+        "compressive": 0.484706818850522,
+        "proportional": 0.3921959066536188,
+        "expansive": 0.2954920207223272
       },
       "exposure_pct": {
-        "compressive": 5.183721690974644,
-        "proportional": 4.085176835745334,
-        "expansive": 2.900340292974282
+        "compressive": 6.041272029276477,
+        "proportional": 4.888237732000876,
+        "expansive": 3.6829431941924042
       },
-      "exposure_pct_proportional": 4.085176835745334,
-      "exposure_pct_min": 2.900340292974282,
-      "exposure_pct_max": 5.183721690974644,
+      "exposure_pct_proportional": 4.888237732000876,
+      "exposure_pct_min": 3.6829431941924042,
+      "exposure_pct_max": 6.041272029276477,
       "modelled_base_per_household": 7020.565447706902,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "OH",
+      "baseline_net_revenue_b": 13.85636607117537,
+      "deltas_b": {
+        "compressive": 0.8051344753717804,
+        "proportional": 0.6765114838405705,
+        "expansive": 0.5499423777927418
+      },
+      "exposure_pct": {
+        "compressive": 5.810574513087216,
+        "proportional": 4.882315322542466,
+        "expansive": 3.968878816912585
+      },
+      "exposure_pct_proportional": 4.882315322542466,
+      "exposure_pct_min": 3.968878816912585,
+      "exposure_pct_max": 5.810574513087216,
+      "modelled_base_per_household": 3053.6604622403006,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -571,39 +571,19 @@
       "state": "LA",
       "baseline_net_revenue_b": 4.86729812063989,
       "deltas_b": {
-        "compressive": 0.26751623923811124,
-        "proportional": 0.1964096103824734,
-        "expansive": 0.12499988144019199
+        "compressive": 0.3070468454895525,
+        "proportional": 0.23483258790489037,
+        "expansive": 0.16248543175779867
       },
       "exposure_pct": {
-        "compressive": 5.496195889536794,
-        "proportional": 4.035290329753871,
-        "expansive": 2.5681574939929632
+        "compressive": 6.308363241353828,
+        "proportional": 4.82470113981877,
+        "expansive": 3.338308600181597
       },
-      "exposure_pct_proportional": 4.035290329753871,
-      "exposure_pct_min": 2.5681574939929632,
-      "exposure_pct_max": 5.496195889536794,
+      "exposure_pct_proportional": 4.82470113981877,
+      "exposure_pct_min": 3.338308600181597,
+      "exposure_pct_max": 6.308363241353828,
       "modelled_base_per_household": 2762.1408926381587,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "VA",
-      "baseline_net_revenue_b": 29.578833236453132,
-      "deltas_b": {
-        "compressive": 0.967858649572724,
-        "proportional": 1.1465873414857886,
-        "expansive": 1.3287671119886786
-      },
-      "exposure_pct": {
-        "compressive": 3.2721326153593147,
-        "proportional": 3.876377855475136,
-        "expansive": 4.492290488155896
-      },
-      "exposure_pct_proportional": 3.876377855475136,
-      "exposure_pct_min": 3.2721326153593147,
-      "exposure_pct_max": 4.492290488155896,
-      "modelled_base_per_household": 9469.478636093594,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -611,39 +591,19 @@
       "state": "MD",
       "baseline_net_revenue_b": 30.327488940642457,
       "deltas_b": {
-        "compressive": 1.04945067946921,
-        "proportional": 1.1642465261300088,
-        "expansive": 1.2200270338506236
+        "compressive": 1.2986929822224298,
+        "proportional": 1.4320757047429165,
+        "expansive": 1.4644058540949607
       },
       "exposure_pct": {
-        "compressive": 3.4603942368034986,
-        "proportional": 3.8389150134015195,
-        "expansive": 4.022842234774148
+        "compressive": 4.282230503040514,
+        "proportional": 4.722038502910025,
+        "expansive": 4.82864195239218
       },
-      "exposure_pct_proportional": 3.8389150134015195,
-      "exposure_pct_min": 3.4603942368034986,
-      "exposure_pct_max": 4.022842234774148,
+      "exposure_pct_proportional": 4.722038502910025,
+      "exposure_pct_min": 4.282230503040514,
+      "exposure_pct_max": 4.82864195239218,
       "modelled_base_per_household": 13051.773393572685,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "WV",
-      "baseline_net_revenue_b": 2.730994843271173,
-      "deltas_b": {
-        "compressive": 0.16063932064187547,
-        "proportional": 0.10359258954469076,
-        "expansive": 0.04229053790789641
-      },
-      "exposure_pct": {
-        "compressive": 5.882080701751251,
-        "proportional": 3.79321805751226,
-        "expansive": 1.548539647084833
-      },
-      "exposure_pct_proportional": 3.79321805751226,
-      "exposure_pct_min": 1.548539647084833,
-      "exposure_pct_max": 5.882080701751251,
-      "modelled_base_per_household": 4248.010319294121,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -651,59 +611,19 @@
       "state": "MO",
       "baseline_net_revenue_b": 10.622785630335876,
       "deltas_b": {
-        "compressive": 0.45432917595568456,
-        "proportional": 0.40196124512377546,
-        "expansive": 0.3498535385473205
+        "compressive": 0.5543605477594193,
+        "proportional": 0.5010464108317656,
+        "expansive": 0.4467307404959792
       },
       "exposure_pct": {
-        "compressive": 4.276930663631582,
-        "proportional": 3.7839532784685033,
-        "expansive": 3.2934255733094244
+        "compressive": 5.2185986524693835,
+        "proportional": 4.716713941782927,
+        "expansive": 4.205401069378958
       },
-      "exposure_pct_proportional": 3.7839532784685033,
-      "exposure_pct_min": 3.2934255733094244,
-      "exposure_pct_max": 4.276930663631582,
+      "exposure_pct_proportional": 4.716713941782927,
+      "exposure_pct_min": 4.205401069378958,
+      "exposure_pct_max": 5.2185986524693835,
       "modelled_base_per_household": 4645.100122309231,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "NC",
-      "baseline_net_revenue_b": 20.228724041935582,
-      "deltas_b": {
-        "compressive": 0.8940632569795613,
-        "proportional": 0.7563912052633053,
-        "expansive": 0.6192905658087493
-      },
-      "exposure_pct": {
-        "compressive": 4.419770891758199,
-        "proportional": 3.7391938497715063,
-        "expansive": 3.0614415646034616
-      },
-      "exposure_pct_proportional": 3.7391938497715063,
-      "exposure_pct_min": 3.0614415646034616,
-      "exposure_pct_max": 4.419770891758199,
-      "modelled_base_per_household": 4799.2703869672,
-      "modelled_base_kind": "broad",
-      "comparable_percentage": true
-    },
-    {
-      "state": "MI",
-      "baseline_net_revenue_b": 18.04356562125228,
-      "deltas_b": {
-        "compressive": 0.766868672330801,
-        "proportional": 0.673932042514549,
-        "expansive": 0.5752925992390308
-      },
-      "exposure_pct": {
-        "compressive": 4.250094955885875,
-        "proportional": 3.735026971170103,
-        "expansive": 3.18835318536727
-      },
-      "exposure_pct_proportional": 3.735026971170103,
-      "exposure_pct_min": 3.18835318536727,
-      "exposure_pct_max": 4.250094955885875,
-      "modelled_base_per_household": 4638.596400757201,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -711,39 +631,99 @@
       "state": "GA",
       "baseline_net_revenue_b": 21.085495504749566,
       "deltas_b": {
-        "compressive": 0.8863110436405255,
-        "proportional": 0.7871791561211138,
-        "expansive": 0.5959681659670157
+        "compressive": 1.0868218936523082,
+        "proportional": 0.9845108065945961,
+        "expansive": 0.8475702839874425
       },
       "exposure_pct": {
-        "compressive": 4.20341577195035,
-        "proportional": 3.733273215911855,
-        "expansive": 2.826436617687131
+        "compressive": 5.154357854229693,
+        "proportional": 4.669137637163102,
+        "expansive": 4.019683975633985
       },
-      "exposure_pct_proportional": 3.733273215911855,
-      "exposure_pct_min": 2.826436617687131,
-      "exposure_pct_max": 4.20341577195035,
+      "exposure_pct_proportional": 4.669137637163102,
+      "exposure_pct_min": 4.019683975633985,
+      "exposure_pct_max": 5.154357854229693,
       "modelled_base_per_household": 5206.197708526032,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
     {
-      "state": "AL",
-      "baseline_net_revenue_b": 8.302621423889105,
+      "state": "VA",
+      "baseline_net_revenue_b": 29.578833236453132,
       "deltas_b": {
-        "compressive": 0.42671569309978674,
-        "proportional": 0.2927439876699276,
-        "expansive": 0.16362518895280456
+        "compressive": 1.1790154676243014,
+        "proportional": 1.3600014849263324,
+        "expansive": 1.5429828282236362
       },
       "exposure_pct": {
-        "compressive": 5.139529689647165,
-        "proportional": 3.5259223891338256,
-        "expansive": 1.970765383593263
+        "compressive": 3.986010733416204,
+        "proportional": 4.597887530094521,
+        "expansive": 5.216510116842794
       },
-      "exposure_pct_proportional": 3.5259223891338256,
-      "exposure_pct_min": 1.970765383593263,
-      "exposure_pct_max": 5.139529689647165,
-      "modelled_base_per_household": 4314.241868963347,
+      "exposure_pct_proportional": 4.597887530094521,
+      "exposure_pct_min": 3.986010733416204,
+      "exposure_pct_max": 5.216510116842794,
+      "modelled_base_per_household": 9469.478636093594,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "MI",
+      "baseline_net_revenue_b": 18.04356562125228,
+      "deltas_b": {
+        "compressive": 0.9226535550931568,
+        "proportional": 0.8262385520619259,
+        "expansive": 0.7283501242351226
+      },
+      "exposure_pct": {
+        "compressive": 5.113476872921538,
+        "proportional": 4.579131250470561,
+        "expansive": 4.03661969880969
+      },
+      "exposure_pct_proportional": 4.579131250470561,
+      "exposure_pct_min": 4.03661969880969,
+      "exposure_pct_max": 5.113476872921538,
+      "modelled_base_per_household": 4638.596400757201,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "WV",
+      "baseline_net_revenue_b": 2.730994843271173,
+      "deltas_b": {
+        "compressive": 0.1816370373666389,
+        "proportional": 0.12413528915377052,
+        "expansive": 0.06268960599738167
+      },
+      "exposure_pct": {
+        "compressive": 6.65094765060321,
+        "proportional": 4.545423784289605,
+        "expansive": 2.295486062591475
+      },
+      "exposure_pct_proportional": 4.545423784289605,
+      "exposure_pct_min": 2.295486062591475,
+      "exposure_pct_max": 6.65094765060321,
+      "modelled_base_per_household": 4248.010319294121,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "NC",
+      "baseline_net_revenue_b": 20.228724041935582,
+      "deltas_b": {
+        "compressive": 1.0487448859875663,
+        "proportional": 0.9087761229358794,
+        "expansive": 0.7706893626538895
+      },
+      "exposure_pct": {
+        "compressive": 5.184434192752067,
+        "proportional": 4.492503437448264,
+        "expansive": 3.8098762979622234
+      },
+      "exposure_pct_proportional": 4.492503437448264,
+      "exposure_pct_min": 3.8098762979622234,
+      "exposure_pct_max": 5.184434192752067,
+      "modelled_base_per_household": 4799.2703869672,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -751,19 +731,39 @@
       "state": "IA",
       "baseline_net_revenue_b": 4.603404496194294,
       "deltas_b": {
-        "compressive": 0.26550076968094316,
-        "proportional": 0.15889616151897257,
-        "expansive": 0.046172190705645426
+        "compressive": 0.31101021519681216,
+        "proportional": 0.202668142397908,
+        "expansive": 0.08800754873480446
       },
       "exposure_pct": {
-        "compressive": 5.7674872998980815,
-        "proportional": 3.451709743307035,
-        "expansive": 1.0030009473166368
+        "compressive": 6.756091398310297,
+        "proportional": 4.402570805269381,
+        "expansive": 1.9117926484097079
       },
-      "exposure_pct_proportional": 3.451709743307035,
-      "exposure_pct_min": 1.0030009473166368,
-      "exposure_pct_max": 5.7674872998980815,
+      "exposure_pct_proportional": 4.402570805269381,
+      "exposure_pct_min": 1.9117926484097079,
+      "exposure_pct_max": 6.756091398310297,
       "modelled_base_per_household": 3813.922886914609,
+      "modelled_base_kind": "broad",
+      "comparable_percentage": true
+    },
+    {
+      "state": "AL",
+      "baseline_net_revenue_b": 8.302621423889105,
+      "deltas_b": {
+        "compressive": 0.4829478558784294,
+        "proportional": 0.34719310141228293,
+        "expansive": 0.21631990940366363
+      },
+      "exposure_pct": {
+        "compressive": 5.8168117179092995,
+        "proportional": 4.181728681658366,
+        "expansive": 2.60544108131014
+      },
+      "exposure_pct_proportional": 4.181728681658366,
+      "exposure_pct_min": 2.60544108131014,
+      "exposure_pct_max": 5.8168117179092995,
+      "modelled_base_per_household": 4314.241868963347,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
     },
@@ -771,18 +771,18 @@
       "state": "KY",
       "baseline_net_revenue_b": 6.121637601054028,
       "deltas_b": {
-        "compressive": 0.33875629419940567,
-        "proportional": 0.20313834847132778,
-        "expansive": 0.04383191414587021
+        "compressive": 0.386891072579648,
+        "proportional": 0.2537730251646595,
+        "expansive": 0.09384550250618172
       },
       "exposure_pct": {
-        "compressive": 5.533752833409778,
-        "proportional": 3.3183661253706243,
-        "expansive": 0.7160161545388313
+        "compressive": 6.320058418894853,
+        "proportional": 4.145508795244016,
+        "expansive": 1.5330130370674564
       },
-      "exposure_pct_proportional": 3.3183661253706243,
-      "exposure_pct_min": 0.7160161545388313,
-      "exposure_pct_max": 5.533752833409778,
+      "exposure_pct_proportional": 4.145508795244016,
+      "exposure_pct_min": 1.5330130370674564,
+      "exposure_pct_max": 6.320058418894853,
       "modelled_base_per_household": 3491.5380688846744,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
@@ -791,18 +791,18 @@
       "state": "IN",
       "baseline_net_revenue_b": 9.754999013231187,
       "deltas_b": {
-        "compressive": 0.34853635213843387,
-        "proportional": 0.28809044346204804,
-        "expansive": 0.23514434605933068
+        "compressive": 0.42337838934972977,
+        "proportional": 0.3620909625430743,
+        "expansive": 0.3084129370455623
       },
       "exposure_pct": {
-        "compressive": 3.572899922036864,
-        "proportional": 2.953259585893312,
-        "expansive": 2.410500972274757
+        "compressive": 4.340117192994902,
+        "proportional": 3.711850324658695,
+        "expansive": 3.1615886032099705
       },
-      "exposure_pct_proportional": 2.953259585893312,
-      "exposure_pct_min": 2.410500972274757,
-      "exposure_pct_max": 3.572899922036864,
+      "exposure_pct_proportional": 3.711850324658695,
+      "exposure_pct_min": 3.1615886032099705,
+      "exposure_pct_max": 4.340117192994902,
       "modelled_base_per_household": 3859.9338801566814,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
@@ -811,18 +811,18 @@
       "state": "IL",
       "baseline_net_revenue_b": 36.358122954415336,
       "deltas_b": {
-        "compressive": 0.7212213990907411,
-        "proportional": 0.90651486851423,
-        "expansive": 1.0969037672887072
+        "compressive": 1.0337798171263617,
+        "proportional": 1.2191390182163457,
+        "expansive": 1.418412140798241
       },
       "exposure_pct": {
-        "compressive": 1.98365960749675,
-        "proportional": 2.493293918530364,
-        "expansive": 3.016942785148646
+        "compressive": 2.8433255985807686,
+        "proportional": 3.353140699108322,
+        "expansive": 3.9012248860498144
       },
-      "exposure_pct_proportional": 2.493293918530364,
-      "exposure_pct_min": 1.98365960749675,
-      "exposure_pct_max": 3.016942785148646,
+      "exposure_pct_proportional": 3.353140699108322,
+      "exposure_pct_min": 2.8433255985807686,
+      "exposure_pct_max": 3.9012248860498144,
       "modelled_base_per_household": 7391.697309729661,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
@@ -831,18 +831,18 @@
       "state": "PA",
       "baseline_net_revenue_b": 22.498159938898702,
       "deltas_b": {
-        "compressive": 0.678805318113137,
-        "proportional": 0.5590660833033261,
-        "expansive": 0.3956384621736288
+        "compressive": 0.8597361368807993,
+        "proportional": 0.7377291948090335,
+        "expansive": 0.5870797359701231
       },
       "exposure_pct": {
-        "compressive": 3.0171592697209926,
-        "proportional": 2.4849413677458845,
-        "expansive": 1.7585369792379364
+        "compressive": 3.8213620101186105,
+        "proportional": 3.279064584893096,
+        "expansive": 2.609456673632577
       },
-      "exposure_pct_proportional": 2.4849413677458845,
-      "exposure_pct_min": 1.7585369792379364,
-      "exposure_pct_max": 3.0171592697209926,
+      "exposure_pct_proportional": 3.279064584893096,
+      "exposure_pct_min": 2.609456673632577,
+      "exposure_pct_max": 3.8213620101186105,
       "modelled_base_per_household": 4409.687804284793,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
@@ -851,18 +851,18 @@
       "state": "MS",
       "baseline_net_revenue_b": 1.9720803707047754,
       "deltas_b": {
-        "compressive": 0.10057853128940487,
-        "proportional": 0.03387695278764248,
-        "expansive": -0.03352102264260602
+        "compressive": 0.1303949503074491,
+        "proportional": 0.06244769566723323,
+        "expansive": -0.006086827318616391
       },
       "exposure_pct": {
-        "compressive": 5.100123340990431,
-        "proportional": 1.7178282026880907,
-        "expansive": -1.6997797422742154
+        "compressive": 6.61205051500254,
+        "proportional": 3.1665897898935977,
+        "expansive": -0.30865006360978586
       },
-      "exposure_pct_proportional": 1.7178282026880907,
-      "exposure_pct_min": -1.6997797422742154,
-      "exposure_pct_max": 5.100123340990431,
+      "exposure_pct_proportional": 3.1665897898935977,
+      "exposure_pct_min": -0.30865006360978586,
+      "exposure_pct_max": 6.61205051500254,
       "modelled_base_per_household": 1727.3962080275785,
       "modelled_base_kind": "broad",
       "comparable_percentage": true
@@ -871,9 +871,9 @@
       "state": "AK",
       "baseline_net_revenue_b": -0.04684004586697613,
       "deltas_b": {
-        "compressive": 0.0019436458467915357,
-        "proportional": -0.0001811133434278965,
-        "expansive": -0.0033314477246173023
+        "compressive": 0.002232291596873224,
+        "proportional": 7.837282014966011e-05,
+        "expansive": -0.002947197959710285
       },
       "exposure_pct": {
         "compressive": null,

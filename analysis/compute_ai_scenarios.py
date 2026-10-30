@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import gc
+import hashlib
 import json
 import os
 import warnings
@@ -35,6 +36,9 @@ from .ai_scenarios import (
     CAPITAL_INCOME_VARS,
     CAPITAL_INCOME_VARS_EXCL_RETIREMENT,
     CORPORATE_TAX_SCOPE_NOTE,
+    LABOR_INCOME_VARS,
+    PASSTHROUGH_CAPITAL_SHARE,
+    PASSTHROUGH_VAR,
     TARGET_YEAR,
     apply_ai_scenario,
     build_scenario,
@@ -72,11 +76,39 @@ CHECKPOINT_PATH = os.path.join(
 
 BASELINE_KEY = "baseline"
 
+#: Exit status of a run that stopped after its unit budget with work left, so
+#: a wrapper can relaunch it (fresh process, fresh memory) to resume.
+EXIT_MORE_UNITS = 3
+
+
+class UnitBudgetExhausted(Exception):
+    """Raised before computing a unit once the run's unit budget is spent."""
+
+
+class UnitBudget:
+    """How many units a run may compute, as opposed to resume, before stopping.
+
+    One full simulation of this pipeline reaches a memory footprint near the
+    host's ceiling, and a process does not hand all of it back between
+    units. Running one unit per process, resuming the rest from the
+    checkpoint, keeps each process to a single simulation's peak.
+    """
+
+    def __init__(self, limit=None):
+        self.limit = limit
+        self.spent = 0
+
+    def spend(self):
+        if self.limit is not None and self.spent >= self.limit:
+            raise UnitBudgetExhausted
+        self.spent += 1
+
 MODEL_URL = "https://www.policyengine.org/us/model"
 
 DESCRIPTION = (
     "AI scenarios calibrated to the Karger et al. (2026) forecaster survey as "
-    "implemented by The Budget Lab (Iselin and Nunn, 2026-07-20). Labor and "
+    "implemented by The Budget Lab (Iselin and Nunn, 2026-07-20, revised "
+    "2026-10-09). Labor and "
     "capital income are grown at scenario-specific rates derived from a "
     "target 2030 labor share, with an optional log-scale spread change in the "
     "labor income distribution. Static current-law microsimulation: no "
@@ -151,6 +183,48 @@ def _branch_name(scenario):
     """
     slug = "".join(char if char.isalnum() else "_" for char in scenario.label.lower())
     return f"ai_{slug}"[:48]
+
+
+def _shock_settings(year, capital_income_vars):
+    """The settings besides the scenario itself that decide a unit's numbers."""
+    return {
+        "year": year,
+        "capital_income_vars": list(capital_income_vars),
+        "labor_income_vars": list(LABOR_INCOME_VARS),
+        "passthrough_var": PASSTHROUGH_VAR,
+        "passthrough_capital_share": PASSTHROUGH_CAPITAL_SHARE,
+    }
+
+
+def _digest(payload):
+    encoded = json.dumps(payload, sort_keys=True, default=float).encode()
+    return hashlib.sha256(encoded).hexdigest()[:12]
+
+
+def scenario_digest(scenario, capital_income_vars, year=TARGET_YEAR):
+    """Short digest of the scenario and the shock settings applied with it.
+
+    Checkpoint keys carry it, so a resumed run cannot return a unit computed
+    from other scenario inputs under the same label. The Budget Lab's
+    2026-10-09 revision moved the Moderate and Rapid labor shares without
+    changing either label; keyed by label alone, a resume would have reused
+    the July cells. Changes to the shock code itself are not covered: bump
+    ``RUNTIME_REVISION`` for those, as for any change to computed values.
+    """
+    return _digest(
+        {"scenario": scenario.to_dict(), **_shock_settings(year, capital_income_vars)}
+    )
+
+
+def scenario_checkpoint_key(prefix, scenario, capital_income_vars, year=TARGET_YEAR):
+    """Checkpoint key for one unit: its family prefix plus its input digest."""
+    return f"{prefix}@{scenario_digest(scenario, capital_income_vars, year)}"
+
+
+def baseline_checkpoint_key(year, capital_income_vars):
+    """Checkpoint key for the baseline unit, which depends on the year and on
+    the capital set its factor-share context is measured with."""
+    return f"{BASELINE_KEY}@{_digest(_shock_settings(year, capital_income_vars))}"
 
 
 def _fiscal_row(delta):
@@ -331,14 +405,19 @@ def _run_one(
     checkpoint=None,
     checkpoint_key=None,
     checkpoint_fingerprint=None,
+    unit_budget=None,
 ):
     """Run a single scenario from a fresh microsimulation."""
-    key = checkpoint_key or scenario.label
+    key = scenario_checkpoint_key(
+        checkpoint_key or scenario.label, scenario, capital_income_vars, year
+    )
     if checkpoint and key in checkpoint:
         if verbose:
             print(f"  {scenario.label} ... (from checkpoint)", flush=True)
         return checkpoint[key]
 
+    if unit_budget is not None:
+        unit_budget.spend()
     if verbose:
         print(f"  {scenario.label} ...", flush=True)
 
@@ -390,6 +469,7 @@ def run_ai_scenarios(
     include_capital_scope_sensitivity=True,
     verbose=False,
     checkpoint_path=CHECKPOINT_PATH,
+    max_new_units=None,
 ):
     """Run the scenario grid plus sensitivities and return an export payload.
 
@@ -399,7 +479,12 @@ def run_ai_scenarios(
     same runtime wrote are resumed, so an engine or dataset change recomputes
     everything instead of mixing vintages. Pass `checkpoint_path=None` to
     disable. Delete the file to force a clean run.
+
+    `max_new_units` caps how many units (the baseline counts as one) this call
+    computes rather than resumes; past it, `UnitBudgetExhausted` is raised
+    before the next simulation starts.
     """
+    budget = UnitBudget(max_new_units)
     if scenarios is None:
         scenarios = default_scenario_grid()
 
@@ -412,15 +497,23 @@ def run_ai_scenarios(
     if verbose:
         print(f"Baseline microsimulation for {year}...", flush=True)
 
-    cached_baseline = checkpoint.get(BASELINE_KEY)
+    baseline_key = baseline_checkpoint_key(year, capital_income_vars)
+    cached_baseline = checkpoint.get(baseline_key)
     if cached_baseline:
         if verbose:
             print("  (from checkpoint)", flush=True)
         baseline_row = cached_baseline["row"]
         baseline_revenue = cached_baseline["revenue"]
         baseline_states = cached_baseline["states"]
-        metadata = cached_baseline["metadata"]
+        # Descriptive fields are this code's, not the resumed unit's.
+        metadata = {
+            **cached_baseline["metadata"],
+            "description": DESCRIPTION,
+            "model_url": MODEL_URL,
+            "corporate_tax_scope_note": CORPORATE_TAX_SCOPE_NOTE,
+        }
     else:
+        budget.spend()
         baseline = microsim_factory()
         baseline_metrics = extract_results(baseline, "Baseline", year=year)
         baseline_revenue = revenue_components(baseline, year=year)
@@ -435,7 +528,7 @@ def run_ai_scenarios(
         gc.collect()
         append_checkpoint(
             checkpoint_path,
-            BASELINE_KEY,
+            baseline_key,
             {
                 "row": baseline_row,
                 "revenue": baseline_revenue,
@@ -474,6 +567,7 @@ def run_ai_scenarios(
             checkpoint=checkpoint,
             checkpoint_fingerprint=checkpoint_fingerprint,
             checkpoint_key=f"grid:{scenario.label}",
+            unit_budget=budget,
         )
         for scenario in scenarios
     ]
@@ -498,6 +592,7 @@ def run_ai_scenarios(
                 checkpoint=checkpoint,
                 checkpoint_fingerprint=checkpoint_fingerprint,
                 checkpoint_key=f"realization:{rate}",
+                unit_budget=budget,
             )
             for rate in realization_sweep
         ]
@@ -518,6 +613,7 @@ def run_ai_scenarios(
                 checkpoint=checkpoint,
                 checkpoint_fingerprint=checkpoint_fingerprint,
                 checkpoint_key=f"capital_scope:{name}",
+                unit_budget=budget,
             )
             for name in ("Slow", "Moderate", "Rapid")
         ]
@@ -576,14 +672,40 @@ def main(argv=None):
         default=CHECKPOINT_PATH,
         help="Resume store; 'none' disables resuming.",
     )
+    parser.add_argument(
+        "--max-new-units",
+        type=int,
+        default=None,
+        help=(
+            "Compute at most this many units not already in the checkpoint, "
+            f"then exit with status {EXIT_MORE_UNITS} if any remain. Relaunching "
+            "until the status is 0 runs one simulation per process."
+        ),
+    )
     args = parser.parse_args(argv)
     checkpoint_path = None if args.checkpoint == "none" else args.checkpoint
+    if args.max_new_units is not None and checkpoint_path is None:
+        parser.error("--max-new-units needs a checkpoint to resume from")
+    if args.max_new_units is not None and args.max_new_units < 1:
+        parser.error("--max-new-units must be at least 1")
 
     print("=" * 78)
     print("AI SCENARIOS (Budget Lab calibration, PolicyEngine-US)")
     print("=" * 78)
 
-    result = run_ai_scenarios(verbose=True, checkpoint_path=checkpoint_path)
+    try:
+        result = run_ai_scenarios(
+            verbose=True,
+            checkpoint_path=checkpoint_path,
+            max_new_units=args.max_new_units,
+        )
+    except UnitBudgetExhausted:
+        print(
+            f"\nUnit budget of {args.max_new_units} spent; relaunch to resume "
+            "from the checkpoint.",
+            flush=True,
+        )
+        return EXIT_MORE_UNITS
 
     output_dir = os.path.dirname(args.output)
     if output_dir:
@@ -607,7 +729,8 @@ def main(argv=None):
         print(line)
 
     print(f"\n{result['metadata']['corporate_tax_scope_note']}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
