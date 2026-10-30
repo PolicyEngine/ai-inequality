@@ -61,7 +61,7 @@ It's about:
 
 ## Current Status
 
-We've developed a preliminary framework ([site here](https://policyengine.github.io/ai-inequality/)) incorporating:
+We've developed a preliminary framework ([site here](https://policyengine.org/us/ai-inequality)) incorporating:
 
 - Literature on AI growth, labor impacts, and inequality
 - Policy scenarios (current systems, UBI variants, safety net expansions, capital taxation)

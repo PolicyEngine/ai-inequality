@@ -132,9 +132,11 @@ ai-inequality/
 
 ## Live Site
 
-**https://policyengine.github.io/ai-inequality/**
+**https://policyengine.org/us/ai-inequality**
 
-The site automatically deploys to GitHub Pages on every push to `main`.
+policyengine.org serves this page through policyengine-app-v2's zone rewrite to
+the repo's Vercel deployment, which Vercel redeploys to production on every push
+to `main`. `.github/workflows/deploy.yml` also publishes a copy to GitHub Pages.
 
 ## Contributing
 
