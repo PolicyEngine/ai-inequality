@@ -1,13 +1,17 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   getAllReferences,
   formatAPACitation,
   formatBibTeX,
 } from "../data/references";
+import { countryFromSearchParams } from "../utils/countryConfig";
 
 function References() {
   const references = getAllReferences();
+  const [searchParams] = useSearchParams();
+  const countryKey = countryFromSearchParams(searchParams);
+  const homePath = countryKey === "us" ? "/" : `/?country=${countryKey}`;
 
   return (
     <div className="references-page">
@@ -16,7 +20,7 @@ function References() {
         style={{ paddingTop: "2rem", paddingBottom: "0" }}
       >
         <Link
-          to="/"
+          to={homePath}
           style={{
             color: "var(--pe-teal-600)",
             fontSize: "0.95rem",

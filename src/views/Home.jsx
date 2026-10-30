@@ -17,7 +17,10 @@ function Home() {
   const [searchParams] = useSearchParams();
   const countryKey = countryFromSearchParams(searchParams);
   const country = COUNTRIES[countryKey];
-  const isUK = countryKey === "uk";
+  const researchPath =
+    countryKey === "us" ? "/research" : `/research?country=${countryKey}`;
+  const referencesPath =
+    countryKey === "us" ? "/references" : `/references?country=${countryKey}`;
 
   return (
     <main>
@@ -42,23 +45,13 @@ function Home() {
             target="_top"
             className="cta-button primary"
           >
-            Income-shift experiment {"\u2192"}
+            Income-shift experiment {"→"}
           </a>
-          {isUK ? (
-            <a
-              href="https://www.policyengine.org/uk/model"
-              target="_top"
-              className="cta-button primary"
-            >
-              UK model documentation {"\u2192"}
-            </a>
-          ) : (
-            <Link to="/research" className="cta-button primary">
-              Research context {"\u2192"}
-            </Link>
-          )}
-          <Link to="/references" className="cta-button secondary">
-            References {"\u2192"}
+          <Link to={researchPath} className="cta-button primary">
+            Research context {"→"}
+          </Link>
+          <Link to={referencesPath} className="cta-button secondary">
+            References {"→"}
           </Link>
         </div>
       </div>
