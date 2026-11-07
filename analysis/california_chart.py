@@ -48,7 +48,7 @@ def series_from_sweep(path=SWEEP_PATH):
         ca.append(ca_net)
         other.append(total - ca_net)
     meta = data["metadata"]
-    note = f"policyengine-us {meta['country_model_version']}, data year {data['year']}"
+    note = f"policyengine-us {meta['country_model_version']}, {data['year']}"
     return xs, ca, None, other, note
 
 
@@ -61,7 +61,7 @@ def series_from_run(path):
         ca_sdi.append(row["california"]["state_net_including_sdi_change_b"])
         other.append(row["other_states_net_change_b"])
     meta = data["metadata"]
-    note = f"policyengine-us {meta['policyengine_us_version']}, data year {data['year']}"
+    note = f"policyengine-us {meta['policyengine_us_version']}, {data['year']}"
     return xs, ca, ca_sdi, other, note
 
 
@@ -111,7 +111,7 @@ def draw(xs, ca, ca_sdi, other, out, source_note):
     fig.text(0.06, 0.955, "California gains as labor income shifts to capital",
              fontsize=14, fontweight="bold", color=TEXT_PRIMARY, ha="left")
     fig.text(0.06, 0.915,
-             "Change in state income tax net of refundable state credits and "
+             "Change in state tax revenue, net of refundable state credits and "
              "state-funded benefits, $ billions",
              fontsize=10, color=TEXT_SECONDARY, ha="left")
     fig.text(0.06, 0.02,
