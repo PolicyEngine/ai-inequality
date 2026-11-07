@@ -214,7 +214,7 @@ def _within_state_lines(run):
             lines.append(
                 f"  California under the national allocation {nat:+.2f}B: "
                 f"{ca['state_net_change_b']:+.2f}B from income moving within the state and "
-                f"{nat - ca['state_net_change_b']:+.2f}B from income moving in from other states "
+                f"{nat - ca['state_net_change_b']:+.2f}B from income moving between states "
                 f"(market income {n['california']['market_income_change_b']:+.1f}B)"
             )
         total_tax = ca["state_tax_before_refundable_credits_change_b"]

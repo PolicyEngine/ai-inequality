@@ -345,7 +345,7 @@ def test_summary_reads_a_run():
     ]
     text = summarize(run, published)
     assert "Within-state variant" in text
-    assert "+3.50B from income moving within the state and +1.50B from income moving in" in text
+    assert "+3.50B from income moving within the state and +1.50B from income moving between states" in text
     assert "Five lowest changes: TX -4.00B" in text
 
 
