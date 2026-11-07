@@ -38,6 +38,8 @@ analysis/outputs/*
 !analysis/outputs/ai_scenarios_buildp_published.json
 !analysis/outputs/transfer_detail_buildp_published.json
 !analysis/outputs/yale_publishable_2030.xlsx
+# California revenue under the labor-to-capital shift (analysis/california_shift.py).
+!analysis/outputs/california_shift_pe*.json
 .venv/
 .venv312/
 .pytest_cache/
