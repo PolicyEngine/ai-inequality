@@ -219,6 +219,21 @@ def test_chart_series_from_run(tmp_path):
     assert "9.9.9" in note
 
 
+def test_chart_draws_california_only(tmp_path):
+    pytest.importorskip("matplotlib")
+    import matplotlib.pyplot as plt
+
+    from analysis.california_chart import draw
+
+    out = tmp_path / "chart.png"
+    draw([0, 10, 50], [0.0, 5.0, 33.0], [0.0, 3.0, 22.0], None, str(out), "policyengine-us 9.9.9, 2026")
+    fig = plt.gcf()
+    labels = [line.get_label() for line in fig.axes[0].get_lines() if not line.get_label().startswith("_")]
+    plt.close(fig)
+    assert out.stat().st_size > 0
+    assert labels == ["California", "California, including SDI contributions"]
+
+
 COMPONENT_KEYS = (
     "household_tax_before_refundable_credits",
     "household_refundable_tax_credits",

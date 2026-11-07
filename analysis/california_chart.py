@@ -5,7 +5,7 @@ Reads either the site's sweep payload (``src/data/shiftSweepData.json``) or a
 
 Usage:
     python -m analysis.california_chart --source sweep --out PATH.png
-    python -m analysis.california_chart --source run --run PATH.json --out PATH.png
+    python -m analysis.california_chart --source run --run PATH.json --out PATH.png [--california-only]
 """
 
 from __future__ import annotations
@@ -78,20 +78,23 @@ def draw(xs, ca, ca_sdi, other, out, source_note):
     ax.set_facecolor(SURFACE)
 
     ax.axhline(0, color=TEXT_SECONDARY, linewidth=0.8, zorder=1)
+    # clip_on=False keeps the end markers at 0% and 100% whole.
     ax.plot(xs, ca, color=CALIFORNIA, linewidth=2, marker="o", markersize=5,
-            label="California", zorder=3)
+            label="California", zorder=3, clip_on=False)
     if ca_sdi is not None:
         ax.plot(xs, ca_sdi, color=CALIFORNIA, linewidth=2, linestyle=(0, (4, 3)),
                 marker="o", markersize=4, markerfacecolor=SURFACE,
-                label="California, including SDI contributions", zorder=3)
-    ax.plot(xs, other, color=OTHER_STATES, linewidth=2, marker="o", markersize=5,
-            label="All other states combined", zorder=3)
+                label="California, including SDI contributions", zorder=3, clip_on=False)
+    if other is not None:
+        ax.plot(xs, other, color=OTHER_STATES, linewidth=2, marker="o", markersize=5,
+                label="All other states combined", zorder=3, clip_on=False)
 
     # Direct labels at the line ends, in text ink beside the colored mark.
     ends = [(ca[-1], "California")]
     if ca_sdi is not None:
         ends.append((ca_sdi[-1], "California, including SDI"))
-    ends.append((other[-1], "All other states"))
+    if other is not None:
+        ends.append((other[-1], "All other states"))
     for y, text in ends:
         ax.annotate(f"{text}  ${y:,.0f}B", xy=(xs[-1], y), xytext=(6, 0),
                     textcoords="offset points", va="center", fontsize=9.5,
@@ -116,8 +119,8 @@ def draw(xs, ca, ca_sdi, other, out, source_note):
              fontsize=10, color=TEXT_SECONDARY, ha="left")
     fig.text(0.06, 0.02,
              "Source: PolicyEngine static microsimulation of current law on Microcosm "
-             f"data ({source_note}).\nWe hold total income fixed and add new capital "
-             "income in proportion to existing holdings.",
+             f"data ({source_note}).\nWe hold national income fixed and add new capital "
+             "income in proportion to existing holdings nationwide.",
              fontsize=7.5, color=TEXT_SECONDARY, ha="left")
     fig.subplots_adjust(left=0.1, right=0.76, top=0.86, bottom=0.16)
     fig.savefig(out, facecolor=SURFACE)
@@ -129,12 +132,19 @@ def main():
     parser.add_argument("--source", choices=["sweep", "run"], default="sweep")
     parser.add_argument("--run", default=None, help="california_shift output JSON")
     parser.add_argument("--out", required=True)
+    parser.add_argument(
+        "--california-only",
+        action="store_true",
+        help="omit the all-other-states line, whose path depends on where new capital income lands",
+    )
     args = parser.parse_args()
     if args.source == "sweep":
         series = series_from_sweep()
     else:
         series = series_from_run(args.run)
     xs, ca, ca_sdi, other, note = series
+    if args.california_only:
+        other = None
     print(draw(xs, ca, ca_sdi, other, args.out, note))
 
 
