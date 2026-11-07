@@ -8,24 +8,40 @@ The invariants, checked over generated household frames:
   field's group changes add up to the state total, and the groups' shares of
   labor and capital income each add up to one;
 - households outside California never move California's rows;
-- the change including SDI equals the net change plus the SDI change.
+- the change including SDI equals the net change plus the SDI change;
+- the within-state shift conserves every state's market income: each state's
+  capital income rises by exactly the labor income its residents give up, only
+  positive capital income moves, and the national labor cut matches the
+  published sweep's;
+- with every record in one state, the within-state shift sets the same inputs
+  as the published sweep's national shift (a differential check, run when
+  policyengine_us is installed, plus a closed-form check that always runs).
 
-None of these tests load PolicyEngine.
+Only the differential check against ``_apply_shift`` loads PolicyEngine.
 """
 
 import json
+import sys
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from hypothesis import given, settings
+from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
 from analysis.california_shift import (
+    CAPITAL_INCOME_VARS,
     GROUPS,
+    LABOR_VARS,
     STATE,
+    _apply_within_state_shift,
     _baseline_concentration,
     _california_rows,
+    _freed_labor,
+    _scale_by_state,
     _weighted_rank,
+    _weighted_sum_by,
+    _within_state_scales,
 )
 
 VALUE_KEYS = (
@@ -301,3 +317,254 @@ def test_summary_reads_a_run():
     text = summarize(run, published)
     assert "California net +5.00B; with SDI +3.00B" in text
     assert "Published: California +5.00B (+0.0%)" in text
+    assert "Within-state variant" not in text
+
+    within_ca = dict(ca, state_net_change_b=3.5, market_income_change_b=0.0)
+    run["within_state_levels"] = [
+        dict(
+            run["levels"][0],
+            allocation="within_state",
+            california=within_ca,
+            california_by_group=[dict(within_ca, group="Top 1%")],
+        )
+    ]
+    text = summarize(run, published)
+    assert "Within-state variant" in text
+    assert "+3.50B from income moving within the state and +1.50B from income moving in" in text
+    assert "Five lowest changes: TX -4.00B" in text
+
+
+# --- Within-state shift -------------------------------------------------------
+
+INCOME_VARS = tuple(LABOR_VARS) + tuple(CAPITAL_INCOME_VARS)
+
+
+class _Result:
+    """Stands in for a MicroSeries: array values plus ``weights``."""
+
+    def __init__(self, values, weights):
+        self.values = np.asarray(values)
+        self.weights = np.asarray(weights, dtype=float)
+
+    def __array__(self, dtype=None, copy=None):
+        return self.values if dtype is None else self.values.astype(dtype)
+
+
+class _Branch:
+    def __init__(self):
+        self.inputs = {}
+
+    def set_input(self, variable, period, values):
+        self.inputs[variable] = np.array(values, dtype=float)
+
+
+class _Sim:
+    """A person-level microsimulation with the calls the shift functions make."""
+
+    def __init__(self, state, weight, columns):
+        self.state = np.asarray(state).astype(str)
+        self.weight = np.asarray(weight, dtype=float)
+        self.columns = {k: np.asarray(v, dtype=float) for k, v in columns.items()}
+        person = SimpleNamespace(entity=SimpleNamespace(key="person"))
+        self.tax_benefit_system = SimpleNamespace(variables={v: person for v in INCOME_VARS})
+        self.branches = []
+
+    def get_branch(self, name):
+        branch = _Branch()
+        self.branches.append(branch)
+        return branch
+
+    def calculate(self, variable, period=None, map_to=None):
+        if variable == "state_code_str":
+            assert map_to == "person"
+            return _Result(self.state, self.weight)
+        return _Result(self.columns[variable], self.weight)
+
+
+INCOMES = st.floats(-2e5, 2e6, allow_nan=False, allow_infinity=False)
+SHIFTS = st.floats(0.0, 1.0, allow_nan=False)
+
+
+@st.composite
+def person_sims(draw, states=("CA", "NY", "TX")):
+    n = draw(st.integers(1, 25))
+    state = draw(st.lists(st.sampled_from(list(states)), min_size=n, max_size=n))
+    weight = draw(st.lists(WEIGHTS, min_size=n, max_size=n))
+    columns = {v: draw(st.lists(INCOMES, min_size=n, max_size=n)) for v in INCOME_VARS}
+    return _Sim(state, weight, columns)
+
+
+def _by_state(sim, values):
+    return _weighted_sum_by(sim.state, values, sim.weight)
+
+
+def _positive_capital(sim):
+    return sum(np.clip(sim.columns[v], 0, None) for v in CAPITAL_INCOME_VARS)
+
+
+@settings(max_examples=300, deadline=None)
+@given(person_sims(), SHIFTS)
+def test_within_state_shift_conserves_each_state(sim, pct):
+    freed = sum(_freed_labor(sim.columns[v], pct) for v in LABOR_VARS)
+    freed_by_state = _by_state(sim, freed)
+    capital_by_state = _by_state(sim, _positive_capital(sim))
+    if any(f > 0 and capital_by_state.get(s, 0.0) <= 0 for s, f in freed_by_state.items()):
+        with pytest.raises(ValueError):
+            _apply_within_state_shift(sim, "t", pct)
+        return
+
+    branch, total, reported = _apply_within_state_shift(sim, "t", pct)
+    out = branch.inputs
+    assert set(out) == set(INCOME_VARS)
+    assert total == pytest.approx(float((freed * sim.weight).sum()), rel=1e-12, abs=1e-6)
+    assert reported == pytest.approx(freed_by_state, rel=1e-12, abs=1e-6)
+
+    labor_change = sum(out[v] - sim.columns[v] for v in LABOR_VARS)
+    capital_change = sum(out[v] - sim.columns[v] for v in CAPITAL_INCOME_VARS)
+    held = _positive_capital(sim)
+    for state in np.unique(sim.state):
+        m = sim.state == state
+        lost = float((labor_change[m] * sim.weight[m]).sum())
+        gained = float((capital_change[m] * sim.weight[m]).sum())
+        # Rounding scales with the dollars involved, capital included.
+        size = float(((np.abs(labor_change[m]) + held[m]) * sim.weight[m]).sum())
+        assert lost + gained == pytest.approx(0.0, abs=1e-9 * size + 1e-6)
+
+    for v in CAPITAL_INCOME_VARS:
+        before, after = sim.columns[v], out[v]
+        # Zero and negative values stay put; positive ones never fall.
+        np.testing.assert_array_equal(after[before <= 0], before[before <= 0])
+        assert np.all(after[before > 0] >= before[before > 0])
+
+
+@settings(max_examples=300, deadline=None)
+@given(person_sims(), SHIFTS)
+def test_within_state_scales_are_shared_across_capital_types(sim, pct):
+    freed = _by_state(sim, sum(_freed_labor(sim.columns[v], pct) for v in LABOR_VARS))
+    capital = _by_state(sim, _positive_capital(sim))
+    assume(all(f <= 0 or capital.get(s, 0.0) > 0 for s, f in freed.items()))
+    scales = _within_state_scales(freed, capital)
+    assert all(s >= 1.0 for s in scales.values())
+    for v in CAPITAL_INCOME_VARS:
+        raw = sim.columns[v]
+        scaled = _scale_by_state(raw, sim.state, scales)
+        for state, scale in scales.items():
+            m = (sim.state == state) & (raw > 0)
+            np.testing.assert_allclose(scaled[m], raw[m] * scale, rtol=1e-12)
+
+
+def test_within_state_scales_refuse_a_state_without_capital():
+    with pytest.raises(ValueError, match="NY"):
+        _within_state_scales({"CA": 10.0, "NY": 5.0}, {"CA": 100.0})
+    assert _within_state_scales({"CA": 0.0}, {}) == {"CA": 1.0}
+
+
+def test_within_state_shift_example():
+    # A California worker gives up $100 of a $1,000 wage; the two California
+    # capital holders split it 3:1 by holdings. New York's worker frees $50,
+    # which goes to New York's only holder, not to California.
+    sim = _Sim(
+        ["CA", "CA", "CA", "NY", "NY"],
+        [1.0, 1.0, 1.0, 1.0, 1.0],
+        {
+            "employment_income": [1000, 0, 0, 500, 0],
+            "self_employment_income": [0, 0, 0, 0, 0],
+            "long_term_capital_gains": [0, 300, 100, 0, 40],
+            "short_term_capital_gains": [0, 0, 0, 0, 0],
+            "taxable_interest_income": [0, 0, 0, 0, 10],
+            "qualified_dividend_income": [0, 0, 0, 0, 0],
+            "non_qualified_dividend_income": [0, 0, 0, 0, 0],
+            "rental_income": [0, 0, -50, 0, 0],
+        },
+    )
+    branch, total, by_state = _apply_within_state_shift(sim, "t", 0.1)
+    assert total == pytest.approx(150)
+    assert by_state == pytest.approx({"CA": 100, "NY": 50})
+    np.testing.assert_allclose(branch.inputs["employment_income"], [900, 0, 0, 450, 0])
+    np.testing.assert_allclose(branch.inputs["long_term_capital_gains"], [0, 375, 125, 0, 80])
+    np.testing.assert_allclose(branch.inputs["taxable_interest_income"], [0, 0, 0, 0, 20])
+    np.testing.assert_allclose(branch.inputs["rental_income"], [0, 0, -50, 0, 0])
+
+
+def _national_closed_form(sim, pct):
+    """The published sweep's shift in closed form: one factor on all positive capital."""
+    freed = sum(_freed_labor(sim.columns[v], pct) for v in LABOR_VARS)
+    total_freed = float((freed * sim.weight).sum())
+    total_capital = float((_positive_capital(sim) * sim.weight).sum())
+    scale = 1.0 + total_freed / total_capital
+    out = {v: sim.columns[v] - _freed_labor(sim.columns[v], pct) for v in LABOR_VARS}
+    for v in CAPITAL_INCOME_VARS:
+        raw = sim.columns[v]
+        out[v] = np.where(raw > 0, raw * scale, raw)
+    return out
+
+
+@settings(max_examples=200, deadline=None)
+@given(person_sims(states=("CA",)), SHIFTS)
+def test_one_state_matches_the_national_shift_in_closed_form(sim, pct):
+    assume(float((_positive_capital(sim) * sim.weight).sum()) > 0)
+    branch, _, _ = _apply_within_state_shift(sim, "t", pct)
+    expected = _national_closed_form(sim, pct)
+    for v in INCOME_VARS:
+        np.testing.assert_allclose(branch.inputs[v], expected[v], rtol=1e-12, atol=1e-9)
+
+
+@settings(max_examples=100, deadline=None)
+@given(person_sims(states=("CA",)), SHIFTS)
+def test_one_state_matches_the_published_apply_shift(sim, pct):
+    # Differential check against the code that produced the published sweep.
+    pytest.importorskip("policyengine_us")
+    from analysis.labor_capital_shift import _apply_shift
+
+    assume(float((_positive_capital(sim) * sim.weight).sum()) > 0)
+    within, total_w, _ = _apply_within_state_shift(sim, "w", pct)
+    national, total_n = _apply_shift(sim, "n", pct)
+    assert total_w == pytest.approx(total_n, rel=1e-12, abs=1e-9)
+    for v in INCOME_VARS:
+        expected = national.inputs.get(v, sim.columns[v])
+        np.testing.assert_allclose(within.inputs[v], expected, rtol=1e-12, atol=1e-9)
+
+
+def test_run_records_both_allocations(monkeypatch):
+    # Wiring check for run(): fake every PolicyEngine call and confirm the output
+    # carries national and within-state rows with the accounting fields.
+    import analysis.california_shift as cs
+
+    frame = _frame([STATE, "NY"], [1e9, 1e9], market_income=[10, 20], labor=[5, 5], capital=[2, 3])
+
+    def fake_national(sim, name, pct):
+        return _Branch(), 100e9 * pct
+
+    def fake_within(sim, name, pct):
+        return _Branch(), 100e9 * pct, {STATE: 60e9 * pct, "NY": 40e9 * pct}
+
+    monkeypatch.setitem(
+        sys.modules, "analysis.labor_capital_shift", SimpleNamespace(_apply_shift=fake_national)
+    )
+    monkeypatch.setattr(cs, "_apply_within_state_shift", fake_within)
+    monkeypatch.setattr(cs, "policyengine_bundle", lambda sim: {"policyengine_version": "test"})
+    monkeypatch.setattr(cs, "revenue_components", lambda sim: {"total": 1.0})
+    monkeypatch.setattr(cs, "net_fiscal_impact", lambda rev, base: {"total_change": -5e9})
+    monkeypatch.setattr(cs, "state_revenue_components", lambda sim: {})
+    monkeypatch.setattr(
+        cs,
+        "state_revenue_delta",
+        lambda scen, base: {STATE: {"state_net_change": 2e9}, "NY": {"state_net_change": -1e9}},
+    )
+    monkeypatch.setattr(cs, "_household_frame", lambda sim: frame)
+
+    # One California household leaves three of the four groups empty, so their
+    # mean income divides by zero; the real data fills every group.
+    with np.errstate(invalid="ignore", divide="ignore"):
+        out = cs.run([0.1, 0.5], microsim_factory=lambda: object(), verbose=True,
+                     within_state_levels=[0.1])
+    assert [r["shift_pct"] for r in out["levels"]] == [10, 50]
+    assert [r["allocation"] for r in out["levels"]] == ["national", "national"]
+    (row,) = out["within_state_levels"]
+    assert row["allocation"] == "within_state" and row["shift_pct"] == 10
+    assert row["labor_income_moved_b"] == pytest.approx(10.0)
+    assert row["labor_income_moved_by_state_b"] == pytest.approx({STATE: 6.0, "NY": 4.0})
+    assert row["federal_net_change_b"] == pytest.approx(-5.0 - 1.0)
+    assert row["other_states_net_change_b"] == pytest.approx(-1.0)
+    assert row["states_gaining"] == [STATE]
+    assert out["metadata"]["policyengine_version"] == "test"

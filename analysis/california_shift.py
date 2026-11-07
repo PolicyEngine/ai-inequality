@@ -13,9 +13,17 @@ records:
   labor income each group gives up and the capital income it receives.
 * Federal net revenue, as the all-government total less every state's net
   change.
+* A within-state variant of the shift. The sweep scales every positive
+  capital-income dollar in the country by one factor, so a state whose share of
+  national capital income exceeds its share of labor income gains market
+  income from other states. The variant gives each state's freed labor income
+  to that state's own capital holders, in proportion to their holdings, so
+  every state's market income stays fixed and only the movement of income
+  within each state changes its revenue.
 
 Usage:
-    python -m analysis.california_shift [--levels 0.1,0.2,0.5,1.0] [--out PATH]
+    python -m analysis.california_shift [--levels 0.1,0.2,0.5,1.0]
+        [--within-state-levels 0.1,0.5] [--out PATH]
 """
 
 from __future__ import annotations
@@ -38,6 +46,7 @@ from .fiscal import (
 from .policyengine_runtime import managed_us_microsimulation, policyengine_bundle
 
 DEFAULT_LEVELS = [0.10, 0.20, 0.50, 1.00]
+DEFAULT_WITHIN_STATE_LEVELS = [0.10, 0.50]
 STATE = "CA"
 SDI_VARIABLE = "ca_employee_state_disability_insurance_contribution"
 LABOR_VARS = ["employment_income", "self_employment_income"]
@@ -86,6 +95,116 @@ def _household_frame(sim):
         frame["sdi"] = np.zeros_like(frame["weight"])
     frame["state_net"] = frame["state_tax"] - frame["state_credits"] - frame["state_benefits"]
     return frame
+
+
+def _freed_labor(values, shift_pct):
+    """Labor income each record gives up: ``shift_pct`` of its positive amount.
+
+    Matches ``labor_capital_shift._apply_shift``: losses free nothing.
+    """
+    values = np.asarray(values, dtype=float)
+    return np.where(values > 0, values * shift_pct, 0.0)
+
+
+def _weighted_sum_by(keys, values, weights):
+    """Weighted sum of ``values`` for each distinct key, as {key: total}."""
+    keys = np.asarray(keys).astype(str)
+    values = np.asarray(values, dtype=float)
+    weights = np.asarray(weights, dtype=float)
+    return {str(k): float((values[keys == k] * weights[keys == k]).sum()) for k in np.unique(keys)}
+
+
+def _within_state_scales(freed_by_state, positive_capital_by_state):
+    """Factor on each state's positive capital income that absorbs its freed labor.
+
+    A state that frees no labor income keeps a factor of one. A state that frees
+    labor income but holds no positive capital income has nowhere to put it, so
+    the shift refuses rather than drop or move those dollars.
+    """
+    scales = {}
+    for state, freed in freed_by_state.items():
+        if freed <= 0:
+            scales[state] = 1.0
+            continue
+        capital = positive_capital_by_state.get(state, 0.0)
+        if capital <= 0:
+            raise ValueError(
+                f"{state} frees ${freed:,.0f} of labor income but holds no positive "
+                "capital income to receive it"
+            )
+        scales[state] = 1.0 + freed / capital
+    return scales
+
+
+def _scale_by_state(values, states, scales):
+    """Multiply each positive value by its state's factor; leave the rest as they are."""
+    values = np.asarray(values, dtype=float)
+    states = np.asarray(states).astype(str)
+    factor = np.ones_like(values)
+    for state, scale in scales.items():
+        factor[states == state] = scale
+    return np.where(values > 0, values * factor, values)
+
+
+def _states_for(sim, variable):
+    """State code of each record of ``variable``'s entity."""
+    entity = sim.tax_benefit_system.variables[variable].entity.key
+    return np.asarray(sim.calculate("state_code_str", period=YEAR, map_to=entity)).astype(str)
+
+
+def _apply_within_state_shift(baseline, branch_name, shift_pct):
+    """Branch with each state's freed labor income added to its own capital income.
+
+    The labor cut matches ``labor_capital_shift._apply_shift``: positive
+    employment and self-employment income fall by ``shift_pct``. Each state's
+    freed total then scales that state's positive capital income, in every
+    capital variable by the same factor, so each state's capital income rises by
+    exactly what its residents gave up in labor income.
+
+    Returns the branch, the national total freed and the total freed by state.
+    """
+    branch = baseline.get_branch(branch_name)
+
+    freed_by_state = {}
+    total_freed = 0.0
+    for var in LABOR_VARS:
+        result = baseline.calculate(var, period=YEAR)
+        raw = np.asarray(result, dtype=float)
+        weights = np.asarray(result.weights, dtype=float)
+        cut = _freed_labor(raw, shift_pct)
+        branch.set_input(var, YEAR, raw - cut)
+        for state, freed in _weighted_sum_by(_states_for(baseline, var), cut, weights).items():
+            freed_by_state[state] = freed_by_state.get(state, 0.0) + freed
+        total_freed += float((cut * weights).sum())
+
+    capital = {}
+    capital_by_state = {}
+    for var in CAPITAL_INCOME_VARS:
+        result = baseline.calculate(var, period=YEAR)
+        raw = np.asarray(result, dtype=float)
+        weights = np.asarray(result.weights, dtype=float)
+        states = _states_for(baseline, var)
+        capital[var] = (raw, states, weights)
+        for state, held in _weighted_sum_by(states, np.clip(raw, 0, None), weights).items():
+            capital_by_state[state] = capital_by_state.get(state, 0.0) + held
+
+    scales = _within_state_scales(freed_by_state, capital_by_state)
+    added_by_state = {}
+    for var, (raw, states, weights) in capital.items():
+        scaled = _scale_by_state(raw, states, scales)
+        branch.set_input(var, YEAR, scaled)
+        for state, added in _weighted_sum_by(states, scaled - raw, weights).items():
+            added_by_state[state] = added_by_state.get(state, 0.0) + added
+
+    # Rounding in raw * scale - raw grows with the capital a state holds, so the
+    # tolerance does too.
+    for state, freed in freed_by_state.items():
+        added = added_by_state.get(state, 0.0)
+        tolerance = 1e-9 * (abs(freed) + capital_by_state.get(state, 0.0)) + 1e-6
+        assert abs(added - freed) <= tolerance, (
+            f"{state}: capital income rose by {added:,.0f}, labor income fell by {freed:,.0f}"
+        )
+    return branch, total_freed, freed_by_state
 
 
 def _weighted_rank(values, weights):
@@ -171,10 +290,66 @@ def _california_rows(base, scen):
     return total(everyone), groups
 
 
-def run(levels, microsim_factory=managed_us_microsimulation, verbose=True):
+def _level_row(branch, freed, pct, base, base_rev, base_states, allocation):
+    """Fiscal and California accounting for one shifted branch."""
+    rev = revenue_components(branch)
+    delta = net_fiscal_impact(rev, base_rev)
+    states = state_revenue_delta(state_revenue_components(branch), base_states)
+    scen = _household_frame(branch)
+    ca_total, ca_groups = _california_rows(base, scen)
+
+    state_net = {code: d["state_net_change"] / 1e9 for code, d in states.items()}
+    all_states = sum(state_net.values())
+    other_states = all_states - state_net.get(STATE, 0.0)
+    gainers = sorted(
+        (c for c, v in state_net.items() if v > 0.005), key=lambda c: -state_net[c]
+    )
+    losers = [c for c, v in state_net.items() if v < -0.005]
+    return {
+        "shift_pct": int(round(pct * 100)),
+        "allocation": allocation,
+        "labor_income_moved_b": freed / 1e9,
+        "all_government_change_b": delta["total_change"] / 1e9,
+        "all_states_net_change_b": all_states,
+        "federal_net_change_b": delta["total_change"] / 1e9 - all_states,
+        "other_states_net_change_b": other_states,
+        "states_gaining": gainers,
+        "states_losing_count": len(losers),
+        "state_net_change_b": dict(sorted(state_net.items())),
+        "national_components_b": {
+            k: v / 1e9 for k, v in sorted(delta.items()) if isinstance(v, (int, float))
+        },
+        "california": ca_total,
+        "california_by_group": ca_groups,
+    }
+
+
+def _report(row):
+    ca = row["california"]
+    print(
+        f"{row['shift_pct']:>3}% shift ({row['allocation']}): CA net "
+        f"{ca['state_net_change_b']:+.2f}B (with SDI "
+        f"{ca['state_net_including_sdi_change_b']:+.2f}B; market income "
+        f"{ca['market_income_change_b']:+.1f}B); other states "
+        f"{row['other_states_net_change_b']:+.2f}B; federal "
+        f"{row['federal_net_change_b']:+.1f}B; all-gov "
+        f"{row['all_government_change_b']:+.1f}B",
+        flush=True,
+    )
+
+
+def run(
+    levels,
+    microsim_factory=managed_us_microsimulation,
+    verbose=True,
+    within_state_levels=None,
+):
     # labor_capital_shift imports policyengine_us at module load; importing it
     # here keeps this module's accounting helpers testable without the model.
     from .labor_capital_shift import _apply_shift
+
+    if within_state_levels is None:
+        within_state_levels = DEFAULT_WITHIN_STATE_LEVELS
 
     base_sim = microsim_factory()
     bundle = policyengine_bundle(base_sim)
@@ -195,46 +370,27 @@ def run(levels, microsim_factory=managed_us_microsimulation, verbose=True):
     for pct in levels:
         sim = microsim_factory()
         branch, freed = _apply_shift(sim, f"ca_{int(round(pct * 100))}", pct)
-        rev = revenue_components(branch)
-        delta = net_fiscal_impact(rev, base_rev)
-        states = state_revenue_delta(state_revenue_components(branch), base_states)
-        scen = _household_frame(branch)
-        ca_total, ca_groups = _california_rows(base, scen)
-
-        state_net = {code: d["state_net_change"] / 1e9 for code, d in states.items()}
-        all_states = sum(state_net.values())
-        other_states = all_states - state_net.get(STATE, 0.0)
-        gainers = sorted(
-            (c for c, v in state_net.items() if v > 0.005), key=lambda c: -state_net[c]
-        )
-        losers = [c for c, v in state_net.items() if v < -0.005]
-        row = {
-            "shift_pct": int(round(pct * 100)),
-            "labor_income_moved_b": freed / 1e9,
-            "all_government_change_b": delta["total_change"] / 1e9,
-            "all_states_net_change_b": all_states,
-            "federal_net_change_b": delta["total_change"] / 1e9 - all_states,
-            "other_states_net_change_b": other_states,
-            "states_gaining": gainers,
-            "states_losing_count": len(losers),
-            "state_net_change_b": dict(sorted(state_net.items())),
-            "national_components_b": {
-                k: v / 1e9 for k, v in sorted(delta.items()) if isinstance(v, (int, float))
-            },
-            "california": ca_total,
-            "california_by_group": ca_groups,
-        }
+        row = _level_row(branch, freed, pct, base, base_rev, base_states, "national")
         rows.append(row)
         if verbose:
-            print(
-                f"{row['shift_pct']:>3}% shift: CA net {ca_total['state_net_change_b']:+.2f}B "
-                f"(with SDI {ca_total['state_net_including_sdi_change_b']:+.2f}B); "
-                f"other states {other_states:+.2f}B; federal "
-                f"{row['federal_net_change_b']:+.1f}B; all-gov "
-                f"{row['all_government_change_b']:+.1f}B",
-                flush=True,
-            )
-        del branch, sim, scen
+            _report(row)
+        del branch, sim
+        gc.collect()
+
+    within_rows = []
+    for pct in within_state_levels:
+        sim = microsim_factory()
+        branch, freed, freed_by_state = _apply_within_state_shift(
+            sim, f"ca_within_{int(round(pct * 100))}", pct
+        )
+        row = _level_row(branch, freed, pct, base, base_rev, base_states, "within_state")
+        row["labor_income_moved_by_state_b"] = {
+            state: value / 1e9 for state, value in sorted(freed_by_state.items())
+        }
+        within_rows.append(row)
+        if verbose:
+            _report(row)
+        del branch, sim
         gc.collect()
 
     return {
@@ -246,7 +402,10 @@ def run(levels, microsim_factory=managed_us_microsimulation, verbose=True):
             "in proportion to existing holdings. Static, current law, no "
             "behavioral response. State net revenue is state income tax plus use "
             "tax, less refundable state credits and state-funded benefits; "
-            "California's employee SDI contribution is reported separately."
+            "California's employee SDI contribution is reported separately. "
+            "'levels' allocate the new capital income across the country, as the "
+            "published sweep does; 'within_state_levels' give each state's freed "
+            "labor income to that state's own capital holders."
         ),
         "metadata": {
             "policyengine_version": bundle.get("policyengine_version")
@@ -259,6 +418,7 @@ def run(levels, microsim_factory=managed_us_microsimulation, verbose=True):
         },
         "baseline_california": baseline,
         "levels": rows,
+        "within_state_levels": within_rows,
     }
 
 
@@ -269,10 +429,16 @@ def main():
         default=",".join(str(x) for x in DEFAULT_LEVELS),
         help="Comma-separated shift shares, e.g. 0.1,0.2,0.5,1.0",
     )
+    parser.add_argument(
+        "--within-state-levels",
+        default=",".join(str(x) for x in DEFAULT_WITHIN_STATE_LEVELS),
+        help="Shift shares for the within-state variant; empty to skip it",
+    )
     parser.add_argument("--out", default=None, help="Output JSON path")
     args = parser.parse_args()
     levels = [float(x) for x in args.levels.split(",") if x.strip()]
-    result = run(levels)
+    within = [float(x) for x in args.within_state_levels.split(",") if x.strip()]
+    result = run(levels, within_state_levels=within)
     out = args.out or os.path.join(
         OUTPUT_DIR,
         f"california_shift_pe{result['metadata']['policyengine_version']}.json",

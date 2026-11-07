@@ -183,7 +183,56 @@ def summarize(run, published=None):
                 f"other states {p['other_states']:+.2f}B, federal {p['federal']:+.1f}B "
                 f"({_pct(row['federal_net_change_b'], p['federal']):+.1f}%)"
             )
+    lines.extend(_within_state_lines(run))
     return "\n".join(lines)
+
+
+def _within_state_lines(run):
+    """The within-state variant, and how much of California's gain it keeps."""
+    within = run.get("within_state_levels") or []
+    if not within:
+        return []
+    national = {row["shift_pct"]: row for row in run["levels"]}
+    lines = ["", "Within-state variant: each state's freed labor income goes to its own capital holders"]
+    for row in within:
+        ca = row["california"]
+        lines.append("")
+        lines.append(
+            f"{row['shift_pct']}% shift: California net {ca['state_net_change_b']:+.2f}B; with SDI "
+            f"{ca['state_net_including_sdi_change_b']:+.2f}B; households: labor "
+            f"{ca['labor_income_change_b']:+.1f}B, capital {ca['capital_income_change_b']:+.1f}B, "
+            f"market income {ca['market_income_change_b']:+.2f}B"
+        )
+        lines.append(
+            f"  Other states {row['other_states_net_change_b']:+.2f}B; gaining: "
+            f"{', '.join(row['states_gaining'])}; {row['states_losing_count']} losing; federal "
+            f"{row['federal_net_change_b']:+.1f}B; all governments {row['all_government_change_b']:+.1f}B"
+        )
+        n = national.get(row["shift_pct"])
+        if n:
+            nat = n["california"]["state_net_change_b"]
+            lines.append(
+                f"  California under the national allocation {nat:+.2f}B: "
+                f"{ca['state_net_change_b']:+.2f}B from income moving within the state and "
+                f"{nat - ca['state_net_change_b']:+.2f}B from income moving in from other states "
+                f"(market income {n['california']['market_income_change_b']:+.1f}B)"
+            )
+        total_tax = ca["state_tax_before_refundable_credits_change_b"]
+        for g in row["california_by_group"]:
+            share = float("nan") if total_tax == 0 else 100 * g["state_tax_before_refundable_credits_change_b"] / total_tax
+            lines.append(
+                f"    {g['group']:<26} state tax {g['state_tax_before_refundable_credits_change_b']:+.2f}B "
+                f"({share:5.1f}% of the change), labor {g['labor_income_change_b']:+.1f}B, capital "
+                f"{g['capital_income_change_b']:+.1f}B"
+            )
+        ranked = sorted(row["state_net_change_b"].items(), key=lambda kv: kv[1])
+        lines.append(
+            "  Five lowest changes: " + ", ".join(f"{s} {v:+.2f}B" for s, v in ranked[:5])
+        )
+        lines.append(
+            "  Five highest changes: " + ", ".join(f"{s} {v:+.2f}B" for s, v in ranked[::-1][:5])
+        )
+    return lines
 
 
 def main():
