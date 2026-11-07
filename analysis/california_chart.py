@@ -83,7 +83,7 @@ def draw(xs, ca, ca_sdi, other, out, source_note):
     if ca_sdi is not None:
         ax.plot(xs, ca_sdi, color=CALIFORNIA, linewidth=2, linestyle=(0, (4, 3)),
                 marker="o", markersize=4, markerfacecolor=SURFACE,
-                label="California, including SDI", zorder=3)
+                label="California, including SDI contributions", zorder=3)
     ax.plot(xs, other, color=OTHER_STATES, linewidth=2, marker="o", markersize=5,
             label="All other states combined", zorder=3)
 
@@ -115,10 +115,10 @@ def draw(xs, ca, ca_sdi, other, out, source_note):
              "state-funded benefits, $ billions",
              fontsize=10, color=TEXT_SECONDARY, ha="left")
     fig.text(0.06, 0.02,
-             "PolicyEngine static microsimulation of current law on Microcosm "
-             f"microdata ({source_note}). Total income held fixed; new capital "
-             "income follows existing holdings.",
-             fontsize=7.5, color=TEXT_SECONDARY, ha="left", wrap=True)
+             "Source: PolicyEngine static microsimulation of current law on Microcosm "
+             f"data ({source_note}).\nWe hold total income fixed and add new capital "
+             "income in proportion to existing holdings.",
+             fontsize=7.5, color=TEXT_SECONDARY, ha="left")
     fig.subplots_adjust(left=0.1, right=0.76, top=0.86, bottom=0.16)
     fig.savefig(out, facecolor=SURFACE)
     return out

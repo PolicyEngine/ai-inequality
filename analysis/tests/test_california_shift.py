@@ -201,3 +201,103 @@ def test_chart_series_from_run(tmp_path):
     xs, ca, ca_sdi, other, note = series_from_run(str(path))
     assert xs == [0, 10] and ca == [0.0, 5.0] and ca_sdi == [0.0, 3.0] and other == [0.0, -2.0]
     assert "9.9.9" in note
+
+
+COMPONENT_KEYS = (
+    "household_tax_before_refundable_credits",
+    "household_refundable_tax_credits",
+    "household_benefits",
+    "employer_payroll_tax",
+    "fed_income_tax_before_refundable_credits",
+    "employee_social_security_tax",
+    "employee_medicare_tax",
+    "employer_social_security_tax",
+    "employer_medicare_tax",
+    "self_employment_tax",
+    "state_tax_before_refundable_credits",
+    "state_refundable_credits",
+    "state_benefits",
+    "income_tax_refundable_credits",
+    "household_market_income",
+    "household_net_income",
+)
+
+
+@settings(max_examples=200, deadline=None)
+@given(
+    st.lists(FLOATS, min_size=len(COMPONENT_KEYS), max_size=len(COMPONENT_KEYS)),
+    st.lists(FLOATS, min_size=len(COMPONENT_KEYS), max_size=len(COMPONENT_KEYS)),
+)
+def test_federal_and_state_parts_add_up_to_the_total(scenario, baseline):
+    # Differential check: the summary's federal split, built from components,
+    # plus the national state lines must equal fiscal.net_fiscal_impact's total.
+    from analysis.california_summary import federal_split
+    from analysis.fiscal import net_fiscal_impact
+
+    delta = net_fiscal_impact(
+        dict(zip(COMPONENT_KEYS, scenario)), dict(zip(COMPONENT_KEYS, baseline))
+    )
+    split = federal_split(delta)
+    assert split["federal_net"] + split["states_net_national"] == pytest.approx(
+        delta["total_change"], rel=1e-9, abs=1e-3
+    )
+    assert split["payroll"] == pytest.approx(
+        split["employee_payroll"] + split["employer_payroll"], rel=1e-12, abs=1e-9
+    )
+
+
+def test_summary_reads_a_run():
+    from analysis.california_summary import summarize
+
+    ca = {
+        "labor_income_change_b": -150.0,
+        "capital_income_change_b": 170.0,
+        "market_income_change_b": 20.0,
+        "state_tax_before_refundable_credits_change_b": 5.5,
+        "state_refundable_credits_change_b": 0.2,
+        "state_benefits_change_b": 0.3,
+        "state_net_change_b": 5.0,
+        "sdi_change_b": -2.0,
+        "state_net_including_sdi_change_b": 3.0,
+    }
+    group = dict(ca, group="Top 1%")
+    run = {
+        "year": 2026,
+        "metadata": {"policyengine_version": "6.16.0", "policyengine_us_version": "2.2.1"},
+        "baseline_california": {
+            "households_m": 14.0,
+            "labor_income_b": 1500.0,
+            "capital_income_b": 400.0,
+            "state_net_revenue_b": 120.0,
+            "sdi_b": 20.0,
+            "groups": [
+                {
+                    "group": "Top 1%",
+                    "households_m": 0.14,
+                    "labor_income_share": 0.15,
+                    "capital_income_share": 0.5,
+                    "mean_market_income": 3e6,
+                }
+            ],
+        },
+        "levels": [
+            {
+                "shift_pct": 10,
+                "labor_income_moved_b": 1200.0,
+                "all_government_change_b": -135.0,
+                "all_states_net_change_b": 3.0,
+                "federal_net_change_b": -138.0,
+                "other_states_net_change_b": -2.0,
+                "states_gaining": ["CA", "NY"],
+                "states_losing_count": 40,
+                "state_net_change_b": {"CA": 5.0, "NY": 2.0, "TX": -4.0},
+                "national_components_b": {"total_change": -135.0},
+                "california": ca,
+                "california_by_group": [group],
+            }
+        ],
+    }
+    published = {10: {"california": 5.0, "other_states": -2.1, "federal": -138.2, "total": -135.3}}
+    text = summarize(run, published)
+    assert "California net +5.00B; with SDI +3.00B" in text
+    assert "Published: California +5.00B (+0.0%)" in text
