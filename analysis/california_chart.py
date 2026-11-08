@@ -32,6 +32,19 @@ TEXT_PRIMARY = "#0b0b0b"
 TEXT_SECONDARY = "#52514e"
 GRID = "#e6e5e1"
 
+# The shift scales the six variables in ``constants.CAPITAL_INCOME_VARS``.
+ALLOCATION_NOTE = (
+    "We move labor income to capital income nationwide, in proportion to the interest, "
+    "dividends, capital gains and rent people already receive."
+)
+# ``fiscal.state_revenue_components`` nets California's refundable credits
+# (gov.states.ca.tax.income.credits.refundable) and its entries in
+# gov.household.household_state_benefits, which hold no CalWORKs or Medi-Cal.
+CALIFORNIA_MEASURE_NOTE = (
+    "We net out refundable credits like CalEITC and benefits like the SSI supplement, "
+    "and leave out Medi-Cal and CalWORKs."
+)
+
 
 def series_from_sweep(path=SWEEP_PATH):
     data = json.load(open(path))
@@ -65,7 +78,7 @@ def series_from_run(path):
     return xs, ca, ca_sdi, other, note
 
 
-def draw(xs, ca, ca_sdi, other, out, source_note):
+def draw(xs, ca, ca_sdi, other, out, source_note, measure_note=None):
     plt.rcParams.update(
         {
             "font.family": "sans-serif",
@@ -104,7 +117,7 @@ def draw(xs, ca, ca_sdi, other, out, source_note):
     ax.set_xticks(range(0, 101, 20))
     ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.0f}%"))
     ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"${v:,.0f}B"))
-    ax.set_xlabel("Share of labor income shifted to capital income", color=TEXT_SECONDARY)
+    ax.set_xlabel("Share of labor income that moves to capital income", color=TEXT_SECONDARY)
     ax.grid(axis="y", color=GRID, linewidth=0.8)
     ax.tick_params(colors=TEXT_SECONDARY, length=0)
     for spine in ax.spines.values():
@@ -115,14 +128,18 @@ def draw(xs, ca, ca_sdi, other, out, source_note):
              fontsize=14, fontweight="bold", color=TEXT_PRIMARY, ha="left")
     fig.text(0.06, 0.915,
              "Change in state tax revenue, net of refundable state credits and "
-             "state-funded benefits, $ billions",
+             "selected state benefits, $ billions",
              fontsize=10, color=TEXT_SECONDARY, ha="left")
-    fig.text(0.06, 0.02,
-             "Source: PolicyEngine static microsimulation of current law on Microcosm "
-             f"data ({source_note}).\nWe hold national income fixed and add new capital "
-             "income in proportion to existing holdings nationwide.",
-             fontsize=7.5, color=TEXT_SECONDARY, ha="left")
-    fig.subplots_adjust(left=0.1, right=0.76, top=0.86, bottom=0.16)
+    notes = [
+        "Source: PolicyEngine static microsimulation of current law on Microcosm "
+        f"data ({source_note}).",
+        ALLOCATION_NOTE,
+    ]
+    if measure_note:
+        notes.append(measure_note)
+    fig.text(0.06, 0.02, "\n".join(notes), fontsize=7.5, color=TEXT_SECONDARY,
+             ha="left", linespacing=1.4)
+    fig.subplots_adjust(left=0.1, right=0.76, top=0.86, bottom=0.14 + 0.025 * len(notes))
     fig.savefig(out, facecolor=SURFACE)
     return out
 
@@ -143,9 +160,11 @@ def main():
     else:
         series = series_from_run(args.run)
     xs, ca, ca_sdi, other, note = series
+    measure_note = None
     if args.california_only:
         other = None
-    print(draw(xs, ca, ca_sdi, other, args.out, note))
+        measure_note = CALIFORNIA_MEASURE_NOTE
+    print(draw(xs, ca, ca_sdi, other, args.out, note, measure_note))
 
 
 if __name__ == "__main__":
