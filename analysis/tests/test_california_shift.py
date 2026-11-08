@@ -23,11 +23,15 @@ The invariants, checked over generated household frames:
 - the federal line with health and TANF plus every state's line equals the
   all-government total with health, and TANF moves dollar for dollar from the
   federal line to the state's;
+- the state-only adjustment moves nothing for people whose status allows
+  federal matching, never moves more than the federal share policyengine-us
+  books, and never moves CHIP's unborn-child (FCEP) match;
 - the federal immigration-status test matches policyengine-us's
   ``is_medicaid_immigration_status_eligible`` where no state coverage applies,
-  and the state-only adjustment moves exactly the federal share policyengine-us
-  books for a California child covered without satisfactory status (both run
-  when policyengine_us is installed).
+  the state-only adjustment moves exactly the federal share policyengine-us
+  books for a California child covered without satisfactory status, and it
+  leaves the federal CHIP match for an undocumented pregnant woman's FCEP
+  coverage in place (all run when policyengine_us is installed).
 
 The differential checks against ``_apply_shift`` and the immigration rules are
 the only tests that load PolicyEngine.
@@ -44,6 +48,7 @@ from hypothesis import strategies as st
 
 from analysis.california_shift import (
     CAPITAL_INCOME_VARS,
+    FCEP_CATEGORY,
     FEDERAL_HEALTH,
     FEDERAL_SHARE_COSTS,
     FMAP_SPLIT_HEALTH,
@@ -61,6 +66,7 @@ from analysis.california_shift import (
     _freed_labor,
     _health_tanf_accounting,
     _scale_by_state,
+    _state_only_federal_share,
     _weighted_rank,
     _weighted_sum_by,
     _with_derived,
@@ -895,3 +901,74 @@ def test_state_only_coverage_matches_policyengine():
     assert federal[2] > 0, "the undocumented child should be enrolled with a federal share booked"
     assert federal[1] > 0, "the citizen child should be enrolled with a federal share booked"
     assert _state_only_coverage(sim).tolist() == pytest.approx([federal[2]])
+
+
+def test_state_only_federal_share_examples():
+    # A citizen on Medicaid, an undocumented woman covered through CHIP's
+    # unborn-child option, a DACA child on CHIP and an undocumented adult on
+    # state-funded Medicaid with a Medicare Savings Program share.
+    federal = [True, False, False, False]
+    shares = {
+        "medicaid_federal_cost": [100.0, 0.0, 0.0, 900.0],
+        "chip_federal_cost": [0.0, 300.0, 200.0, 0.0],
+        "msp_federal_cost": [0.0, 0.0, 0.0, 10.0],
+    }
+    chip_category = ["NONE", FCEP_CATEGORY, "CHILD", "NONE"]
+    got = _state_only_federal_share(federal, shares, chip_category)
+    assert got.tolist() == [0.0, 0.0, 200.0, 910.0]
+
+
+@settings(max_examples=300, deadline=None)
+@given(st.data())
+def test_state_only_federal_share_bounds(data):
+    n = data.draw(st.integers(1, 30))
+    federal = np.asarray(data.draw(st.lists(st.booleans(), min_size=n, max_size=n)))
+    shares = {
+        v: np.asarray(data.draw(st.lists(SPENDING, min_size=n, max_size=n)))
+        for v in FEDERAL_SHARE_COSTS
+    }
+    chip_category = np.asarray(
+        data.draw(
+            st.lists(
+                st.sampled_from(["NONE", "CHILD", "PREGNANT_STANDARD", FCEP_CATEGORY]),
+                min_size=n,
+                max_size=n,
+            )
+        )
+    )
+    moved = _state_only_federal_share(federal, shares, chip_category)
+    total = sum(shares.values())
+    assert (moved >= 0).all()
+    assert (moved <= total + 1e-9).all()
+    assert (moved[federal] == 0).all()
+    fcep = chip_category == FCEP_CATEGORY
+    np.testing.assert_allclose(
+        moved[~federal & fcep],
+        (shares["medicaid_federal_cost"] + shares["msp_federal_cost"])[~federal & fcep],
+    )
+    np.testing.assert_allclose(moved[~federal & ~fcep], total[~federal & ~fcep])
+
+
+def test_state_only_coverage_keeps_fcep_match_federal():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    from analysis.california_shift import _state_only_coverage
+
+    # Texas covers no undocumented adults in Medicaid, so an undocumented
+    # pregnant woman with no income qualifies only through CHIP's unborn-child
+    # option, which federal CHIP funds match whatever her status.
+    people = {
+        "mother": {
+            "age": {2026: 28},
+            "immigration_status": {2026: "UNDOCUMENTED"},
+            "is_pregnant": {2026: True},
+            "takes_up_medicaid_if_eligible": {2026: True},
+            "takes_up_chip_if_eligible": {2026: True},
+        }
+    }
+    sim = Simulation(situation=_situation("TX", people))
+    category = sim.calculate("chip_category", 2026, decode_enums=True)
+    assert np.asarray(category).astype(str).tolist() == [FCEP_CATEGORY]
+    assert float(np.asarray(sim.calculate("chip_federal_cost", 2026))[0]) > 0
+    assert _state_only_coverage(sim).tolist() == pytest.approx([0.0])

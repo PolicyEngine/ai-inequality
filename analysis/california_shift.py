@@ -30,8 +30,9 @@ records:
   Savings Program costs under federal matching rules
   (``state_benefit_cost``, from ``gov.hhs.medicaid.cost_share``), the whole
   cost of coverage it funds alone for people whose immigration status rules
-  out federal matching, its own health subsidies, and its whole TANF change,
-  because the federal TANF block grant is a fixed amount. The all-government
+  out federal matching (CHIP's unborn-child coverage keeps its federal match),
+  its own health subsidies, and its whole TANF change, because the federal
+  TANF block grant is a fixed amount. The all-government
   total adds every program in ``gov.household.household_health_benefits``;
   federal net revenue is again what the states leave.
 
@@ -86,6 +87,11 @@ STATE_HEALTH = (
 #: ``gov.household.state_benefit_cost`` this accounting expects.
 FEDERAL_SHARE_COSTS = ("medicaid_federal_cost", "chip_federal_cost", "msp_federal_cost")
 STATE_SHARE_COSTS = ("medicaid_state_cost", "chip_state_cost", "msp_state_cost")
+#: ``chip_category`` for a pregnant person covered through CHIP's
+#: From-Conception-to-End-of-Pregnancy option. The unborn child is the
+#: beneficiary (42 CFR 457.10), so federal CHIP funds match the coverage
+#: whatever the parent's immigration status.
+FCEP_CATEGORY = "PREGNANT_FCEP"
 #: Every state TANF program; California's is CalWORKs (``ca_tanf``).
 TANF_VARIABLE = "tanf"
 
@@ -161,6 +167,31 @@ def _federally_eligible_status(status, years_since_entry, p):
     return citizen | (qualified & (bar_exempt | past_bar))
 
 
+def _state_only_federal_share(federal, shares, chip_category):
+    """Federal share to move to the state, by person.
+
+    ``federal`` says whether each person's immigration status lets federal
+    funds match their coverage, ``shares`` maps each name in
+    ``FEDERAL_SHARE_COSTS`` to the federal share policyengine-us books for each
+    person, and ``chip_category`` holds each person's decoded ``chip_category``.
+    For people federal matching can't cover, the Medicaid, Medicare Savings
+    Program and CHIP shares move, except CHIP coverage through the
+    unborn-child (FCEP) option, which federal funds match whatever the parent's
+    status.
+    """
+    chip = np.where(
+        np.asarray(chip_category).astype(str) == FCEP_CATEGORY,
+        0.0,
+        np.asarray(shares["chip_federal_cost"], dtype=float),
+    )
+    movable = (
+        np.asarray(shares["medicaid_federal_cost"], dtype=float)
+        + chip
+        + np.asarray(shares["msp_federal_cost"], dtype=float)
+    )
+    return np.where(np.asarray(federal, dtype=bool), 0.0, movable)
+
+
 def _state_only_coverage(sim):
     """Federal share policyengine-us books for coverage only a state pays for, by household.
 
@@ -169,15 +200,15 @@ def _state_only_coverage(sim):
     immigration status, such as California's Medi-Cal for undocumented, DACA
     and TPS residents. Federal funds pay for such people only in emergencies,
     which ``medicaid_cost`` leaves out, so their whole cost is the state's.
+    CHIP's unborn-child coverage is the exception (``_state_only_federal_share``).
     """
     p = _parameters(sim).gov.hhs.medicaid.eligibility
     status = sim.calculate("immigration_status", period=YEAR, decode_enums=True)
     years = sim.calculate("years_since_us_entry", period=YEAR)
     federal = _federally_eligible_status(np.asarray(status), np.asarray(years), p)
-    federal_share = sum(
-        np.asarray(sim.calculate(v, period=YEAR), dtype=float) for v in FEDERAL_SHARE_COSTS
-    )
-    moved = np.where(federal, 0.0, federal_share)
+    shares = {v: np.asarray(sim.calculate(v, period=YEAR), dtype=float) for v in FEDERAL_SHARE_COSTS}
+    chip_category = np.asarray(sim.calculate("chip_category", period=YEAR, decode_enums=True))
+    moved = _state_only_federal_share(federal, shares, chip_category)
     return np.asarray(sim.map_result(moved, "person", "household"), dtype=float)
 
 
