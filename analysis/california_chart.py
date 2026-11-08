@@ -44,6 +44,42 @@ CALIFORNIA_MEASURE_NOTE = (
     "We net out refundable credits like CalEITC and benefits like the SSI supplement, "
     "and leave out Medi-Cal and CalWORKs."
 )
+# ``california_shift._health_tanf_accounting`` adds California's share of
+# Medi-Cal, CHIP and Medicare Savings Program costs, the coverage it funds
+# alone, its premium subsidy and CalWORKs.
+CALIFORNIA_HEALTH_TANF_NOTE = (
+    "We net out refundable credits like CalEITC, benefits like the SSI supplement, "
+    "CalWORKs, and California's share of Medi-Cal costs."
+)
+
+#: What each measure reads from a run (California, California with SDI, all
+#: other states) and how the chart describes it.
+MEASURES = {
+    "study": {
+        "fields": (
+            "state_net_change_b",
+            "state_net_including_sdi_change_b",
+            "other_states_net_change_b",
+        ),
+        "subtitle": (
+            "Change in state tax revenue, net of refundable state credits and "
+            "some state benefits, $ billions"
+        ),
+        "california_note": CALIFORNIA_MEASURE_NOTE,
+    },
+    "with_health_tanf": {
+        "fields": (
+            "state_net_with_health_tanf_change_b",
+            "state_net_with_health_tanf_including_sdi_change_b",
+            "other_states_net_with_health_tanf_change_b",
+        ),
+        "subtitle": (
+            "Change in state tax revenue, net of credits, benefits, Medi-Cal and "
+            "CalWORKs, $ billions"
+        ),
+        "california_note": CALIFORNIA_HEALTH_TANF_NOTE,
+    },
+}
 
 
 def series_from_sweep(path=SWEEP_PATH):
@@ -65,20 +101,22 @@ def series_from_sweep(path=SWEEP_PATH):
     return xs, ca, None, other, note
 
 
-def series_from_run(path):
+def series_from_run(path, measure="with_health_tanf"):
+    ca_key, ca_sdi_key, other_key = MEASURES[measure]["fields"]
     data = json.load(open(path))
     xs, ca, ca_sdi, other = [0], [0.0], [0.0], [0.0]
     for row in data["levels"]:
         xs.append(row["shift_pct"])
-        ca.append(row["california"]["state_net_change_b"])
-        ca_sdi.append(row["california"]["state_net_including_sdi_change_b"])
-        other.append(row["other_states_net_change_b"])
+        ca.append(row["california"][ca_key])
+        ca_sdi.append(row["california"][ca_sdi_key])
+        other.append(row[other_key])
     meta = data["metadata"]
     note = f"policyengine-us {meta['policyengine_us_version']}, {data['year']}"
     return xs, ca, ca_sdi, other, note
 
 
-def draw(xs, ca, ca_sdi, other, out, source_note, measure_note=None):
+def draw(xs, ca, ca_sdi, other, out, source_note, measure_note=None,
+         subtitle=MEASURES["study"]["subtitle"]):
     plt.rcParams.update(
         {
             "font.family": "sans-serif",
@@ -126,10 +164,7 @@ def draw(xs, ca, ca_sdi, other, out, source_note, measure_note=None):
 
     fig.text(0.06, 0.955, "California gains as labor income shifts to capital",
              fontsize=14, fontweight="bold", color=TEXT_PRIMARY, ha="left")
-    fig.text(0.06, 0.915,
-             "Change in state tax revenue, net of refundable state credits and "
-             "some state benefits, $ billions",
-             fontsize=10, color=TEXT_SECONDARY, ha="left")
+    fig.text(0.06, 0.915, subtitle, fontsize=10, color=TEXT_SECONDARY, ha="left")
     notes = [
         "Source: PolicyEngine static microsimulation of current law on Microcosm "
         f"data ({source_note}).",
@@ -154,17 +189,28 @@ def main():
         action="store_true",
         help="omit the all-other-states line, whose path depends on where new capital income lands",
     )
+    parser.add_argument(
+        "--measure",
+        choices=sorted(MEASURES),
+        default=None,
+        help="state measure to chart: a run defaults to with_health_tanf; the sweep has only study",
+    )
     args = parser.parse_args()
     if args.source == "sweep":
+        measure = args.measure or "study"
+        if measure != "study":
+            parser.error("the sweep payload holds only the study measure")
         series = series_from_sweep()
     else:
-        series = series_from_run(args.run)
+        measure = args.measure or "with_health_tanf"
+        series = series_from_run(args.run, measure)
     xs, ca, ca_sdi, other, note = series
     measure_note = None
     if args.california_only:
         other = None
-        measure_note = CALIFORNIA_MEASURE_NOTE
-    print(draw(xs, ca, ca_sdi, other, args.out, note, measure_note))
+        measure_note = MEASURES[measure]["california_note"]
+    print(draw(xs, ca, ca_sdi, other, args.out, note, measure_note,
+               subtitle=MEASURES[measure]["subtitle"]))
 
 
 if __name__ == "__main__":

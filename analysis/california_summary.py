@@ -3,6 +3,10 @@
 Prints, for each shift level:
 
 * California's net change, with and without its employee SDI contribution;
+* the same once health spending and TANF count: California's share of
+  Medi-Cal, CHIP and Medicare Savings Program costs, the state-only coverage it
+  pays for in full, its premium subsidy and CalWORKs, with the other states and
+  federal lines on the same basis (runs without these fields skip the lines);
 * all other states combined, every state, and federal net revenue;
 * the federal split into income tax, payroll taxes, refundable credits and
   benefits;
@@ -140,6 +144,7 @@ def summarize(run, published=None):
             f"refundable credits {ca['state_refundable_credits_change_b']:+.2f}B, "
             f"benefits {ca['state_benefits_change_b']:+.2f}B"
         )
+        lines.extend(_health_tanf_lines(row))
         lines.append(
             f"  California households: labor {ca['labor_income_change_b']:+.1f}B, capital "
             f"{ca['capital_income_change_b']:+.1f}B, market income {ca['market_income_change_b']:+.1f}B"
@@ -171,10 +176,12 @@ def summarize(run, published=None):
         total_tax = ca["state_tax_before_refundable_credits_change_b"]
         for g in row["california_by_group"]:
             share = float("nan") if total_tax == 0 else 100 * g["state_tax_before_refundable_credits_change_b"] / total_tax
+            full = g.get("state_net_with_health_tanf_change_b")
             lines.append(
                 f"    {g['group']:<26} state tax {g['state_tax_before_refundable_credits_change_b']:+.2f}B "
-                f"({share:5.1f}% of the change), net {g['state_net_change_b']:+.2f}B, labor "
-                f"{g['labor_income_change_b']:+.1f}B, capital {g['capital_income_change_b']:+.1f}B"
+                f"({share:5.1f}% of the change), net {g['state_net_change_b']:+.2f}B"
+                + ("" if full is None else f" (with health and TANF {full:+.2f}B)")
+                + f", labor {g['labor_income_change_b']:+.1f}B, capital {g['capital_income_change_b']:+.1f}B"
             )
         if published and row["shift_pct"] in published:
             p = published[row["shift_pct"]]
@@ -185,6 +192,26 @@ def summarize(run, published=None):
             )
     lines.extend(_within_state_lines(run))
     return "\n".join(lines)
+
+
+def _health_tanf_lines(row):
+    """California, the other states and federal once health spending and TANF count."""
+    ca = row["california"]
+    if "state_net_with_health_tanf_change_b" not in ca:
+        return []
+    return [
+        f"  California with health and TANF {ca['state_net_with_health_tanf_change_b']:+.2f}B; with SDI "
+        f"{ca['state_net_with_health_tanf_including_sdi_change_b']:+.2f}B. Spending changes: state health "
+        f"{ca['state_health_change_b']:+.2f}B (matched shares {ca['state_health_split_change_b']:+.2f}B, "
+        f"state-only coverage {ca['state_only_coverage_change_b']:+.2f}B, premium subsidy "
+        f"{ca['state_health_programs_change_b']:+.2f}B), CalWORKs {ca['tanf_change_b']:+.2f}B",
+        f"  With health and TANF: other states {row['other_states_net_with_health_tanf_change_b']:+.2f}B "
+        f"({row['states_losing_with_health_tanf_count']} losing); federal "
+        f"{row['federal_net_with_health_tanf_change_b']:+.1f}B; all governments "
+        f"{row['all_government_with_health_change_b']:+.1f}B. Health spending changes: federal "
+        f"{row['health_federal_change_b']:+.1f}B, states {row['health_state_change_b']:+.2f}B; TANF "
+        f"{row['tanf_change_b']:+.2f}B moves from the federal line to the states'",
+    ]
 
 
 def _within_state_lines(run):
@@ -208,6 +235,7 @@ def _within_state_lines(run):
             f"{', '.join(row['states_gaining'])}; {row['states_losing_count']} losing; federal "
             f"{row['federal_net_change_b']:+.1f}B; all governments {row['all_government_change_b']:+.1f}B"
         )
+        lines.extend(_health_tanf_lines(row))
         n = national.get(row["shift_pct"])
         if n:
             nat = n["california"]["state_net_change_b"]

@@ -15,9 +15,22 @@ The invariants, checked over generated household frames:
   published sweep's;
 - with every record in one state, the within-state shift sets the same inputs
   as the published sweep's national shift (a differential check, run when
-  policyengine_us is installed, plus a closed-form check that always runs).
+  policyengine_us is installed, plus a closed-form check that always runs);
+- the health accounting conserves health spending: each household's state and
+  federal health spending add up to every program in
+  ``household_health_benefits``, and moving state-only coverage changes who
+  pays, not how much;
+- the federal line with health and TANF plus every state's line equals the
+  all-government total with health, and TANF moves dollar for dollar from the
+  federal line to the state's;
+- the federal immigration-status test matches policyengine-us's
+  ``is_medicaid_immigration_status_eligible`` where no state coverage applies,
+  and the state-only adjustment moves exactly the federal share policyengine-us
+  books for a California child covered without satisfactory status (both run
+  when policyengine_us is installed).
 
-Only the differential check against ``_apply_shift`` loads PolicyEngine.
+The differential checks against ``_apply_shift`` and the immigration rules are
+the only tests that load PolicyEngine.
 """
 
 import json
@@ -31,16 +44,26 @@ from hypothesis import strategies as st
 
 from analysis.california_shift import (
     CAPITAL_INCOME_VARS,
+    FEDERAL_HEALTH,
+    FEDERAL_SHARE_COSTS,
+    FMAP_SPLIT_HEALTH,
     GROUPS,
     LABOR_VARS,
     STATE,
+    STATE_HEALTH,
+    STATE_SHARE_COSTS,
     _apply_within_state_shift,
     _baseline_concentration,
     _california_rows,
+    _check_health_lists,
+    _check_health_split,
+    _federally_eligible_status,
     _freed_labor,
+    _health_tanf_accounting,
     _scale_by_state,
     _weighted_rank,
     _weighted_sum_by,
+    _with_derived,
     _within_state_scales,
 )
 
@@ -52,6 +75,13 @@ VALUE_KEYS = (
     "labor",
     "capital",
     "sdi",
+    "federal_health_split",
+    "state_health_split",
+    "fmap_split_cost",
+    "federal_health_other",
+    "state_health_programs",
+    "state_only_coverage",
+    "tanf",
 )
 
 
@@ -63,8 +93,7 @@ def _frame(state, weight, **columns):
     }
     for key in VALUE_KEYS:
         frame[key] = np.asarray(columns.get(key, np.zeros(n)), dtype=float)
-    frame["state_net"] = frame["state_tax"] - frame["state_credits"] - frame["state_benefits"]
-    return frame
+    return _with_derived(frame)
 
 
 FLOATS = st.floats(-1e6, 1e7, allow_nan=False, allow_infinity=False)
@@ -205,18 +234,23 @@ def test_chart_series_from_run(tmp_path):
             {
                 "shift_pct": 10,
                 "other_states_net_change_b": -2.0,
+                "other_states_net_with_health_tanf_change_b": -2.5,
                 "california": {
                     "state_net_change_b": 5.0,
                     "state_net_including_sdi_change_b": 3.0,
+                    "state_net_with_health_tanf_change_b": 4.0,
+                    "state_net_with_health_tanf_including_sdi_change_b": 2.0,
                 },
             }
         ],
     }
     path = tmp_path / "run.json"
     path.write_text(json.dumps(run))
-    xs, ca, ca_sdi, other, note = series_from_run(str(path))
+    xs, ca, ca_sdi, other, note = series_from_run(str(path), measure="study")
     assert xs == [0, 10] and ca == [0.0, 5.0] and ca_sdi == [0.0, 3.0] and other == [0.0, -2.0]
     assert "9.9.9" in note
+    xs, ca, ca_sdi, other, _ = series_from_run(str(path))
+    assert xs == [0, 10] and ca == [0.0, 4.0] and ca_sdi == [0.0, 2.0] and other == [0.0, -2.5]
 
 
 def test_chart_draws_california_only(tmp_path):
@@ -290,6 +324,13 @@ def test_summary_reads_a_run():
         "state_net_change_b": 5.0,
         "sdi_change_b": -2.0,
         "state_net_including_sdi_change_b": 3.0,
+        "state_health_change_b": 0.6,
+        "state_health_split_change_b": 0.4,
+        "state_only_coverage_change_b": 0.15,
+        "state_health_programs_change_b": 0.05,
+        "tanf_change_b": 0.4,
+        "state_net_with_health_tanf_change_b": 4.0,
+        "state_net_with_health_tanf_including_sdi_change_b": 2.0,
     }
     group = dict(ca, group="Top 1%")
     run = {
@@ -325,12 +366,23 @@ def test_summary_reads_a_run():
                 "national_components_b": {"total_change": -135.0},
                 "california": ca,
                 "california_by_group": [group],
+                "other_states_net_with_health_tanf_change_b": -3.0,
+                "states_losing_with_health_tanf_count": 42,
+                "federal_net_with_health_tanf_change_b": -140.0,
+                "all_government_with_health_change_b": -139.0,
+                "health_federal_change_b": 3.0,
+                "health_state_change_b": 1.0,
+                "tanf_change_b": 1.0,
             }
         ],
     }
     published = {10: {"california": 5.0, "other_states": -2.1, "federal": -138.2, "total": -135.3}}
     text = summarize(run, published)
     assert "California net +5.00B; with SDI +3.00B" in text
+    assert "California with health and TANF +4.00B; with SDI +2.00B" in text
+    assert "state-only coverage +0.15B" in text and "CalWORKs +0.40B" in text
+    assert "With health and TANF: other states -3.00B (42 losing); federal -140.0B" in text
+    assert "(with health and TANF +4.00B)" in text
     assert "Published: California +5.00B (+0.0%)" in text
     assert "Within-state variant" not in text
 
@@ -583,3 +635,261 @@ def test_run_records_both_allocations(monkeypatch):
     assert row["other_states_net_change_b"] == pytest.approx(-1.0)
     assert row["states_gaining"] == [STATE]
     assert out["metadata"]["policyengine_version"] == "test"
+    # The fake changes no health spending or TANF, so those fields match the sweep's.
+    assert row["federal_net_with_health_tanf_change_b"] == pytest.approx(row["federal_net_change_b"])
+    assert row["other_states_net_with_health_tanf_change_b"] == pytest.approx(-1.0)
+    assert row["california"]["state_net_with_health_tanf_change_b"] == pytest.approx(0.0)
+    assert "state_net_with_health_tanf_b" in out["baseline_california"]
+
+
+# --- Health spending and TANF -------------------------------------------------
+
+HEALTH_KEYS = (
+    "federal_health_split",
+    "state_health_split",
+    "federal_health_other",
+    "state_health_programs",
+    "tanf",
+)
+SPENDING = st.floats(0, 5e4, allow_nan=False, allow_infinity=False)
+SHARES = st.floats(0, 1, allow_nan=False)
+
+
+@st.composite
+def health_pair(draw):
+    """Baseline and scenario frames with non-negative health spending, at least one in CA."""
+    n = draw(st.integers(1, 30))
+    state = draw(st.lists(st.sampled_from([STATE, "NY", "TX"]), min_size=n, max_size=n))
+    state[0] = STATE
+    weight = draw(st.lists(WEIGHTS, min_size=n, max_size=n))
+
+    def columns():
+        cols = {
+            key: np.asarray(draw(st.lists(SPENDING, min_size=n, max_size=n))) for key in HEALTH_KEYS
+        }
+        # State-only coverage moves part of the federal share, never more.
+        share = np.asarray(draw(st.lists(SHARES, min_size=n, max_size=n)))
+        cols["state_only_coverage"] = cols["federal_health_split"] * share
+        cols["fmap_split_cost"] = cols["federal_health_split"] + cols["state_health_split"]
+        cols["state_tax"] = draw(st.lists(FLOATS, min_size=n, max_size=n))
+        return cols
+
+    return _frame(state, weight, **columns()), _frame(state, weight, **columns())
+
+
+@settings(max_examples=300, deadline=None)
+@given(health_pair())
+def test_health_spending_is_conserved(pair):
+    for frame in pair:
+        every_program = (
+            frame["federal_health_split"]
+            + frame["state_health_split"]
+            + frame["federal_health_other"]
+            + frame["state_health_programs"]
+        )
+        np.testing.assert_allclose(
+            frame["state_health"] + frame["federal_health"], every_program, rtol=1e-12, atol=1e-6
+        )
+        np.testing.assert_allclose(
+            frame["state_net_with_health_tanf"],
+            frame["state_net"] - frame["state_health"] - frame["tanf"],
+            rtol=1e-12,
+            atol=1e-6,
+        )
+        # Generated frames satisfy the run's own checks.
+        _check_health_split(frame)
+
+
+@settings(max_examples=300, deadline=None)
+@given(
+    health_pair(),
+    st.floats(-50, 50, allow_nan=False),
+    st.floats(-500, 500, allow_nan=False),
+    st.floats(-50, 50, allow_nan=False),
+)
+def test_health_tanf_accounting_adds_up(pair, ca_net, all_government, ny_net):
+    base, scen = pair
+    out = _health_tanf_accounting(base, scen, {STATE: ca_net, "NY": ny_net}, all_government)
+    states = out["state_net_with_health_tanf_change_b"]
+    assert out["federal_net_with_health_tanf_change_b"] + sum(states.values()) == pytest.approx(
+        out["all_government_with_health_change_b"], rel=1e-9, abs=1e-9
+    )
+    assert out["all_states_net_with_health_tanf_change_b"] == pytest.approx(
+        sum(states.values()), rel=1e-12, abs=1e-12
+    )
+    # California's line is the sweep's net less California's health and TANF
+    # changes, as its household rows count them.
+    total, _ = _california_rows(base, scen)
+    assert states[STATE] == pytest.approx(
+        ca_net - total["state_health_change_b"] - total["tanf_change_b"], rel=1e-9, abs=1e-9
+    )
+    # Every health dollar leaves the all-government total; TANF already sits in it.
+    w = base["weight"]
+    health = lambda f: f["state_health"] + f["federal_health"]  # noqa: E731
+    health_change = float(((health(scen) - health(base)) * w).sum()) / 1e9
+    assert out["all_government_with_health_change_b"] == pytest.approx(
+        all_government - health_change, rel=1e-9, abs=1e-9
+    )
+
+
+def test_tanf_moves_from_the_federal_line_to_the_state():
+    # CalWORKs rises $1B and nothing else changes. The sweep counts the $1B in
+    # all-government benefits but in no state's line, so its federal line falls
+    # $1B; here California pays it and the federal line does not move.
+    base = _frame([STATE, "NY"], [1e9, 1e9])
+    scen = _frame([STATE, "NY"], [1e9, 1e9], tanf=[1.0, 0.0])
+    out = _health_tanf_accounting(base, scen, {STATE: 0.0, "NY": 0.0}, -1.0)
+    assert out["state_net_with_health_tanf_change_b"][STATE] == pytest.approx(-1.0)
+    assert out["federal_net_with_health_tanf_change_b"] == pytest.approx(0.0)
+    assert out["tanf_change_b"] == pytest.approx(1.0)
+
+
+def test_state_only_coverage_moves_to_the_state():
+    # A California child newly covered by state-funded Medi-Cal costs $1,000.
+    # policyengine-us books $500 federal and $500 state at the 50% matching
+    # rate; the child's status rules out federal matching, so California pays
+    # all of it and the federal line does not move.
+    base = _frame([STATE], [1e9])
+    scen = _frame(
+        [STATE],
+        [1e9],
+        fmap_split_cost=[1000.0],
+        federal_health_split=[500.0],
+        state_health_split=[500.0],
+        state_only_coverage=[500.0],
+    )
+    _check_health_split(scen)
+    out = _health_tanf_accounting(base, scen, {STATE: 0.0}, 0.0)
+    assert out["state_net_with_health_tanf_change_b"][STATE] == pytest.approx(-1000.0)
+    assert out["health_federal_change_b"] == pytest.approx(0.0)
+    assert out["federal_net_with_health_tanf_change_b"] == pytest.approx(0.0)
+    assert out["all_government_with_health_change_b"] == pytest.approx(-1000.0)
+
+
+def test_check_health_split_refuses_gaps():
+    gap = _frame(
+        [STATE], [1.0], fmap_split_cost=[100.0], federal_health_split=[50.0], state_health_split=[40.0]
+    )
+    with pytest.raises(AssertionError, match="differ"):
+        _check_health_split(gap)
+    overmoved = _frame(
+        [STATE],
+        [1.0],
+        fmap_split_cost=[100.0],
+        federal_health_split=[50.0],
+        state_health_split=[50.0],
+        state_only_coverage=[60.0],
+    )
+    with pytest.raises(AssertionError, match="moves more"):
+        _check_health_split(overmoved)
+
+
+def _health_parameters(flag=False, health=None, federal=None, state=None):
+    household = SimpleNamespace(
+        household_health_benefits=health
+        or list(FMAP_SPLIT_HEALTH) + list(FEDERAL_HEALTH) + list(STATE_HEALTH),
+        federal_benefit_cost=federal or list(FEDERAL_SHARE_COSTS),
+        state_benefit_cost=state or list(STATE_SHARE_COSTS),
+    )
+    simulation = SimpleNamespace(include_health_benefits_in_net_income=flag)
+    return SimpleNamespace(gov=SimpleNamespace(household=household, simulation=simulation))
+
+
+def test_check_health_lists():
+    _check_health_lists(_health_parameters())
+    with pytest.raises(ValueError, match="twice"):
+        _check_health_lists(_health_parameters(flag=True))
+    with pytest.raises(ValueError, match="new_program"):
+        _check_health_lists(
+            _health_parameters(
+                health=list(FMAP_SPLIT_HEALTH) + list(FEDERAL_HEALTH) + list(STATE_HEALTH) + ["new_program"]
+            )
+        )
+    with pytest.raises(ValueError, match="state_benefit_cost"):
+        _check_health_lists(_health_parameters(state=["medicaid_state_cost"]))
+
+
+def test_federally_eligible_status_examples():
+    p = SimpleNamespace(
+        eligible_immigration_statuses=["CITIZEN", "LEGAL_PERMANENT_RESIDENT", "REFUGEE"],
+        bar_exempt_immigration_statuses=["REFUGEE"],
+        five_year_bar_years=5,
+    )
+    statuses = [
+        "CITIZEN",
+        "LEGAL_PERMANENT_RESIDENT",
+        "LEGAL_PERMANENT_RESIDENT",
+        "REFUGEE",
+        "UNDOCUMENTED",
+        "DACA",
+        "TPS",
+    ]
+    years = [0, 5, 2, 0, 20, 20, 20]
+    got = _federally_eligible_status(statuses, years, p)
+    assert got.tolist() == [True, True, False, True, False, False, False]
+
+
+def _situation(state, people):
+    return {
+        "people": people,
+        "households": {"household": {"members": list(people), "state_code": {2026: state}}},
+    }
+
+
+def test_federally_eligible_status_matches_policyengine():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    statuses = [
+        "CITIZEN",
+        "LEGAL_PERMANENT_RESIDENT",
+        "LEGAL_PERMANENT_RESIDENT",
+        "REFUGEE",
+        "ASYLEE",
+        "UNDOCUMENTED",
+        "DACA",
+        "TPS",
+        "PAROLED_ONE_YEAR",
+        "PAROLED_ONE_YEAR",
+    ]
+    years = [0, 7, 1, 0, 2, 12, 12, 12, 6, 2]
+    people = {
+        f"p{i}": {
+            "age": {2026: 40},
+            "immigration_status": {2026: s},
+            "years_since_us_entry": {2026: y},
+        }
+        for i, (s, y) in enumerate(zip(statuses, years))
+    }
+    # Texas covers no one without satisfactory status, so policyengine-us's
+    # variable reduces to its federal branch there.
+    sim = Simulation(situation=_situation("TX", people))
+    expected = np.asarray(sim.calculate("is_medicaid_immigration_status_eligible", 2026))
+    p = sim.tax_benefit_system.parameters("2026-01-01").gov.hhs.medicaid.eligibility
+    got = _federally_eligible_status(statuses, years, p)
+    assert got.tolist() == expected.tolist()
+    assert got.any() and not got.all()
+
+
+def test_state_only_coverage_matches_policyengine():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    from analysis.california_shift import _state_only_coverage
+
+    # A California household with no income: a citizen parent, a citizen child
+    # and an undocumented child whom state-funded Medi-Cal covers. The
+    # adjustment moves exactly the federal share policyengine-us books for the
+    # undocumented child, and nothing for the citizens.
+    people = {
+        "parent": {"age": {2026: 30}, "immigration_status": {2026: "CITIZEN"}},
+        "citizen_child": {"age": {2026: 5}, "immigration_status": {2026: "CITIZEN"}},
+        "undocumented_child": {"age": {2026: 6}, "immigration_status": {2026: "UNDOCUMENTED"}},
+    }
+    for person in people.values():
+        person["takes_up_medicaid_if_eligible"] = {2026: True}
+    sim = Simulation(situation=_situation("CA", people))
+    federal = sum(np.asarray(sim.calculate(v, 2026), dtype=float) for v in FEDERAL_SHARE_COSTS)
+    assert federal[2] > 0, "the undocumented child should be enrolled with a federal share booked"
+    assert federal[1] > 0, "the citizen child should be enrolled with a federal share booked"
+    assert _state_only_coverage(sim).tolist() == pytest.approx([federal[2]])
