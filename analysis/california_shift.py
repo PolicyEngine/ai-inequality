@@ -227,6 +227,10 @@ def _household_frame(sim):
         "weight": np.asarray(sim.calculate("household_weight", period=YEAR), dtype=float),
         "market_income": _hh(sim, "household_market_income"),
         "state_tax": _hh(sim, "household_state_tax_before_refundable_credits"),
+        # Both sit inside state_tax: use tax beside income tax, and California's
+        # 1% tax on taxable income above $1 million inside its income tax.
+        "state_use_tax": _hh(sim, "state_use_tax"),
+        "mental_health_services_tax": _hh(sim, "ca_mental_health_services_tax"),
         "state_credits": _hh(sim, "household_refundable_state_tax_credits"),
         "state_benefits": _hh(sim, "household_state_benefits"),
         "labor": sum(_hh(sim, v) for v in LABOR_VARS),
@@ -426,6 +430,8 @@ def _california_rows(base, scen):
         "capital_income_change_b": delta("capital"),
         "market_income_change_b": delta("market_income"),
         "state_tax_before_refundable_credits_change_b": delta("state_tax"),
+        "state_use_tax_change_b": delta("state_use_tax"),
+        "mental_health_services_tax_change_b": delta("mental_health_services_tax"),
         "state_refundable_credits_change_b": delta("state_credits"),
         "state_benefits_change_b": delta("state_benefits"),
         "state_net_change_b": delta("state_net"),

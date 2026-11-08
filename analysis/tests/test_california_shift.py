@@ -70,6 +70,8 @@ from analysis.california_shift import (
 VALUE_KEYS = (
     "market_income",
     "state_tax",
+    "state_use_tax",
+    "mental_health_services_tax",
     "state_credits",
     "state_benefits",
     "labor",

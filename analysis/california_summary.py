@@ -139,8 +139,14 @@ def summarize(run, published=None):
             f"  California net {ca['state_net_change_b']:+.2f}B; with SDI "
             f"{ca['state_net_including_sdi_change_b']:+.2f}B (SDI {ca['sdi_change_b']:+.2f}B)"
         )
+        inside = ""
+        if "mental_health_services_tax_change_b" in ca:
+            inside = (
+                f" (of which use tax {ca['state_use_tax_change_b']:+.2f}B and the 1% mental health "
+                f"services tax {ca['mental_health_services_tax_change_b']:+.2f}B)"
+            )
         lines.append(
-            f"  California parts: state tax {ca['state_tax_before_refundable_credits_change_b']:+.2f}B, "
+            f"  California parts: state tax {ca['state_tax_before_refundable_credits_change_b']:+.2f}B{inside}, "
             f"refundable credits {ca['state_refundable_credits_change_b']:+.2f}B, "
             f"benefits {ca['state_benefits_change_b']:+.2f}B"
         )
