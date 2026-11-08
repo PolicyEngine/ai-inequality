@@ -11,8 +11,11 @@ records:
   use tax only, so this wage levy sits outside it.
 * California's change split by within-state market-income group, with the
   labor income each group gives up and the capital income it receives.
-* Federal net revenue, as the all-government total less every state's net
-  change.
+* Federal net revenue: the all-government total less every state's net
+  change and less the state payroll taxes (``STATE_PAYROLL_TAXES``) and local
+  taxes (``LOCAL_TAXES``) that the all-government total counts but no state's
+  line holds. The published site's federal line keeps those taxes;
+  ``federal_net_published_definition_change_b`` reproduces it.
 * A within-state variant of the shift. The sweep scales every positive
   capital-income dollar in the country by one factor, so a state whose share of
   national capital income exceeds its share of labor income gains market
@@ -23,18 +26,27 @@ records:
 * Health spending and TANF, which the sweep's state measure leaves out
   (``*_with_health_tanf`` fields). Household net income excludes health
   benefits (``gov.simulation.include_health_benefits_in_net_income`` is
-  false), so Medicaid, CHIP, the Medicare Savings Programs and ACA premium tax
-  credits sit in no government's total, and ``tanf`` sits in
-  ``household_benefits`` but in no state's line, so the sweep books it federal.
-  These fields charge each state its share of Medicaid, CHIP and Medicare
-  Savings Program costs under federal matching rules
+  false), so Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax
+  credits and state premium subsidies sit in no government's total. ``tanf``
+  sits in ``household_benefits`` but in no state's line, so the sweep books it
+  federal; the exception is a state whose program
+  ``gov.household.household_state_benefits`` also lists (Massachusetts's
+  TAFDC in policyengine-us 2.2.1, which later releases drop from that list),
+  which the state's line holds and the all-government total counts twice. These fields charge each state its share of Medicaid, CHIP and
+  Medicare Savings Program costs under federal matching rules
   (``state_benefit_cost``, from ``gov.hhs.medicaid.cost_share``), the whole
   cost of coverage it funds alone for people whose immigration status rules
   out federal matching (CHIP's unborn-child coverage keeps its federal match),
-  its own health subsidies, and its whole TANF change, because the federal
-  TANF block grant is a fixed amount. The all-government
-  total adds every program in ``gov.household.household_health_benefits``;
-  federal net revenue is again what the states leave.
+  its own health subsidies, and the TANF change its line doesn't already hold,
+  because the federal TANF block grant is a fixed amount. The all-government
+  total adds every program in ``healthcare_benefit_value`` and counts TANF
+  once; federal net revenue is again what the states and localities leave.
+* Medicaid at the baseline's cost per enrollee. policyengine-us spreads each
+  state's fixed Medicaid spending over the enrollees in each simulation
+  (``medicaid_slcsp_state_denominator``), so on its own a shifted branch that
+  adds enrollees cuts every enrollee's cost and keeps the state's total. Each
+  branch here takes the baseline's denominator, as policyengine-us's reform
+  branches do, so a new enrollee adds cost.
 
 Usage:
     python -m analysis.california_shift [--levels 0.1,0.2,0.5,1.0]
@@ -83,17 +95,55 @@ STATE_HEALTH = (
     "assigned_nm_premium_assistance",
     "or_healthier_oregon_cost",
 )
+#: State premium subsidies that ``healthcare_benefit_value`` counts and
+#: policyengine-us 2.2.1's ``gov.household.household_health_benefits`` leaves
+#: out; later releases list them there (PolicyEngine/policyengine-us#9514).
+#: Each state pays insurers these amounts on top of the federal premium tax
+#: credit.
+STATE_HEALTH_UNLISTED = (
+    "ct_covered_connecticut",
+    "ma_connector_care",
+    "nj_njhps",
+    "vt_premium_assistance",
+    "wa_cascade_care_savings",
+)
+#: policyengine-us's household value of health coverage. Its ``adds`` list
+#: every health program, including those ``household_health_benefits`` omits.
+HEALTH_VALUE_VARIABLE = "healthcare_benefit_value"
+#: Healthier Oregon covers people federal Medicaid can't. Its cost has no
+#: enrollment test, and policyengine-us also enrolls Oregon's undocumented
+#: residents in Medicaid (``gov.hhs.medicaid.eligibility.undocumented_immigrant``
+#: is true for Oregon), so it prices their coverage twice. Their Medicaid cost
+#: stays here and their Healthier Oregon cost goes.
+HEALTHIER_OREGON = "or_healthier_oregon_cost"
 #: The members of ``gov.household.federal_benefit_cost`` and
 #: ``gov.household.state_benefit_cost`` this accounting expects.
 FEDERAL_SHARE_COSTS = ("medicaid_federal_cost", "chip_federal_cost", "msp_federal_cost")
 STATE_SHARE_COSTS = ("medicaid_state_cost", "chip_state_cost", "msp_state_cost")
-#: ``chip_category`` for a pregnant person covered through CHIP's
-#: From-Conception-to-End-of-Pregnancy option. The unborn child is the
-#: beneficiary (42 CFR 457.10), so federal CHIP funds match the coverage
-#: whatever the parent's immigration status.
-FCEP_CATEGORY = "PREGNANT_FCEP"
+#: Whether CHIP's From-Conception-to-End-of-Pregnancy option covers a
+#: pregnant person. The unborn child is the beneficiary (42 CFR 457.10), so
+#: federal CHIP funds match the coverage whatever the parent's immigration
+#: status.
+FCEP_ELIGIBLE = "is_chip_fcep_eligible_person"
+CHIP_ENROLLED = "chip_enrolled"
 #: Every state TANF program; California's is CalWORKs (``ca_tanf``).
 TANF_VARIABLE = "tanf"
+#: Spreads each state's Medicaid spending over that state's enrollees.
+MEDICAID_DENOMINATOR = "medicaid_slcsp_state_denominator"
+#: Taxes the all-government total counts that go to states and localities but
+#: sit outside the sweep's state measure: payroll taxes such as California's
+#: SDI withholding and state unemployment insurance, and city wage taxes.
+STATE_PAYROLL_TAXES = ("employee_state_payroll_tax", "employer_state_payroll_tax")
+LOCAL_TAXES = (
+    "local_income_tax_before_refundable_credits",
+    "local_occupational_tax",
+    "employer_local_payroll_tax",
+)
+#: Federal payroll taxes that ``fiscal.revenue_components`` doesn't list,
+#: which the summary's federal split needs to add up.
+FEDERAL_PAYROLL_UNLISTED = ("additional_medicare_tax", "employer_federal_unemployment_tax")
+#: The taxes above, kept by variable in each household frame.
+OTHER_TAX_VARIABLES = STATE_PAYROLL_TAXES + LOCAL_TAXES + FEDERAL_PAYROLL_UNLISTED
 
 #: Within-California groups by baseline household market income, as
 #: (label, lower weighted percentile, upper weighted percentile).
@@ -122,14 +172,17 @@ def _parameters(sim):
     return sim.tax_benefit_system.parameters(f"{YEAR}-01-01")
 
 
-def _check_health_lists(parameters):
+def _check_health_lists(parameters, health_value_programs):
     """Refuse a model whose health accounting differs from what this module classifies.
 
     The ``*_with_health_tanf`` fields assume health benefits sit outside
     household net income, that every program in
-    ``gov.household.household_health_benefits`` has a payer here, and that the
-    federal and state benefit-cost lists hold the shares of the same three
-    programs.
+    ``gov.household.household_health_benefits`` and in
+    ``healthcare_benefit_value``'s ``adds`` (``health_value_programs``) has a
+    payer here, that the federal and state benefit-cost lists hold the shares
+    of the same three programs, and that no health program sits in
+    ``gov.household.household_state_benefits``, which the state measure already
+    nets.
     """
     gov = parameters.gov
     if gov.simulation.include_health_benefits_in_net_income:
@@ -137,18 +190,46 @@ def _check_health_lists(parameters):
             "health benefits are in household net income, so household_benefits "
             "already counts them; the health accounting would count them twice"
         )
+    listed_health = set(FMAP_SPLIT_HEALTH) | set(FEDERAL_HEALTH) | set(STATE_HEALTH)
+    every_health = listed_health | set(STATE_HEALTH_UNLISTED)
     expected = {
-        "household_health_benefits": set(FMAP_SPLIT_HEALTH) | set(FEDERAL_HEALTH) | set(STATE_HEALTH),
-        "federal_benefit_cost": set(FEDERAL_SHARE_COSTS),
-        "state_benefit_cost": set(STATE_SHARE_COSTS),
+        # Releases after 2.2.1 also list the unlisted state subsidies here.
+        "gov.household.household_health_benefits": (
+            set(gov.household.household_health_benefits) - set(STATE_HEALTH_UNLISTED),
+            listed_health,
+        ),
+        f"{HEALTH_VALUE_VARIABLE}'s adds": (set(health_value_programs), every_health),
+        "gov.household.federal_benefit_cost": (
+            set(gov.household.federal_benefit_cost),
+            set(FEDERAL_SHARE_COSTS),
+        ),
+        "gov.household.state_benefit_cost": (
+            set(gov.household.state_benefit_cost),
+            set(STATE_SHARE_COSTS),
+        ),
     }
-    for name, want in expected.items():
-        listed = set(getattr(gov.household, name))
+    for name, (listed, want) in expected.items():
         if listed != want:
             raise ValueError(
-                f"gov.household.{name} changed: unclassified {sorted(listed - want)}, "
+                f"{name} changed: unclassified {sorted(listed - want)}, "
                 f"missing {sorted(want - listed)}"
             )
+    in_state_benefits = every_health & set(gov.household.household_state_benefits)
+    if in_state_benefits:
+        raise ValueError(
+            "gov.household.household_state_benefits lists health programs "
+            f"{sorted(in_state_benefits)}, which the health accounting would count twice"
+        )
+
+
+def _tanf_states_in_state_benefits(state_tanf_variables, state_benefits):
+    """States whose TANF program ``household_state_benefits`` already lists.
+
+    ``state_tanf_variables`` holds every state TANF program, each named with its
+    state's code first (``ca_tanf``, ``ma_tafdc``).
+    """
+    listed = set(state_benefits)
+    return sorted({v.split("_", 1)[0].upper() for v in state_tanf_variables if v in listed})
 
 
 def _federally_eligible_status(status, years_since_entry, p):
@@ -167,20 +248,19 @@ def _federally_eligible_status(status, years_since_entry, p):
     return citizen | (qualified & (bar_exempt | past_bar))
 
 
-def _state_only_federal_share(federal, shares, chip_category):
+def _state_only_federal_share(federal, shares, fcep):
     """Federal share to move to the state, by person.
 
     ``federal`` says whether each person's immigration status lets federal
     funds match their coverage, ``shares`` maps each name in
     ``FEDERAL_SHARE_COSTS`` to the federal share policyengine-us books for each
-    person, and ``chip_category`` holds each person's decoded ``chip_category``.
-    For people federal matching can't cover, the Medicaid, Medicare Savings
-    Program and CHIP shares move, except CHIP coverage through the
-    unborn-child (FCEP) option, which federal funds match whatever the parent's
-    status.
+    person, and ``fcep`` says whether CHIP's unborn-child (FCEP) option covers
+    each person. For people federal matching can't cover, the Medicaid,
+    Medicare Savings Program and CHIP shares move, except CHIP for people the
+    FCEP option covers, which federal funds match whatever the parent's status.
     """
     chip = np.where(
-        np.asarray(chip_category).astype(str) == FCEP_CATEGORY,
+        np.asarray(fcep, dtype=bool),
         0.0,
         np.asarray(shares["chip_federal_cost"], dtype=float),
     )
@@ -198,18 +278,44 @@ def _state_only_coverage(sim):
     ``medicaid_federal_share`` and ``chip_federal_share`` apply federal matching
     rates to every enrollee, including people a state covers whatever their
     immigration status, such as California's Medi-Cal for undocumented, DACA
-    and TPS residents. Federal funds pay for such people only in emergencies,
-    which ``medicaid_cost`` leaves out, so their whole cost is the state's.
-    CHIP's unborn-child coverage is the exception (``_state_only_federal_share``).
+    and TPS residents. Federal law matches only emergency care for such people
+    (42 USC 1396b(v)), so this moves their whole federal share to the state.
+    If the state totals that ``medicaid_cost`` spreads (KFF and MACPAC totals of
+    Medicaid spending) count that federally matched emergency care, the move
+    overstates the state's cost by the federal share of their emergency care,
+    an amount this accounting can't measure. CHIP's unborn-child coverage keeps
+    its federal match (``_state_only_federal_share``).
     """
     p = _parameters(sim).gov.hhs.medicaid.eligibility
     status = sim.calculate("immigration_status", period=YEAR, decode_enums=True)
     years = sim.calculate("years_since_us_entry", period=YEAR)
     federal = _federally_eligible_status(np.asarray(status), np.asarray(years), p)
     shares = {v: np.asarray(sim.calculate(v, period=YEAR), dtype=float) for v in FEDERAL_SHARE_COSTS}
-    chip_category = np.asarray(sim.calculate("chip_category", period=YEAR, decode_enums=True))
-    moved = _state_only_federal_share(federal, shares, chip_category)
+    fcep = np.asarray(sim.calculate(FCEP_ELIGIBLE, period=YEAR), dtype=bool) & np.asarray(
+        sim.calculate(CHIP_ENROLLED, period=YEAR), dtype=bool
+    )
+    moved = _state_only_federal_share(federal, shares, fcep)
     return np.asarray(sim.map_result(moved, "person", "household"), dtype=float)
+
+
+def _healthier_oregon_overlap(sim):
+    """Healthier Oregon cost for people policyengine-us also enrolls in Medicaid, by household."""
+    cost = np.asarray(sim.calculate(HEALTHIER_OREGON, period=YEAR), dtype=float)
+    enrolled = np.asarray(sim.calculate("medicaid_enrolled", period=YEAR), dtype=bool)
+    return np.asarray(
+        sim.map_result(np.where(enrolled, cost, 0.0), "person", "household"), dtype=float
+    )
+
+
+def _adds(sim, variable):
+    """The variables ``variable`` adds, from its list or the parameter it names."""
+    adds = sim.tax_benefit_system.variables[variable].adds
+    if isinstance(adds, str):
+        node = _parameters(sim)
+        for part in adds.split("."):
+            node = getattr(node, part)
+        adds = node
+    return list(adds)
 
 
 def _with_derived(frame):
@@ -218,7 +324,9 @@ def _with_derived(frame):
     ``state_health`` is each household's health spending that falls on its
     state and ``federal_health`` the part that falls on the federal
     government; between them they hold every program in
-    ``gov.household.household_health_benefits``.
+    ``healthcare_benefit_value`` once. ``tanf_charge`` is the TANF its state's
+    line doesn't already hold. ``state_payroll_tax`` and ``local_tax`` are the
+    taxes the all-government total counts outside every state's line.
     """
     frame["state_net"] = frame["state_tax"] - frame["state_credits"] - frame["state_benefits"]
     frame["state_health"] = (
@@ -227,9 +335,12 @@ def _with_derived(frame):
     frame["federal_health"] = (
         frame["federal_health_split"] - frame["state_only_coverage"] + frame["federal_health_other"]
     )
+    frame["tanf_charge"] = frame["tanf"] - frame["tanf_in_state_benefits"]
     frame["state_net_with_health_tanf"] = (
-        frame["state_net"] - frame["state_health"] - frame["tanf"]
+        frame["state_net"] - frame["state_health"] - frame["tanf_charge"]
     )
+    frame["state_payroll_tax"] = sum(frame[v] for v in STATE_PAYROLL_TAXES)
+    frame["local_tax"] = sum(frame[v] for v in LOCAL_TAXES)
     return frame
 
 
@@ -250,11 +361,21 @@ def _check_health_split(frame):
 
 def _household_frame(sim):
     """Household arrays needed for the California accounting."""
-    _check_health_lists(_parameters(sim))
+    # Imported here, as in run(), so the accounting helpers load without the model.
+    from policyengine_us.variables.gov.hhs.tanf.cash.tanf_if_takes_up import (
+        STATE_TANF_VARIABLES,
+    )
+
+    parameters = _parameters(sim)
+    _check_health_lists(parameters, _adds(sim, HEALTH_VALUE_VARIABLE))
+    state = np.asarray(sim.calculate("state_code_str", map_to="household", period=YEAR)).astype(str)
+    tanf = _hh(sim, TANF_VARIABLE)
+    tanf_states = _tanf_states_in_state_benefits(
+        STATE_TANF_VARIABLES, parameters.gov.household.household_state_benefits
+    )
+    overlap = _healthier_oregon_overlap(sim)
     frame = {
-        "state": np.asarray(
-            sim.calculate("state_code_str", map_to="household", period=YEAR)
-        ).astype(str),
+        "state": state,
         "weight": np.asarray(sim.calculate("household_weight", period=YEAR), dtype=float),
         "market_income": _hh(sim, "household_market_income"),
         "state_tax": _hh(sim, "household_state_tax_before_refundable_credits"),
@@ -270,10 +391,15 @@ def _household_frame(sim):
         "state_health_split": _hh(sim, "state_benefit_cost"),
         "fmap_split_cost": sum(_hh(sim, v) for v in FMAP_SPLIT_HEALTH),
         "federal_health_other": sum(_hh(sim, v) for v in FEDERAL_HEALTH),
-        "state_health_programs": sum(_hh(sim, v) for v in STATE_HEALTH),
+        "state_health_programs": sum(_hh(sim, v) for v in STATE_HEALTH + STATE_HEALTH_UNLISTED)
+        - overlap,
+        "healthier_oregon_overlap": overlap,
         "state_only_coverage": _state_only_coverage(sim),
-        "tanf": _hh(sim, TANF_VARIABLE),
+        "tanf": tanf,
+        "tanf_in_state_benefits": np.where(np.isin(state, tanf_states), tanf, 0.0),
     }
+    for variable in OTHER_TAX_VARIABLES:
+        frame[variable] = _hh(sim, variable)
     try:
         frame["sdi"] = _hh(sim, SDI_VARIABLE)
     except Exception as exc:  # noqa: BLE001 - record, do not fail the run
@@ -439,6 +565,7 @@ def _baseline_concentration(base):
         "state_only_coverage_b": float((base["state_only_coverage"][mask] * w).sum() / 1e9),
         "state_health_programs_b": float((base["state_health_programs"][mask] * w).sum() / 1e9),
         "tanf_b": float((base["tanf"][mask] * w).sum() / 1e9),
+        "state_payroll_tax_b": float((base["state_payroll_tax"][mask] * w).sum() / 1e9),
         "state_net_with_health_tanf_b": float(
             (base["state_net_with_health_tanf"][mask] * w).sum() / 1e9
         ),
@@ -471,8 +598,11 @@ def _california_rows(base, scen):
         "state_health_split_change_b": delta("state_health_split"),
         "state_only_coverage_change_b": delta("state_only_coverage"),
         "state_health_programs_change_b": delta("state_health_programs"),
-        "tanf_change_b": delta("tanf"),
+        # TANF the state's line doesn't already hold: for California, CalWORKs.
+        "tanf_change_b": delta("tanf_charge"),
         "state_net_with_health_tanf_change_b": delta("state_net_with_health_tanf"),
+        "state_payroll_tax_change_b": delta("state_payroll_tax"),
+        "local_tax_change_b": delta("local_tax"),
     }
 
     def total(sel):
@@ -495,15 +625,40 @@ def _california_rows(base, scen):
     return total(everyone), groups
 
 
+def _outside_state_measure(base, scen):
+    """Changes in taxes the all-government total counts outside every state's line, $B."""
+    assert np.array_equal(base["state"], scen["state"]), "household order changed"
+    w = base["weight"]
+
+    def total(key):
+        return float(((scen[key] - base[key]) * w).sum()) / 1e9
+
+    return {
+        "state_payroll_tax_change_b": total("state_payroll_tax"),
+        "local_tax_change_b": total("local_tax"),
+    }
+
+
+def _other_tax_components_b(base, scen):
+    """National change in each of ``OTHER_TAX_VARIABLES``, $B, keyed as ``fiscal`` keys its deltas."""
+    w = base["weight"]
+    return {
+        f"{v}_change": float(((scen[v] - base[v]) * w).sum()) / 1e9 for v in OTHER_TAX_VARIABLES
+    }
+
+
 def _health_tanf_accounting(base, scen, state_net, all_government):
     """Each government's change once health spending and TANF count, $B.
 
     ``state_net`` ($B by state) and ``all_government`` ($B) follow the sweep:
-    ``tanf`` sits in all-government benefits but in no state's line, and health
-    spending sits in neither. Here each state also pays its health share
-    (``state_health``) and its whole TANF change, the all-government total pays
-    every health dollar, and federal net revenue is what the states leave, so
-    TANF moves from the federal line to the states'.
+    ``tanf`` sits in all-government benefits but in no state's line, except a
+    program ``household_state_benefits`` also lists, which sits in its state's
+    line and twice in the all-government total; health spending sits in
+    neither. Here each state also pays its health share (``state_health``) and
+    the TANF change its line doesn't already hold, the all-government total
+    pays every health dollar and counts TANF once, and federal net revenue is
+    what the states and localities leave, so TANF moves from the federal line to
+    the states'.
     """
     assert np.array_equal(base["state"], scen["state"]), "household order changed"
     w = base["weight"]
@@ -511,25 +666,35 @@ def _health_tanf_accounting(base, scen, state_net, all_government):
     def by_state(key):
         return _weighted_sum_by(base["state"], scen[key] - base[key], w)
 
+    def total(key):
+        return float(((scen[key] - base[key]) * w).sum())
+
     state_health = by_state("state_health")
-    tanf = by_state("tanf")
-    federal_health = float(((scen["federal_health"] - base["federal_health"]) * w).sum())
+    tanf_charge = by_state("tanf_charge")
+    federal_health = total("federal_health")
+    counted_twice = total("tanf_in_state_benefits")
     states = {
         code: state_net.get(code, 0.0)
-        - (state_health.get(code, 0.0) + tanf.get(code, 0.0)) / 1e9
-        for code in set(state_net) | set(state_health) | set(tanf)
+        - (state_health.get(code, 0.0) + tanf_charge.get(code, 0.0)) / 1e9
+        for code in set(state_net) | set(state_health) | set(tanf_charge)
     }
     all_states = sum(states.values())
     all_government_with_health = (
-        all_government - (federal_health + sum(state_health.values())) / 1e9
+        all_government - (federal_health + sum(state_health.values()) - counted_twice) / 1e9
     )
+    outside = _outside_state_measure(base, scen)
     return {
         "health_federal_change_b": federal_health / 1e9,
         "health_state_change_b": sum(state_health.values()) / 1e9,
-        "tanf_change_b": sum(tanf.values()) / 1e9,
+        "healthier_oregon_overlap_change_b": total("healthier_oregon_overlap") / 1e9,
+        "tanf_change_b": total("tanf") / 1e9,
+        "tanf_counted_twice_change_b": counted_twice / 1e9,
         "all_government_with_health_change_b": all_government_with_health,
         "all_states_net_with_health_tanf_change_b": all_states,
-        "federal_net_with_health_tanf_change_b": all_government_with_health - all_states,
+        "federal_net_with_health_tanf_change_b": all_government_with_health
+        - all_states
+        - outside["state_payroll_tax_change_b"]
+        - outside["local_tax_change_b"],
         "other_states_net_with_health_tanf_change_b": all_states - states.get(STATE, 0.0),
         "states_losing_with_health_tanf_count": sum(1 for v in states.values() if v < -0.005),
         "state_net_with_health_tanf_change_b": dict(sorted(states.items())),
@@ -551,21 +716,28 @@ def _level_row(branch, freed, pct, base, base_rev, base_states, allocation):
         (c for c, v in state_net.items() if v > 0.005), key=lambda c: -state_net[c]
     )
     losers = [c for c, v in state_net.items() if v < -0.005]
-    health_tanf = _health_tanf_accounting(base, scen, state_net, delta["total_change"] / 1e9)
-    return health_tanf | {
+    all_government = delta["total_change"] / 1e9
+    outside = _outside_state_measure(base, scen)
+    health_tanf = _health_tanf_accounting(base, scen, state_net, all_government)
+    components = {k: v / 1e9 for k, v in sorted(delta.items()) if isinstance(v, (int, float))}
+    components.update(_other_tax_components_b(base, scen))
+    return health_tanf | outside | {
         "shift_pct": int(round(pct * 100)),
         "allocation": allocation,
         "labor_income_moved_b": freed / 1e9,
-        "all_government_change_b": delta["total_change"] / 1e9,
+        "all_government_change_b": all_government,
         "all_states_net_change_b": all_states,
-        "federal_net_change_b": delta["total_change"] / 1e9 - all_states,
+        "federal_net_change_b": all_government
+        - all_states
+        - outside["state_payroll_tax_change_b"]
+        - outside["local_tax_change_b"],
+        # The published site's federal line: all governments less the states.
+        "federal_net_published_definition_change_b": all_government - all_states,
         "other_states_net_change_b": other_states,
         "states_gaining": gainers,
         "states_losing_count": len(losers),
         "state_net_change_b": dict(sorted(state_net.items())),
-        "national_components_b": {
-            k: v / 1e9 for k, v in sorted(delta.items()) if isinstance(v, (int, float))
-        },
+        "national_components_b": dict(sorted(components.items())),
         "california": ca_total,
         "california_by_group": ca_groups,
     }
@@ -579,8 +751,9 @@ def _report(row):
         f"{ca['state_net_including_sdi_change_b']:+.2f}B; market income "
         f"{ca['market_income_change_b']:+.1f}B); other states "
         f"{row['other_states_net_change_b']:+.2f}B; federal "
-        f"{row['federal_net_change_b']:+.1f}B; all-gov "
-        f"{row['all_government_change_b']:+.1f}B",
+        f"{row['federal_net_change_b']:+.1f}B; state payroll "
+        f"{row['state_payroll_tax_change_b']:+.2f}B; local {row['local_tax_change_b']:+.2f}B; "
+        f"all-gov {row['all_government_change_b']:+.1f}B",
         flush=True,
     )
     print(
@@ -592,6 +765,31 @@ def _report(row):
         f"{row['all_government_with_health_change_b']:+.1f}B",
         flush=True,
     )
+
+
+def _medicaid_denominator(sim):
+    """Each person's ``medicaid_slcsp_state_denominator`` in ``sim``."""
+    return np.asarray(sim.calculate(MEDICAID_DENOMINATOR, period=YEAR), dtype=float)
+
+
+def _price_medicaid_at_baseline(branch, denominator):
+    """Price a shifted branch's Medicaid enrollees at the baseline's cost per enrollee.
+
+    ``medicaid_cost_if_enrolled`` is the state's spending times the person's
+    cost index over ``medicaid_slcsp_state_denominator``, the weighted sum of
+    the cost indices of the state's enrollees in the same simulation. Left to
+    itself, a branch that adds enrollees raises its own denominator, so every
+    enrollee's cost falls and the state's total stays fixed. With the
+    baseline's denominator, each enrollee costs what an enrollee with that cost
+    index costs in the baseline, so the total moves with enrollment, as in
+    policyengine-us's reform branches.
+    """
+    if branch.get_holder(MEDICAID_DENOMINATOR).get_known_periods():
+        raise RuntimeError(
+            f"{MEDICAID_DENOMINATOR} is already calculated in this branch; set the "
+            "baseline's before calculating anything that depends on it"
+        )
+    branch.set_input(MEDICAID_DENOMINATOR, YEAR, np.asarray(denominator, dtype=float))
 
 
 def run(
@@ -613,6 +811,7 @@ def run(
     base_states = state_revenue_components(base_sim)
     base = _household_frame(base_sim)
     baseline = _baseline_concentration(base)
+    medicaid_denominator = _medicaid_denominator(base_sim)
     del base_sim
     gc.collect()
     if verbose:
@@ -626,6 +825,7 @@ def run(
     for pct in levels:
         sim = microsim_factory()
         branch, freed = _apply_shift(sim, f"ca_{int(round(pct * 100))}", pct)
+        _price_medicaid_at_baseline(branch, medicaid_denominator)
         row = _level_row(branch, freed, pct, base, base_rev, base_states, "national")
         rows.append(row)
         if verbose:
@@ -639,6 +839,7 @@ def run(
         branch, freed, freed_by_state = _apply_within_state_shift(
             sim, f"ca_within_{int(round(pct * 100))}", pct
         )
+        _price_medicaid_at_baseline(branch, medicaid_denominator)
         row = _level_row(branch, freed, pct, base, base_rev, base_states, "within_state")
         row["labor_income_moved_by_state_b"] = {
             state: value / 1e9 for state, value in sorted(freed_by_state.items())
@@ -662,15 +863,26 @@ def run(
             "gov.household.household_state_benefits (for California: SSP, CAPI, "
             "child care subsidies, CVRP, CARE, FERA and three Los Angeles "
             "programs; no Medi-Cal or CalWORKs); California's employee SDI "
-            "contribution is reported separately. The *_with_health_tanf fields "
+            "contribution is reported separately. Federal net revenue is the "
+            "all-government change less every state's net change and less state "
+            "payroll taxes (employee and employer) and local taxes, which the "
+            "all-government total counts but no state's line holds; "
+            "federal_net_published_definition_change_b keeps them, as the published "
+            "site does. Each shifted branch prices Medicaid enrollees at the "
+            "baseline's cost per enrollee (the baseline's "
+            "medicaid_slcsp_state_denominator), so state Medicaid totals move with "
+            "enrollment. The *_with_health_tanf fields "
             "also charge each state its share of Medicaid, CHIP and Medicare "
             "Savings Program costs under federal matching rules (state_benefit_cost), "
             "the whole cost of coverage it funds alone for people whose immigration "
-            "status rules out federal matching, its own health subsidies (for "
-            "California, the Covered California premium subsidy) and its whole TANF "
-            "change (CalWORKs for California), since the federal TANF block grant is "
-            "fixed; the all-government total adds every program in "
-            "gov.household.household_health_benefits. "
+            "status rules out federal matching (CHIP coverage through the "
+            "unborn-child option keeps its federal match), its own health subsidies "
+            "(for California, the Covered California premium subsidy; Healthier "
+            "Oregon only for people not also enrolled in Medicaid) and the TANF "
+            "change its line doesn't already hold (CalWORKs for California; "
+            "Massachusetts's TAFDC already sits in its state benefits), since the "
+            "federal TANF block grant is fixed; the all-government total adds every "
+            "program in healthcare_benefit_value and counts TANF once. "
             "'levels' allocate the new capital income across the country, as the "
             "published sweep does; 'within_state_levels' give each state's freed "
             "labor income to that state's own capital holders."

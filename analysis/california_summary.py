@@ -8,8 +8,9 @@ Prints, for each shift level:
   pays for in full, its premium subsidy and CalWORKs, with the other states and
   federal lines on the same basis (runs without these fields skip the lines);
 * all other states combined, every state, and federal net revenue;
-* the federal split into income tax, payroll taxes, refundable credits and
-  benefits;
+* the federal split into income tax, federal payroll taxes, refundable credits
+  and benefits, and the state payroll and local taxes that the all-government
+  total counts outside every state's line and the federal line;
 * the labor income California households give up and the capital income they
   receive;
 * California's change by within-state market-income group;
@@ -30,53 +31,86 @@ import os
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SWEEP_PATH = os.path.join(REPO, "src", "data", "shiftSweepData.json")
 
+#: Federal payroll taxes on the employee and self-employed side, inside
+#: ``household_tax_before_refundable_credits``.
 EMPLOYEE_PAYROLL_KEYS = (
     "employee_social_security_tax_change",
     "employee_medicare_tax_change",
+    "additional_medicare_tax_change",
     "self_employment_tax_change",
+)
+#: Federal payroll taxes on the employer side, inside ``employer_payroll_tax``.
+EMPLOYER_PAYROLL_KEYS = (
+    "employer_social_security_tax_change",
+    "employer_medicare_tax_change",
+    "employer_federal_unemployment_tax_change",
+)
+#: State payroll and local taxes, with the aggregate each sits in.
+HOUSEHOLD_STATE_LOCAL_KEYS = (
+    "employee_state_payroll_tax_change",
+    "local_income_tax_before_refundable_credits_change",
+    "local_occupational_tax_change",
+)
+EMPLOYER_STATE_LOCAL_KEYS = (
+    "employer_state_payroll_tax_change",
+    "employer_local_payroll_tax_change",
 )
 
 
 def federal_split(components):
     """Split the federal net change ($B) into its parts.
 
-    Federal net = all-government net less the states' net, so each federal part
-    is the national aggregate less its state portion. ``residual`` holds any
-    household tax outside federal income tax, payroll and state tax (local and
-    flat taxes); it is zero when the decomposition is complete. Payroll takes
-    the employer side from ``employer_payroll_tax``, the aggregate that
-    ``fiscal.net_fiscal_impact`` counts, so the parts add up to the total.
+    Federal net = all-government net less the states' net and less the state
+    payroll and local taxes no state's line holds, so each federal part is the
+    national aggregate less its state and local portions. ``payroll`` holds
+    federal payroll taxes only. ``residual`` holds household tax outside
+    federal income tax, federal payroll, state tax, state payroll and local
+    taxes (the flat tax), and ``employer_residual`` employer payroll tax outside
+    its federal, state and local parts; both are zero when the decomposition is
+    complete. A run that predates the state payroll and local lines reports
+    none of them, so its residuals hold those taxes and its federal line is the
+    published site's.
     """
     c = components
-    employee_payroll = sum(c.get(k, 0.0) for k in EMPLOYEE_PAYROLL_KEYS)
-    employer_payroll = c.get("employer_payroll_tax_change", 0.0)
+
+    def get(key):
+        return c.get(key, 0.0)
+
+    employee_payroll = sum(get(k) for k in EMPLOYEE_PAYROLL_KEYS)
+    employer_payroll = sum(get(k) for k in EMPLOYER_PAYROLL_KEYS)
     payroll = employee_payroll + employer_payroll
-    income_tax = c.get("fed_income_tax_before_refundable_credits_change", 0.0)
-    state_tax = c.get("state_tax_before_refundable_credits_change", 0.0)
+    household_state_local = sum(get(k) for k in HOUSEHOLD_STATE_LOCAL_KEYS)
+    employer_state_local = sum(get(k) for k in EMPLOYER_STATE_LOCAL_KEYS)
+    income_tax = get("fed_income_tax_before_refundable_credits_change")
+    state_tax = get("state_tax_before_refundable_credits_change")
     residual = (
-        c.get("household_tax_before_refundable_credits_change", 0.0)
+        get("household_tax_before_refundable_credits_change")
         - income_tax
         - employee_payroll
         - state_tax
+        - household_state_local
     )
-    credits = c.get("household_refundable_tax_credits_change", 0.0) - c.get(
-        "state_refundable_credits_change", 0.0
+    employer_residual = (
+        get("employer_payroll_tax_change") - employer_payroll - employer_state_local
     )
-    benefits = c.get("household_benefits_change", 0.0) - c.get("state_benefits_change", 0.0)
-    states_net = (
-        state_tax
-        - c.get("state_refundable_credits_change", 0.0)
-        - c.get("state_benefits_change", 0.0)
-    )
-    federal = income_tax + payroll + residual - credits - benefits
+    credits = get("household_refundable_tax_credits_change") - get("state_refundable_credits_change")
+    benefits = get("household_benefits_change") - get("state_benefits_change")
+    states_net = state_tax - get("state_refundable_credits_change") - get("state_benefits_change")
+    federal = income_tax + payroll + residual + employer_residual - credits - benefits
     return {
         "income_tax": income_tax,
         "payroll": payroll,
         "employee_payroll": employee_payroll,
         "employer_payroll": employer_payroll,
-        "employer_social_security_and_medicare": c.get("employer_social_security_tax_change", 0.0)
-        + c.get("employer_medicare_tax_change", 0.0),
+        "employer_social_security_and_medicare": get("employer_social_security_tax_change")
+        + get("employer_medicare_tax_change"),
         "residual": residual,
+        "employer_residual": employer_residual,
+        "state_payroll": get("employee_state_payroll_tax_change")
+        + get("employer_state_payroll_tax_change"),
+        "local": get("local_income_tax_before_refundable_credits_change")
+        + get("local_occupational_tax_change")
+        + get("employer_local_payroll_tax_change"),
         "refundable_credits": credits,
         "federal_refundable_credits_reported": c.get(
             "income_tax_refundable_credits_change", float("nan")
@@ -168,15 +202,20 @@ def summarize(run, published=None):
         )
         lines.append(
             f"  Federal net {row['federal_net_change_b']:+.1f}B = income tax {split['income_tax']:+.1f}B "
-            f"+ payroll {split['payroll']:+.1f}B + other household tax {split['residual']:+.2f}B "
+            f"+ payroll {split['payroll']:+.1f}B + other tax "
+            f"{split['residual'] + split['employer_residual']:+.2f}B "
             f"- refundable credits {split['refundable_credits']:+.1f}B - benefits {split['benefits']:+.1f}B "
             f"(sum {split['federal_net']:+.1f}B; reported federal refundable credits "
             f"{split['federal_refundable_credits_reported']:+.1f}B)"
         )
         lines.append(
-            f"  Payroll: employee and self-employment {split['employee_payroll']:+.1f}B, employer "
-            f"{split['employer_payroll']:+.1f}B (employer Social Security and Medicare lines "
+            f"  Federal payroll: employee and self-employment {split['employee_payroll']:+.1f}B, employer "
+            f"{split['employer_payroll']:+.1f}B (employer Social Security and Medicare "
             f"{split['employer_social_security_and_medicare']:+.1f}B)"
+        )
+        lines.append(
+            f"  Outside every state's line and the federal line: state payroll taxes "
+            f"{split['state_payroll']:+.2f}B, local taxes {split['local']:+.2f}B"
         )
         lines.append(f"  All governments {row['all_government_change_b']:+.1f}B")
         total_tax = ca["state_tax_before_refundable_credits_change_b"]
@@ -191,10 +230,14 @@ def summarize(run, published=None):
             )
         if published and row["shift_pct"] in published:
             p = published[row["shift_pct"]]
+            # The site's federal line is all governments less the states.
+            federal_published = row.get(
+                "federal_net_published_definition_change_b", row["federal_net_change_b"]
+            )
             lines.append(
                 f"  Published: California {p['california']:+.2f}B ({_pct(ca['state_net_change_b'], p['california']):+.1f}%), "
-                f"other states {p['other_states']:+.2f}B, federal {p['federal']:+.1f}B "
-                f"({_pct(row['federal_net_change_b'], p['federal']):+.1f}%)"
+                f"other states {p['other_states']:+.2f}B, federal on the site's definition {p['federal']:+.1f}B "
+                f"({_pct(federal_published, p['federal']):+.1f}%)"
             )
     lines.extend(_within_state_lines(run))
     return "\n".join(lines)
@@ -205,6 +248,9 @@ def _health_tanf_lines(row):
     ca = row["california"]
     if "state_net_with_health_tanf_change_b" not in ca:
         return []
+    tanf = row["tanf_change_b"]
+    twice = row.get("tanf_counted_twice_change_b", 0.0)
+    oregon = row.get("healthier_oregon_overlap_change_b", 0.0)
     return [
         f"  California with health and TANF {ca['state_net_with_health_tanf_change_b']:+.2f}B; with SDI "
         f"{ca['state_net_with_health_tanf_including_sdi_change_b']:+.2f}B. Spending changes: state health "
@@ -216,7 +262,9 @@ def _health_tanf_lines(row):
         f"{row['federal_net_with_health_tanf_change_b']:+.1f}B; all governments "
         f"{row['all_government_with_health_change_b']:+.1f}B. Health spending changes: federal "
         f"{row['health_federal_change_b']:+.1f}B, states {row['health_state_change_b']:+.2f}B; TANF "
-        f"{row['tanf_change_b']:+.2f}B moves from the federal line to the states'",
+        f"{tanf:+.2f}B leaves the federal line: {tanf - twice:+.2f}B to the states and {twice:+.2f}B "
+        f"(TANF household_state_benefits already counts) out of the all-government total; "
+        f"Healthier Oregon cost for Medicaid enrollees dropped {oregon:+.3f}B",
     ]
 
 

@@ -48,8 +48,8 @@ CALIFORNIA_MEASURE_NOTE = (
 # Medi-Cal, CHIP and Medicare Savings Program costs, the coverage it funds
 # alone, its premium subsidy and CalWORKs.
 CALIFORNIA_HEALTH_TANF_NOTE = (
-    "We net out refundable credits like CalEITC, benefits like the SSI supplement, "
-    "CalWORKs, and California's share of Medi-Cal costs."
+    "We net out refundable credits like CalEITC, benefits like the SSI supplement, CalWORKs, "
+    "and California's Medi-Cal and premium subsidy spending."
 )
 
 #: What each measure reads from a run (California, California with SDI, all
@@ -77,9 +77,38 @@ MEASURES = {
             "Change in state tax revenue, net of credits, benefits, Medi-Cal and "
             "CalWORKs, $ billions"
         ),
+        "subtitle_all_states": (
+            "Change in state tax revenue, net of credits, benefits, Medicaid and "
+            "TANF, $ billions"
+        ),
         "california_note": CALIFORNIA_HEALTH_TANF_NOTE,
     },
 }
+
+
+def subtitle_for(measure, california_only):
+    """The measure's subtitle, naming California's programs only when California stands alone."""
+    entry = MEASURES[measure]
+    if california_only:
+        return entry["subtitle"]
+    return entry.get("subtitle_all_states", entry["subtitle"])
+
+
+def title_for(ca):
+    """A title that says which way California's revenue moves."""
+    moved = [v for v in ca if v != 0]
+    if moved and all(v > 0 for v in moved):
+        return "California gains as labor income shifts to capital"
+    if moved and all(v < 0 for v in moved):
+        return "California loses as labor income shifts to capital"
+    return "California's revenue as labor income shifts to capital"
+
+
+def dollar_format(values):
+    """Format for $B labels: one decimal when the values span less than $5 billion."""
+    span = max(values) - min(values) if values else 0.0
+    decimals = 1 if span < 5 else 0
+    return lambda v: f"${v:,.{decimals}f}B"
 
 
 def series_from_sweep(path=SWEEP_PATH):
@@ -140,6 +169,9 @@ def draw(xs, ca, ca_sdi, other, out, source_note, measure_note=None,
         ax.plot(xs, other, color=OTHER_STATES, linewidth=2, marker="o", markersize=5,
                 label="All other states combined", zorder=3, clip_on=False)
 
+    drawn = list(ca) + list(ca_sdi or []) + list(other or [])
+    dollars = dollar_format(drawn)
+
     # Direct labels at the line ends, in text ink beside the colored mark.
     ends = [(ca[-1], "California")]
     if ca_sdi is not None:
@@ -147,14 +179,14 @@ def draw(xs, ca, ca_sdi, other, out, source_note, measure_note=None,
     if other is not None:
         ends.append((other[-1], "All other states"))
     for y, text in ends:
-        ax.annotate(f"{text}  ${y:,.0f}B", xy=(xs[-1], y), xytext=(6, 0),
+        ax.annotate(f"{text}  {dollars(y)}", xy=(xs[-1], y), xytext=(6, 0),
                     textcoords="offset points", va="center", fontsize=9.5,
                     color=TEXT_PRIMARY)
 
     ax.set_xlim(0, 100)
     ax.set_xticks(range(0, 101, 20))
     ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.0f}%"))
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"${v:,.0f}B"))
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: dollars(v)))
     ax.set_xlabel("Share of labor income that moves to capital income", color=TEXT_SECONDARY)
     ax.grid(axis="y", color=GRID, linewidth=0.8)
     ax.tick_params(colors=TEXT_SECONDARY, length=0)
@@ -162,7 +194,7 @@ def draw(xs, ca, ca_sdi, other, out, source_note, measure_note=None,
         spine.set_visible(False)
     ax.legend(frameon=False, loc="upper left", fontsize=9.5, labelcolor=TEXT_PRIMARY)
 
-    fig.text(0.06, 0.955, "California gains as labor income shifts to capital",
+    fig.text(0.06, 0.955, title_for(ca),
              fontsize=14, fontweight="bold", color=TEXT_PRIMARY, ha="left")
     fig.text(0.06, 0.915, subtitle, fontsize=10, color=TEXT_SECONDARY, ha="left")
     notes = [
@@ -210,7 +242,7 @@ def main():
         other = None
         measure_note = MEASURES[measure]["california_note"]
     print(draw(xs, ca, ca_sdi, other, args.out, note, measure_note,
-               subtitle=MEASURES[measure]["subtitle"]))
+               subtitle=subtitle_for(measure, args.california_only)))
 
 
 if __name__ == "__main__":
