@@ -37,7 +37,7 @@ ALLOCATION_NOTE = (
     "We move labor income to capital income nationwide, in proportion to the interest, "
     "dividends, capital gains and rent people already receive."
 )
-# ``fiscal.state_revenue_components`` nets California's refundable credits
+# ``fiscal.state_revenue_delta`` nets California's refundable credits
 # (gov.states.ca.tax.income.credits.refundable) and its entries in
 # gov.household.household_state_benefits, which hold no CalWORKs or Medi-Cal.
 CALIFORNIA_MEASURE_NOTE = (
@@ -128,7 +128,7 @@ def draw(xs, ca, ca_sdi, other, out, source_note, measure_note=None):
              fontsize=14, fontweight="bold", color=TEXT_PRIMARY, ha="left")
     fig.text(0.06, 0.915,
              "Change in state tax revenue, net of refundable state credits and "
-             "selected state benefits, $ billions",
+             "some state benefits, $ billions",
              fontsize=10, color=TEXT_SECONDARY, ha="left")
     notes = [
         "Source: PolicyEngine static microsimulation of current law on Microcosm "
