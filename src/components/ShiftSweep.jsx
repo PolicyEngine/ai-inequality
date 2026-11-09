@@ -22,6 +22,12 @@ import defaultSweepData from "../data/shiftSweepData.json";
 import { TOOLTIP_STYLE } from "../utils/chartStyles";
 import { niceTicks } from "../utils/chartTicks";
 import {
+  countsHealthTanf,
+  federalRow,
+  stateDeltaRow,
+  stateRow,
+} from "../utils/sweepRevenue";
+import {
   policyEngineLabel,
   predatesHeadStartCorrection,
 } from "../utils/modelMetadata";
@@ -63,14 +69,38 @@ const NATIONAL_BUCKETS_UK = [
   },
 ];
 
+// Bands for runs that count health coverage and TANF (countsHealthTanf).
+const FEDERAL_BUCKETS_US_HEALTH_TANF = [
+  FEDERAL_BUCKETS_US[0],
+  FEDERAL_BUCKETS_US[1],
+  {
+    key: "rev_fed_benefits",
+    label: "Federal benefits other than TANF (negated)",
+    color: "#805AD5",
+  },
+  {
+    key: "rev_fed_health",
+    label: "Federal health coverage (negated)",
+    color: "#0D9488",
+  },
+];
+
 // What the US federal decomposition holds. It adds up its own bands rather
 // than taking the all-government total less the states, so some taxes that
 // the total counts sit in no chart's bands.
-const FEDERAL_LINE_NOTE_US =
-  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band includes TANF. We count three groups of taxes only in the net government revenue total: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations. New York City's and Maryland's local income taxes count in those states' charts instead.";
+const OUTSIDE_CHART_TAXES_NOTE =
+  "Three groups of taxes appear only in the net government revenue total, not in this chart or the state charts: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and city and county taxes on income and occupations such as Louisville's occupational license tax. New York City's and Maryland's local income taxes count in those states' charts.";
 
-function federalBuckets(countryId) {
-  return countryId === "uk" ? NATIONAL_BUCKETS_UK : FEDERAL_BUCKETS_US;
+const FEDERAL_LINE_NOTE_US = `The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band counts TANF as federal. ${OUTSIDE_CHART_TAXES_NOTE}`;
+
+const FEDERAL_LINE_NOTE_US_HEALTH_TANF = `The payroll band includes employers' state unemployment insurance and other state and local payroll taxes. The health band includes what the federal government spends on ACA premium tax credits, the Basic Health Program, and its matching share of Medicaid, CHIP and the Medicare Savings Programs. The federal government pays each state a fixed TANF block grant, so the states pay for any change in TANF benefits, and their charts count it. ${OUTSIDE_CHART_TAXES_NOTE}`;
+
+const STATE_LINE_NOTE_HEALTH_TANF =
+  "The health band includes what the state spends on its matching share of Medicaid, CHIP and the Medicare Savings Programs, and on programs it runs on its own, such as Colorado's OmniSalud. The state also pays the whole cost of coverage for enrollees that federal law excludes from matching funds because of their immigration status, and the band includes that cost. The federal government pays each state a fixed TANF block grant, so the state pays for any change in TANF benefits, and the TANF band counts it.";
+
+function federalBuckets(countryId, withHealthTanf = false) {
+  if (countryId === "uk") return NATIONAL_BUCKETS_UK;
+  return withHealthTanf ? FEDERAL_BUCKETS_US_HEALTH_TANF : FEDERAL_BUCKETS_US;
 }
 
 const STATE_BUCKETS = [
@@ -85,6 +115,29 @@ const STATE_BUCKETS = [
     color: "#B45309",
   },
 ];
+
+const STATE_BUCKETS_HEALTH_TANF = [
+  STATE_BUCKETS[0],
+  {
+    key: "rev_state_benefits",
+    label: "State benefits other than TANF (negated)",
+    color: "#805AD5",
+  },
+  {
+    key: "rev_state_tanf",
+    label: "TANF (negated)",
+    color: "#B45309",
+  },
+  {
+    key: "rev_state_health",
+    label: "State health coverage (negated)",
+    color: "#0D9488",
+  },
+];
+
+function stateBuckets(withHealthTanf = false) {
+  return withHealthTanf ? STATE_BUCKETS_HEALTH_TANF : STATE_BUCKETS;
+}
 
 const FED_INCOME_TAX_BUCKETS = [
   {
@@ -174,7 +227,13 @@ const CONCEPTS = {
   },
 };
 
-function measuresForMetadata(metadata) {
+const REVENUE_DESCRIPTION_US =
+  "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. It leaves out health coverage such as Medicaid, CHIP and ACA premium tax credits. Reconciles to the household net-income identity.";
+
+const REVENUE_DESCRIPTION_US_HEALTH_TANF =
+  "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits + health coverage), across federal, state and local governments. We count what governments spend on Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax credits, the Basic Health Program and state programs such as Colorado's OmniSalud. We price each new Medicaid enrollee at what their state's Medicaid program spent before the shift on an enrollee with the same ACA benchmark premium. The federal and state charts add up to this total, except for three groups of taxes we list under the federal chart.";
+
+function measuresForMetadata(metadata, withHealthTanf = false) {
   const currencySymbol = metadata.currency_symbol ?? "$";
   return {
     gini: {
@@ -242,7 +301,9 @@ function measuresForMetadata(metadata) {
         billionFmt(value, { precision: 1, currencySymbol }),
       description:
         metadata.revenue_description ??
-        "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. We leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.",
+        (withHealthTanf
+          ? REVENUE_DESCRIPTION_US_HEALTH_TANF
+          : REVENUE_DESCRIPTION_US),
     },
   };
 }
@@ -256,44 +317,6 @@ const MEASURE_OPTIONS = [
   "revenue",
 ];
 const CONCEPT_OPTIONS = ["market", "net"];
-
-function buildFederalRow(scenario) {
-  const fedRefundable =
-    (scenario.refundable_credits_change_b ?? 0) -
-    (scenario.state_refundable_credits_change_b ?? 0);
-  const rev_fed_income_tax_net =
-    (scenario.fed_income_tax_before_refundable_credits_change_b ?? 0) -
-    fedRefundable;
-  const rev_payroll_all =
-    (scenario.employer_payroll_change_b ?? 0) +
-    (scenario.employee_ss_tax_change_b ?? 0) +
-    (scenario.employee_medicare_tax_change_b ?? 0) +
-    (scenario.self_employment_tax_change_b ?? 0);
-  // Federal benefits = total household benefits − household_state_benefits
-  // (the programs PolicyEngine counts as state-paid), so TANF stays here.
-  const fedBenefitsChange =
-    (scenario.benefits_change_b ?? 0) - (scenario.state_benefits_change_b ?? 0);
-  const rev_fed_benefits = -fedBenefitsChange;
-  return {
-    rev_fed_income_tax_net,
-    rev_payroll_all,
-    rev_fed_benefits,
-    revenue: rev_fed_income_tax_net + rev_payroll_all + rev_fed_benefits,
-  };
-}
-
-function buildStateRow(scenario, stateCode) {
-  const state = scenario.state_deltas?.[stateCode] ?? {};
-  const rev_state_income_tax_net =
-    (state.state_tax_before_refundable_credits_change_b ?? 0) -
-    (state.state_refundable_credits_change_b ?? 0);
-  const rev_state_benefits = -(state.state_benefits_change_b ?? 0);
-  return {
-    rev_state_income_tax_net,
-    rev_state_benefits,
-    revenue: rev_state_income_tax_net + rev_state_benefits,
-  };
-}
 
 function dataForChart(sweepData) {
   return sweepData.scenarios.map((scenario) => ({
@@ -325,12 +348,16 @@ function dataForChart(sweepData) {
   }));
 }
 
-function decompositionDataForJurisdiction(chartData, jurisdiction) {
+function decompositionDataForJurisdiction(
+  chartData,
+  jurisdiction,
+  withHealthTanf = false,
+) {
   return chartData.map((row) => {
     const extras =
       jurisdiction === "federal"
-        ? buildFederalRow(row._scenario)
-        : buildStateRow(row._scenario, jurisdiction);
+        ? federalRow(row._scenario, withHealthTanf)
+        : stateRow(row._scenario, jurisdiction, withHealthTanf);
     return { ...row, ...extras };
   });
 }
@@ -426,12 +453,20 @@ function summaryForMetric(measureKey, conceptKey, config, chartData, metadata) {
     (min, row) => (row.revenue < min.revenue ? row : min),
     chartData[0],
   );
+  const at50 = config.valueFormatter(shift50?.revenue ?? 0);
+  const at100 = config.valueFormatter(shift100?.revenue ?? 0);
+  const atTrough = config.valueFormatter(trough?.revenue ?? 0);
+  let path;
+  if (trough === endPoint) {
+    path = `${config.label} reaches ${at50} at a 50% shift and falls to ${at100} at a 100% shift.`;
+  } else if (trough.shift > 50) {
+    path = `${config.label} reaches ${at50} at a 50% shift, bottoms out at ${atTrough} at a ${trough.shift}% shift, and rebounds to ${at100} at a 100% shift.`;
+  } else {
+    path = `${config.label} bottoms out at ${atTrough} at a ${trough.shift}% shift and recovers to ${at100} at a 100% shift.`;
+  }
   return (
     <>
-      {config.label} reaches {config.valueFormatter(shift50?.revenue ?? 0)} at a
-      50% shift, bottoms out at {config.valueFormatter(trough?.revenue ?? 0)} at
-      a {trough?.shift ?? 80}% shift, and rebounds to{" "}
-      {config.valueFormatter(shift100?.revenue ?? 0)} at a 100% shift.{" "}
+      {path}{" "}
       {metadata.revenue_summary_note ??
         "Capital-gains tax and NIIT accelerate at the top of the sweep, while EITC and refundable CTC collapse once labor income approaches zero."}
     </>
@@ -848,6 +883,7 @@ function DecileImpactChart({ sweepData, unit = "dollars" }) {
 function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
   const [selectedShift, setSelectedShift] = useState(50);
   const baselineTotals = sweepData?.metadata?.baseline_facts?.totals;
+  const withHealthTanf = countsHealthTanf(sweepData);
 
   const { ranked, availableShifts } = useMemo(() => {
     const withDeltas = sweepData.scenarios.filter(
@@ -863,7 +899,7 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
       const stateTax = d.state_tax_before_refundable_credits_change_b ?? 0;
       const stateRef = d.state_refundable_credits_change_b ?? 0;
       const stateBen = d.state_benefits_change_b ?? 0;
-      const netDollarsB = stateTax - stateRef - stateBen;
+      const netDollarsB = stateDeltaRow(d, withHealthTanf).revenue;
       // Denominator in $B for share mode: state's own baseline net state
       // revenue (tax − refundable credits − state benefits).
       const baseline = baselineTotals?.per_state?.[code];
@@ -895,7 +931,7 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
     );
     valid.sort((a, b) => b.stateNet - a.stateNet);
     return { ranked: valid, availableShifts: shifts };
-  }, [sweepData, selectedShift, baselineTotals, unit]);
+  }, [sweepData, selectedShift, baselineTotals, unit, withHealthTanf]);
 
   if (ranked.length === 0) {
     return null;
@@ -940,18 +976,34 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
       </div>
       <p className="shift-sweep-description">
         The chart ranks every state by its net change in state revenue at the
-        selected shift level, largest first. Net = state income and use tax
-        before refundable credits − refundable state credits − state-paid
-        benefits. PolicyEngine counts state SSI supplements, child care
-        subsidies and other programs, such as New Jersey&apos;s property tax
-        relief, as state-paid. We leave Medicaid, CHIP and TANF out of these
-        figures, apart from Massachusetts&apos;s TAFDC. New York&apos;s and
-        Maryland&apos;s figures include New York City&apos;s income tax and
-        refundable credits, Maryland&apos;s county income taxes and Montgomery
-        County&apos;s earned income credit. California&apos;s include San
-        Francisco&apos;s Working Families Tax Credit and Los Angeles
-        County&apos;s EZ Save program, infant supplement and expectant parent
-        payment. Teal gains, orange loses.
+        selected shift level, largest first.{" "}
+        {withHealthTanf ? (
+          <>
+            Net = state income and use tax before refundable credits −
+            refundable state credits − the other benefits PolicyEngine counts
+            as state-paid (state SSI supplements, child care subsidies and
+            programs such as New Jersey&apos;s property tax relief) − TANF − the
+            state&apos;s spending on health coverage: its matching share of
+            Medicaid, CHIP and the Medicare Savings Programs, the whole cost of
+            coverage for enrollees that federal law excludes from matching
+            funds because of their immigration status, and programs it runs on
+            its own.
+          </>
+        ) : (
+          <>
+            Net = state income and use tax before refundable credits −
+            refundable state credits − the benefits PolicyEngine counts as
+            state-paid (state SSI supplements, child care subsidies and other
+            programs, such as New Jersey&apos;s property tax relief). It leaves
+            out Medicaid, CHIP and TANF (apart from Massachusetts&apos;s TAFDC).
+          </>
+        )}{" "}
+        A few local taxes, credits and programs
+        count in their states&apos; figures: New York City&apos;s income tax and
+        refundable credits; Maryland&apos;s county income taxes and Montgomery
+        County&apos;s earned income credit; San Francisco&apos;s Working
+        Families Tax Credit; and three Los Angeles programs. Teal gains, orange
+        loses.
         {unit === "share"
           ? " In share mode, each state's change is expressed as % of its own baseline net state revenue — states without income tax (FL, TX, etc.) are dropped."
           : ""}
@@ -1060,7 +1112,11 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
   const modelLabel = policyEngineLabel(metadata);
   const laborTerm = metadata.labor_label ?? "labor";
   const laborTitle = metadata.labor_title ?? "Labor";
-  const measures = useMemo(() => measuresForMetadata(metadata), [metadata]);
+  const withHealthTanf = useMemo(() => countsHealthTanf(sweepData), [sweepData]);
+  const measures = useMemo(
+    () => measuresForMetadata(metadata, withHealthTanf),
+    [metadata, withHealthTanf],
+  );
   const chartData = useMemo(() => dataForChart(sweepData), [sweepData]);
   const stateOptions = useMemo(() => {
     const last = sweepData.scenarios[sweepData.scenarios.length - 1];
@@ -1096,8 +1152,13 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
     }
   }, [stateOptions, measureOptions, selectedJurisdiction, selectedMeasure]);
   const jurisdictionData = useMemo(
-    () => decompositionDataForJurisdiction(chartData, selectedJurisdiction),
-    [chartData, selectedJurisdiction],
+    () =>
+      decompositionDataForJurisdiction(
+        chartData,
+        selectedJurisdiction,
+        withHealthTanf,
+      ),
+    [chartData, selectedJurisdiction, withHealthTanf],
   );
   const config = useMemo(
     () => metricConfig(measures, selectedMeasure, selectedConcept),
@@ -1272,8 +1333,8 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
             currencySymbol={currencySymbol}
             buckets={
               selectedJurisdiction === "federal"
-                ? federalBuckets(metadata.country_id)
-                : STATE_BUCKETS
+                ? federalBuckets(metadata.country_id, withHealthTanf)
+                : stateBuckets(withHealthTanf)
             }
             title={
               selectedJurisdiction === "federal"
@@ -1287,9 +1348,15 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
             denominatorB={decompositionDenominatorB}
             laborTerm={laborTerm}
             note={
-              selectedJurisdiction === "federal" && metadata.country_id !== "uk"
-                ? FEDERAL_LINE_NOTE_US
-                : null
+              selectedJurisdiction !== "federal"
+                ? withHealthTanf
+                  ? STATE_LINE_NOTE_HEALTH_TANF
+                  : null
+                : metadata.country_id === "uk"
+                  ? null
+                  : withHealthTanf
+                    ? FEDERAL_LINE_NOTE_US_HEALTH_TANF
+                    : FEDERAL_LINE_NOTE_US
             }
           />
         ) : (
