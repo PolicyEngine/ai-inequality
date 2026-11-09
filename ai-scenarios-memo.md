@@ -306,10 +306,10 @@ computed on the identical threshold. Because the threshold is identical in
 baseline and scenario, those changes are close to unaffected by the level gap;
 the levels are context, the deltas are the result.
 
-**Stability across data builds.** These results were first computed on the
-prior populace build (build o, 22 July) and rerun on build p (28 July, with
-revised capital gains calibration) under the identical model version — a
-data-only change. Both runs predate the Head Start correction, so this
+**Stability across data builds.** We first computed these results on build o
+(22 July) of our Microcosm microdata, then reran them on build p (28 July, with
+revised capital gains calibration) under the identical model version, changing
+only the data. Both runs predate the Head Start correction, so this
 comparison uses the net-income accounting they shared. No scenario's revenue
 estimate moved by more than $5.9B:
 Moderate and Rapid by at most 2.8%, and the Slow cells, whose revenue changes
@@ -326,9 +326,9 @@ and the labor shock hits its target aggregate to within 2e-16.
 ## Reproducibility
 
 Everything above runs from open source against openly published microdata:
-policyengine-us 1.764.6, policyengine.py 5.0.1, populace-us `populace_us_2024`
-(certified build `populace-us-2024-buildp-sparse-rmloss100-cae8640`), with
-Head Start and Early Head Start kept out of household net income. The
+policyengine-us 1.764.6, policyengine.py 5.0.1 and Microcosm's certified US
+2024 build p (commit `cae8640`), with Head Start and Early Head Start kept out
+of household net income. The
 Budget Lab notes their PUF-based data cannot be released publicly, so this is a
 complement rather than a competitor: anyone can rerun these scenarios, or score
 a different reform against them.

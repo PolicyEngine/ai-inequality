@@ -6,6 +6,35 @@ export function policyEngineLabel(metadata) {
   return `PolicyEngine ${policyEngineVersion(metadata)}`;
 }
 
+const MICROCOSM_US_BUILD_ID =
+  /^(?:microcosm|populace)-us-(\d{4})-build([a-z0-9]+)-.+-(\d{4})(\d{2})(\d{2})T\d{6}Z$/;
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+// Published release ids keep Microcosm's pre-August spelling, so pages show
+// this label and never the id. Returns null for anything other than a dated
+// Microcosm US build.
+export function microcosmBuildLabel(buildId) {
+  const match = MICROCOSM_US_BUILD_ID.exec(buildId ?? "");
+  const month = match && MONTH_NAMES[Number(match[4]) - 1];
+  if (!month) return null;
+  const [, dataYear, build, year, , day] = match;
+  return `Microcosm US ${dataYear} (build ${build}, ${Number(day)} ${month} ${year})`;
+}
+
 function hasNetIncomeExclusionRecord(record) {
   return (
     record != null &&

@@ -1,8 +1,7 @@
-"""Compare AI scenario results across two populace data builds.
+"""Compare AI scenario results across two Microcosm data builds.
 
-Both runs use the same policyengine-us version, so every difference here is
-attributable to the data build alone — the decomposition the o->p step makes
-possible that the vintage change from policyengine-us-data could not.
+Both runs use the same policyengine-us version, so every difference here comes
+from the data build alone.
 
 Usage:
     python analysis/compare_data_builds.py [old.json] [new.json]

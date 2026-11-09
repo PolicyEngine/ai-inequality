@@ -28,14 +28,6 @@ const PROJECTS = {
       type: "AI infrastructure",
     },
     {
-      title: "Enhanced CPS microdata",
-      description:
-        "Comprehensive survey enhancement enabling household-level tax-benefit microsimulation.",
-      image: withBasePath("/images/enhanced-cps-launch.png"),
-      url: "https://policyengine.org/us/research/enhanced-cps-launch",
-      type: "Data infrastructure",
-    },
-    {
       title: "ACA premium tax credit calculator",
       description:
         "Calculate health insurance subsidies under current and alternative policies.",

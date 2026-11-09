@@ -234,7 +234,7 @@ of why our bridged totals exceed theirs.
 **Asset-based apportionment.** Distribute the incremental capital flow by
 household assets rather than by existing realized capital income, matching the
 Budget Lab's SCF-imputed approach and reaching households that hold wealth but
-realize nothing. The data supports it: in `populace_us_2024` at 2030,
+realize nothing. The data supports it: in Microcosm's US 2024 build at 2030,
 `stock_assets` totals $35.7T and is non-zero for 31.2% of households,
 `net_worth` totals $202.0T and is non-zero for 99.7%. (`bond_assets` is thin at
 0.9% of households, and `household_business_assets_value` is not populated.)
