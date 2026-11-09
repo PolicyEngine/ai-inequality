@@ -60,7 +60,7 @@ function Approach({ countryKey = "us" }) {
       description: (
         <>
           Used by the{" "}
-          <Source href="https://policyengine.org/uk/research/autumn-budget-2024-policy-reform-impacts">
+          <Source href="https://policyengine.org/uk/research/policyengine-10-downing-street">
             UK government
           </Source>
           , US congressional offices, and leading think tanks. Cited by{" "}
