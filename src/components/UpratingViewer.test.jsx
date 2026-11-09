@@ -1,28 +1,32 @@
 import { readFileSync } from "node:fs";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import Papa from "papaparse";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import {
   POLICYENGINE_US_SNAPSHOT,
+  formatReleaseMonth,
   policyengineUsSourceUrl,
 } from "../utils/policyengineUsSource";
 import UpratingViewer from "./UpratingViewer";
 
 const csv = readFileSync("public/data/uprating_analysis.csv", "utf8");
 const rows = Papa.parse(csv, { header: true, skipEmptyLines: true }).data;
+const urlByPath = new Map(
+  rows.map((row) => [row.path, policyengineUsSourceUrl(row)]),
+);
 const listedFiles = new Set(
   readFileSync("tests/fixtures/policyengine-us-files.txt", "utf8")
     .split("\n")
     .filter((line) => line && !line.startsWith("#")),
 );
 const blobPrefix = `https://github.com/PolicyEngine/policyengine-us/blob/${POLICYENGINE_US_SNAPSHOT.commit}/`;
+// An open card lists this many of its items; search reaches the rest.
+const SHOWN_PER_CARD = 50;
 
-const sourceLinks = () =>
-  screen
-    .queryAllByRole("link", { name: /view source/i })
-    .map((link) => link.getAttribute("href"));
+const sourceLinks = (container = document.body) =>
+  within(container).queryAllByRole("link", { name: /view source/i });
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -37,33 +41,50 @@ afterEach(() => {
 
 test("names the release its links open", async () => {
   render(<UpratingViewer />);
-  const intro = await screen.findByText(/that grow over time/);
+  const intro = await screen.findByText(/grows over time/);
   const parameters = rows.filter((row) => row.type === "parameter").length;
   const variables = rows.filter((row) => row.type === "variable").length;
   expect(intro).toHaveTextContent(
-    `Explore the ${parameters} parameters and ${variables} variables in PolicyEngine-US ${POLICYENGINE_US_SNAPSHOT.version} (October 2025)`,
+    `Explore ${parameters} of the parameters and ${variables} of the variables that PolicyEngine-US ${POLICYENGINE_US_SNAPSHOT.version} (${formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time`,
   );
 });
 
-test("links every item it shows to a file listed at the pinned commit", async () => {
+test("links every item it shows to its own file at the pinned commit", async () => {
   render(<UpratingViewer />);
-  await screen.findByText(/that grow over time/);
+  await screen.findByText(/grows over time/);
+  expect(urlByPath.size).toBe(rows.length);
 
-  const expected = new Set(rows.map(policyengineUsSourceUrl));
-  const cardCount = document.querySelectorAll(".grid > .card").length;
-  expect(cardCount).toBeGreaterThan(1);
+  const cards = () => document.querySelectorAll(".grid > .card");
+  expect(cards().length).toBeGreaterThan(1);
 
+  const problems = [];
   const seen = [];
-  for (let index = 0; index < cardCount; index += 1) {
-    fireEvent.click(document.querySelectorAll(".grid > .card")[index]);
-    const links = sourceLinks();
-    expect(links.length).toBeGreaterThan(0);
-    seen.push(...links);
+  let itemsInCards = 0;
+  for (let index = 0; index < cards().length; index += 1) {
+    // A card's header counts its parameters and variables, as in "214p 0v".
+    const heading = cards()[index].querySelector("h3").textContent;
+    const [, parameters, variables] = heading.match(/(\d+)p (\d+)v/);
+    const items = Number(parameters) + Number(variables);
+    itemsInCards += items;
+
+    fireEvent.click(cards()[index]);
+    const links = sourceLinks(cards()[index]);
+    if (links.length !== Math.min(SHOWN_PER_CARD, items)) {
+      problems.push(`${heading}: ${links.length} links for ${items} items`);
+    }
+    for (const link of links) {
+      // Each link sits in its item's block, beside the item's name.
+      const path = link.parentElement.querySelector("strong").textContent;
+      const href = link.getAttribute("href");
+      if (href !== urlByPath.get(path)) problems.push(`${path}: ${href}`);
+      seen.push(href);
+    }
   }
 
+  expect(problems).toEqual([]);
+  expect(itemsInCards).toBe(rows.length);
   const outside = seen.filter(
     (href) =>
-      !expected.has(href) ||
       !href.startsWith(blobPrefix) ||
       !listedFiles.has(href.slice(blobPrefix.length)),
   );
@@ -72,14 +93,14 @@ test("links every item it shows to a file listed at the pinned commit", async ()
 
 test("links a variable to its Python file, not the parameters folder", async () => {
   render(<UpratingViewer />);
-  await screen.findByText(/that grow over time/);
+  await screen.findByText(/grows over time/);
 
   fireEvent.change(screen.getByPlaceholderText(/search/i), {
     target: { value: "household_weight" },
   });
   fireEvent.click(document.querySelector(".grid > .card"));
 
-  expect(sourceLinks()).toEqual([
+  expect(sourceLinks().map((link) => link.getAttribute("href"))).toEqual([
     `${blobPrefix}policyengine_us/variables/household/demographic/weights/household_weight.py`,
   ]);
 });

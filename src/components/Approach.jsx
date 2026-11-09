@@ -59,12 +59,8 @@ function Approach({ countryKey = "us" }) {
       title: "Proven infrastructure",
       description: (
         <>
-          Used by the{" "}
-          <Source href="https://policyengine.org/uk/research/policyengine-10-downing-street">
-            UK government
-          </Source>
-          , US congressional offices, and leading think tanks. Cited by{" "}
-          <Source href="https://www.cbo.gov/">CBO</Source>,{" "}
+          Used by the UK government, US congressional offices, and leading think
+          tanks. Cited by <Source href="https://www.cbo.gov/">CBO</Source>,{" "}
           <Source href="https://home.treasury.gov/">Treasury</Source>, and
           academic researchers.
         </>
