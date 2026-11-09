@@ -482,9 +482,9 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
 
         <p className="ai-scenarios-stat-note">
           Net government revenue is federal, state <em>and</em> local taxes
-          minus transfers: it nets out refundable credits (EITC, refundable CTC) and
-          benefit outlays such as SNAP, SSI, TANF, WIC and school meals, so a
-          scenario that raises taxes and benefit spending together shows the
+          minus transfers: it nets out refundable credits (EITC, refundable CTC)
+          and benefit outlays such as SNAP, SSI, TANF, WIC and school meals, so
+          a scenario that raises taxes and benefit spending together shows the
           difference. It leaves out health coverage such as Medicaid, CHIP and
           ACA premium tax credits. Under {scenarioName} / proportional, state
           income tax is {fmtBillions(selected.stateTaxChange)} of it.

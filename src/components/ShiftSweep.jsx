@@ -67,7 +67,7 @@ const NATIONAL_BUCKETS_UK = [
 // than taking the all-government total less the states, so some taxes that
 // the total counts sit in no chart's bands.
 const FEDERAL_LINE_NOTE_US =
-  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band counts TANF as federal. Three groups of taxes appear only in the net government revenue total, not in this chart or the state charts: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and city and county taxes on income and occupations such as Philadelphia's wage tax. New York City's and Maryland's local income taxes count in those states' charts.";
+  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band counts TANF as federal. Three groups of taxes appear only in the net government revenue total, not in this chart or the state charts: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and city and county taxes on income and occupations such as Louisville's occupational license tax. New York City's and Maryland's local income taxes count in those states' charts.";
 
 function federalBuckets(countryId) {
   return countryId === "uk" ? NATIONAL_BUCKETS_UK : FEDERAL_BUCKETS_US;
@@ -416,9 +416,8 @@ function summaryForMetric(measureKey, conceptKey, config, chartData, metadata) {
       <>
         {config.label} {direction} from {config.valueFormatter(startValue)} at
         baseline to {config.valueFormatter(endValue)} at a 100% shift. This
-        traces how the income distribution changes when {laborTerm} income
-        moves to people in proportion to the capital income they already
-        receive.
+        traces how the income distribution changes when {laborTerm} income moves
+        to people in proportion to the capital income they already receive.
       </>
     );
   }
@@ -942,13 +941,13 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
       <p className="shift-sweep-description">
         The chart ranks every state by its net change in state revenue at the
         selected shift level, largest first. Net = state income and use tax
-        before refundable credits (New York&apos;s includes New York
-        City&apos;s income tax, and Maryland&apos;s its county income taxes) −
-        refundable state credits − the benefits PolicyEngine counts as
-        state-paid (state SSI supplements, child care subsidies and other
-        programs, such as New Jersey&apos;s property tax relief). It leaves out
-        Medicaid, CHIP and TANF (apart from Massachusetts&apos;s TAFDC). Teal
-        gains, orange loses.
+        before refundable credits − refundable state credits − the benefits
+        PolicyEngine counts as state-paid (state SSI supplements, child care
+        subsidies and other programs, such as New Jersey&apos;s property tax
+        relief). It leaves out Medicaid, CHIP and TANF (apart from
+        Massachusetts&apos;s TAFDC). New York&apos;s figures include New York
+        City&apos;s income tax and refundable credits, and Maryland&apos;s
+        include its county income taxes. Teal gains, orange loses.
         {unit === "share"
           ? " In share mode, each state's change is expressed as % of its own baseline net state revenue — states without income tax (FL, TX, etc.) are dropped."
           : ""}
@@ -1284,8 +1283,7 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
             denominatorB={decompositionDenominatorB}
             laborTerm={laborTerm}
             note={
-              selectedJurisdiction === "federal" &&
-              metadata.country_id !== "uk"
+              selectedJurisdiction === "federal" && metadata.country_id !== "uk"
                 ? FEDERAL_LINE_NOTE_US
                 : null
             }
