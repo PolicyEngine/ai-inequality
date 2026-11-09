@@ -945,9 +945,12 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
         PolicyEngine counts as state-paid (state SSI supplements, child care
         subsidies and other programs, such as New Jersey&apos;s property tax
         relief). It leaves out Medicaid, CHIP and TANF (apart from
-        Massachusetts&apos;s TAFDC). New York&apos;s figures include New York
-        City&apos;s income tax and refundable credits, and Maryland&apos;s
-        include its county income taxes. Teal gains, orange loses.
+        Massachusetts&apos;s TAFDC). A few local taxes and programs count in
+        their states&apos; figures: New York City&apos;s income tax and
+        refundable credits; Maryland&apos;s county income taxes and Montgomery
+        County&apos;s earned income credit; San Francisco&apos;s Working
+        Families Tax Credit; and three Los Angeles programs. Teal gains, orange
+        loses.
         {unit === "share"
           ? " In share mode, each state's change is expressed as % of its own baseline net state revenue — states without income tax (FL, TX, etc.) are dropped."
           : ""}

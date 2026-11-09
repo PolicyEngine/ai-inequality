@@ -80,4 +80,7 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
   expect(document.body).toHaveTextContent(
     /new york city's and maryland's local income taxes count in those states' charts/i,
   );
+  expect(document.body).toHaveTextContent(
+    /montgomery county's earned income credit; san francisco's working families tax credit; and three los angeles programs/i,
+  );
 });
