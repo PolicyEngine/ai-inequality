@@ -161,10 +161,13 @@ MICRODATA_OUTPUT_DIR = os.path.join(
 )
 MODEL_URL = "https://www.policyengine.org/us/model"
 SHIFT_SWEEP_DESCRIPTION = (
-    "Positive employment and self-employment income are reduced by the selected "
-    "share, and the same weighted total is redistributed to positive capital "
-    "income in proportion to existing holdings. This is a static current-law "
-    "microsimulation; it is not a behavioral forecast."
+    "Positive employment and self-employment income fall by the selected "
+    "share, and the same weighted total goes to positive capital income: "
+    "long- and short-term capital gains, taxable interest, qualified and "
+    "non-qualified dividends, and rental income. One common factor scales "
+    "every positive amount, so each person gains in proportion to the capital "
+    "income they already receive, and losses stay as they are. This is a "
+    "static current-law microsimulation; it is not a behavioral forecast."
 )
 
 

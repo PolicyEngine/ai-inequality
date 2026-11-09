@@ -64,10 +64,13 @@ VARIANTS = ["compressive", "proportional", "expansive"]
 CAPITAL_ONLY_INCOME_TAX_STATES = {"WA"}
 
 SCOPE_NOTE = (
-    "State income tax (plus use tax) net of refundable state credits and "
-    "state-funded benefits. Sales, property, corporate and severance taxes are "
-    "outside the model, so a low score means low exposure through the "
-    "income-tax channel, not budgetary resilience."
+    "State income tax (plus use tax), less refundable state credits and the "
+    "benefits PolicyEngine counts as state-paid: state supplements to SSI, "
+    "child care subsidies and a few other state programs. The measure leaves "
+    "out Medicaid, CHIP and TANF (apart from Massachusetts's TAFDC), and the "
+    "model leaves out sales, property, corporate and severance taxes, so a "
+    "low score means low exposure through the income-tax channel, not "
+    "budgetary resilience."
 )
 
 

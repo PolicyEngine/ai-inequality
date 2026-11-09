@@ -58,7 +58,7 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
   );
 
   fireEvent.click(
-    screen.getByRole("radio", { name: /net federal revenue change/i }),
+    screen.getByRole("radio", { name: /net government revenue change/i }),
   );
   expect(
     screen.queryByRole("radiogroup", { name: /income concept/i }),
@@ -67,4 +67,14 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
     formatBillions(shift100.revenue_change_b),
   );
   expect(document.body).toHaveTextContent(/capital-gains tax and niit/i);
+  expect(document.body).toHaveTextContent(
+    /leaves out health coverage such as medicaid/i,
+  );
+  expect(
+    screen.getByRole("heading", { name: /federal revenue decomposition/i }),
+  ).toBeInTheDocument();
+  expect(document.body).toHaveTextContent(
+    /payroll band includes employers' state unemployment insurance/i,
+  );
+  expect(document.body).toHaveTextContent(/the additional medicare tax/i);
 });

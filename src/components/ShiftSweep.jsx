@@ -63,6 +63,12 @@ const NATIONAL_BUCKETS_UK = [
   },
 ];
 
+// What the US federal decomposition holds. It adds up its own bands rather
+// than taking the all-government total less the states, so three taxes that
+// the total counts sit in no chart's bands.
+const FEDERAL_LINE_NOTE_US =
+  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes. Three taxes appear only in the net government revenue total, not in this chart or the state charts: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local income taxes.";
+
 function federalBuckets(countryId) {
   return countryId === "uk" ? NATIONAL_BUCKETS_UK : FEDERAL_BUCKETS_US;
 }
@@ -224,7 +230,7 @@ function measuresForMetadata(metadata) {
           : "Share of people with household resources below the Supplemental Poverty Measure threshold.",
     },
     revenue: {
-      label: metadata.revenue_label ?? "Net federal revenue change",
+      label: metadata.revenue_label ?? "Net government revenue change",
       field: "Revenue",
       dataKey: "revenue",
       color: "#2C6496",
@@ -236,7 +242,7 @@ function measuresForMetadata(metadata) {
         billionFmt(value, { precision: 1, currencySymbol }),
       description:
         metadata.revenue_description ??
-        "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits). Reconciles to the household net-income identity.",
+        "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. It leaves out health coverage such as Medicaid, CHIP and ACA premium tax credits. Reconciles to the household net-income identity.",
     },
   };
 }
@@ -263,7 +269,8 @@ function buildFederalRow(scenario) {
     (scenario.employee_ss_tax_change_b ?? 0) +
     (scenario.employee_medicare_tax_change_b ?? 0) +
     (scenario.self_employment_tax_change_b ?? 0);
-  // Federal benefits = total household benefits − state-funded benefits.
+  // Federal benefits = total household benefits − household_state_benefits
+  // (the programs PolicyEngine counts as state-paid), so TANF stays here.
   const fedBenefitsChange =
     (scenario.benefits_change_b ?? 0) - (scenario.state_benefits_change_b ?? 0);
   const rev_fed_benefits = -fedBenefitsChange;
@@ -387,7 +394,7 @@ function summaryForMetric(measureKey, conceptKey, config, chartData, metadata) {
         {endValue.toFixed(3)} at a 100% shift.{" "}
         {conceptKey === "net"
           ? "Current law dampens the shock, but it does not come close to offsetting it."
-          : `This is the pre-tax, pre-transfer distributional effect of routing ${laborTerm} income through existing capital holdings.`}
+          : `This is the pre-tax, pre-transfer distributional effect of moving ${laborTerm} income to people in proportion to the capital income they already receive.`}
       </>
     );
   }
@@ -409,8 +416,9 @@ function summaryForMetric(measureKey, conceptKey, config, chartData, metadata) {
       <>
         {config.label} {direction} from {config.valueFormatter(startValue)} at
         baseline to {config.valueFormatter(endValue)} at a 100% shift. This
-        traces how the income distribution changes when {laborTerm} income is
-        rerouted through existing capital holdings.
+        traces how the income distribution changes when {laborTerm} income
+        moves to people in proportion to the capital income they already
+        receive.
       </>
     );
   }
@@ -441,6 +449,7 @@ function RevenueDecompositionChart({
   unit = "dollars",
   denominatorB = null, // denominator in $B, used when unit === "share"
   laborTerm = "labor",
+  note = null,
 }) {
   // Share mode scales each bucket value by 100 / denominatorB.
   const scale = unit === "share" && denominatorB ? 100 / denominatorB : 1;
@@ -556,6 +565,7 @@ function RevenueDecompositionChart({
           )}
         </ComposedChart>
       </ResponsiveContainer>
+      {note && <p className="shift-sweep-description">{note}</p>}
     </>
   );
 }
@@ -930,10 +940,13 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
         </div>
       </div>
       <p className="shift-sweep-description">
-        All states with a state income tax, sorted descending by net change in
-        state revenue at the selected shift level. Net = state income tax before
-        refundable credits − refundable state credits − state-funded benefits.
-        Teal gains, orange loses.
+        The chart ranks every state by its net change in state revenue at the
+        selected shift level, largest first. Net = state income and use tax
+        before refundable credits − refundable state credits − the benefits
+        PolicyEngine counts as state-paid (state SSI supplements, child care
+        subsidies and a few other state programs). It leaves out Medicaid, CHIP
+        and TANF (apart from Massachusetts&apos;s TAFDC). Teal gains, orange
+        loses.
         {unit === "share"
           ? " In share mode, each state's change is expressed as % of its own baseline net state revenue — states without income tax (FL, TX, etc.) are dropped."
           : ""}
@@ -1268,6 +1281,12 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
             unit={selectedUnit}
             denominatorB={decompositionDenominatorB}
             laborTerm={laborTerm}
+            note={
+              selectedJurisdiction === "federal" &&
+              metadata.country_id !== "uk"
+                ? FEDERAL_LINE_NOTE_US
+                : null
+            }
           />
         ) : (
           <>
