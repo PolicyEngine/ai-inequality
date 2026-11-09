@@ -320,6 +320,7 @@ def test_chart_titles_subtitles_and_formats():
     assert legend_location([0.0, -0.15, 47.2]) == "upper left"
 
 
+@settings(max_examples=200, deadline=None)
 @given(
     st.lists(st.floats(-1e4, 1e4), min_size=1, max_size=8),
     st.floats(-1e4, 1e4),
@@ -1057,6 +1058,14 @@ def test_check_health_lists():
     # Releases after policyengine-us 2.2.1 list the five state subsidies in
     # household_health_benefits too; the classification is the same.
     _check_health_lists(_health_parameters(health=EVERY_HEALTH), EVERY_HEALTH)
+    # That longer list gets the same checks.
+    with pytest.raises(ValueError, match="new_program"):
+        _check_health_lists(_health_parameters(health=EVERY_HEALTH + ["new_program"]), EVERY_HEALTH)
+    dropped = LISTED_HEALTH[0]
+    with pytest.raises(ValueError, match=f"missing.*{dropped}"):
+        _check_health_lists(
+            _health_parameters(health=[p for p in EVERY_HEALTH if p != dropped]), EVERY_HEALTH
+        )
     with pytest.raises(ValueError, match="twice"):
         _check_health_lists(_health_parameters(flag=True), EVERY_HEALTH)
     with pytest.raises(ValueError, match="new_program"):
