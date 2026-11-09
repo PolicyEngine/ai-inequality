@@ -64,10 +64,10 @@ const NATIONAL_BUCKETS_UK = [
 ];
 
 // What the US federal decomposition holds. It adds up its own bands rather
-// than taking the all-government total less the states, so three taxes that
+// than taking the all-government total less the states, so some taxes that
 // the total counts sit in no chart's bands.
 const FEDERAL_LINE_NOTE_US =
-  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes. Three taxes appear only in the net government revenue total, not in this chart or the state charts: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local income taxes.";
+  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band counts TANF as federal. Three groups of taxes appear only in the net government revenue total, not in this chart or the state charts: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and city and county taxes on income and occupations such as Philadelphia's wage tax. New York City's and Maryland's local income taxes count in those states' charts.";
 
 function federalBuckets(countryId) {
   return countryId === "uk" ? NATIONAL_BUCKETS_UK : FEDERAL_BUCKETS_US;
@@ -942,11 +942,13 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
       <p className="shift-sweep-description">
         The chart ranks every state by its net change in state revenue at the
         selected shift level, largest first. Net = state income and use tax
-        before refundable credits − refundable state credits − the benefits
-        PolicyEngine counts as state-paid (state SSI supplements, child care
-        subsidies and a few other state programs). It leaves out Medicaid, CHIP
-        and TANF (apart from Massachusetts&apos;s TAFDC). Teal gains, orange
-        loses.
+        before refundable credits (New York&apos;s includes New York
+        City&apos;s income tax, and Maryland&apos;s its county income taxes) −
+        refundable state credits − the benefits PolicyEngine counts as
+        state-paid (state SSI supplements, child care subsidies and other
+        programs, such as New Jersey&apos;s property tax relief). It leaves out
+        Medicaid, CHIP and TANF (apart from Massachusetts&apos;s TAFDC). Teal
+        gains, orange loses.
         {unit === "share"
           ? " In share mode, each state's change is expressed as % of its own baseline net state revenue — states without income tax (FL, TX, etc.) are dropped."
           : ""}

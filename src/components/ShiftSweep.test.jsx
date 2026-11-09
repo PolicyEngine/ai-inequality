@@ -77,4 +77,7 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
     /payroll band includes employers' state unemployment insurance/i,
   );
   expect(document.body).toHaveTextContent(/the additional medicare tax/i);
+  expect(document.body).toHaveTextContent(
+    /new york city's and maryland's local income taxes count in those states' charts/i,
+  );
 });

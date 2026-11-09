@@ -19,7 +19,10 @@ records:
   split ``california_summary`` applies to the published sweep. The site's
   federal chart instead adds up its own bands, so its payroll band holds
   employers' state and local payroll taxes, and it leaves out workers' state
-  payroll taxes, the Additional Medicare Tax and local income taxes.
+  payroll taxes, the Additional Medicare Tax,
+  ``local_income_tax_before_refundable_credits`` and ``local_occupational_tax``.
+  New York City's and Maryland's local income taxes sit in those states'
+  income tax.
 * A within-state variant of the shift. The sweep scales every positive
   capital-income dollar in the country by one factor, so a state whose share of
   national capital income exceeds its share of labor income gains market

@@ -9,9 +9,10 @@ SCOPE, and it decides how the ranking may be read
 -------------------------------------------------
 `household_state_tax_before_refundable_credits` adds exactly two things at
 policyengine-us 1.764.6: `state_income_tax_before_refundable_credits` and
-`state_use_tax`. So the channel measured here is **state income tax** (plus a
-small use-tax component), net of refundable state credits and state-funded
-benefits.
+`state_use_tax`. So this script measures the **state income tax** channel
+(plus a small use-tax component), net of refundable state credits and the
+programs in `household_state_benefits`. New York's state income tax includes
+New York City's, and Maryland's includes its county income taxes.
 
 It is *not* state own-source revenue in the budgetary sense. General sales
 tax, property tax, corporate income tax, severance taxes and fees are outside
@@ -64,13 +65,14 @@ VARIANTS = ["compressive", "proportional", "expansive"]
 CAPITAL_ONLY_INCOME_TAX_STATES = {"WA"}
 
 SCOPE_NOTE = (
-    "State income tax (plus use tax), less refundable state credits and the "
-    "benefits PolicyEngine counts as state-paid: state supplements to SSI, "
-    "child care subsidies and a few other state programs. The measure leaves "
-    "out Medicaid, CHIP and TANF (apart from Massachusetts's TAFDC), and the "
-    "model leaves out sales, property, corporate and severance taxes, so a "
-    "low score means low exposure through the income-tax channel, not "
-    "budgetary resilience."
+    "State income tax (plus use tax; New York's includes New York City's "
+    "income tax, and Maryland's its county income taxes), less refundable "
+    "state credits and the benefits PolicyEngine counts as state-paid: state "
+    "supplements to SSI, child care subsidies and other programs, such as New "
+    "Jersey's property tax relief. The measure leaves out Medicaid, CHIP and "
+    "TANF (apart from Massachusetts's TAFDC), and the model leaves out sales, "
+    "property, corporate and severance taxes, so a low score means low "
+    "exposure through the income-tax channel, not budgetary resilience."
 )
 
 

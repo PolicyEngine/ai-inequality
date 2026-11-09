@@ -458,7 +458,7 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
           <StatTile
             label="Net government revenue"
             value={fmtBillions(selected.revenueChange)}
-            delta="federal + state, net of transfers"
+            delta="federal, state and local, net of transfers"
           />
           <StatTile
             label="SPM poverty"
@@ -481,8 +481,8 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
         </div>
 
         <p className="ai-scenarios-stat-note">
-          Net government revenue is federal <em>and</em> state taxes minus
-          transfers: it nets out refundable credits (EITC, refundable CTC) and
+          Net government revenue is federal, state <em>and</em> local taxes
+          minus transfers: it nets out refundable credits (EITC, refundable CTC) and
           benefit outlays such as SNAP, SSI, TANF, WIC and school meals, so a
           scenario that raises taxes and benefit spending together shows the
           difference. It leaves out health coverage such as Medicaid, CHIP and
