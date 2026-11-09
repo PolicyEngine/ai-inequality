@@ -21,9 +21,11 @@ const parsed = Papa.parse(readFileSync(TABLE, "utf8"), {
 const rows = parsed.data;
 
 const listing = readFileSync(FILE_LIST, "utf8").split("\n");
-const listedCommit = listing
-  .find((line) => line.startsWith("# commit "))
-  ?.slice("# commit ".length);
+// The header records the commit, its release and its date as "# name value".
+const listed = (name) =>
+  listing
+    .find((line) => line.startsWith(`# ${name} `))
+    ?.slice(`# ${name} `.length);
 const files = new Set(listing.filter((line) => line && !line.startsWith("#")));
 
 const describeRow = (row) => `${row.type} ${row.path} (${row.file_path})`;
@@ -36,8 +38,13 @@ describe("PolicyEngine-US source links in the uprating viewer", () => {
 
   it("pin the commit the file list records", () => {
     expect(POLICYENGINE_US_SNAPSHOT.commit).toMatch(/^[0-9a-f]{40}$/);
-    expect(listedCommit).toBe(POLICYENGINE_US_SNAPSHOT.commit);
+    expect(listed("commit")).toBe(POLICYENGINE_US_SNAPSHOT.commit);
     expect(files.size).toBeGreaterThan(1000);
+  });
+
+  it("name the release and date the file list records for that commit", () => {
+    expect(listed("version")).toBe(POLICYENGINE_US_SNAPSHOT.version);
+    expect(listed("date")).toBe(POLICYENGINE_US_SNAPSHOT.date);
   });
 
   it("open a file that exists at that commit, for every row", () => {
@@ -84,7 +91,9 @@ describe("PolicyEngine-US source links in the uprating viewer", () => {
   it("name the release month by its UTC date", () => {
     expect(POLICYENGINE_US_SNAPSHOT.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(formatReleaseMonth("2025-10-09")).toBe("October 2025");
-    // West of UTC, local midnight on the 1st still falls in the prior month.
+    // vitest.config.mjs runs the suite west of UTC, where UTC midnight on the
+    // 1st falls on the last day of the prior month.
+    expect(new Date("2025-11-01T00:00:00Z").getDate()).toBe(31);
     expect(formatReleaseMonth("2025-11-01")).toBe("November 2025");
   });
 });
