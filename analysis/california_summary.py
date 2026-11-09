@@ -62,8 +62,10 @@ BEFORE_LSR_NOTE = (
     "Note: the shift sets employment_income and self_employment_income on each branch, so "
     "programs that read their *_before_lsr inputs see pre-shift earnings. The default TANF "
     "earned-income list and Massachusetts's, Montana's and South Carolina's lists read them, "
-    "so those states' TANF response is missing from the TANF, other-states and all-government "
-    "lines. California's CalWORKs list reads the shifted variables."
+    "so those states' TANF responds to the added capital income and not to the wage cut, and "
+    "can fall. The TANF, other-states and all-government lines and the study measure's federal "
+    "lines miss the response to the wage cut. California's CalWORKs list reads the shifted "
+    "variables."
 )
 
 

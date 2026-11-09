@@ -108,7 +108,18 @@ def dollar_format(values):
     """Format for $B labels: one decimal when the values span less than $5 billion."""
     span = max(values) - min(values) if values else 0.0
     decimals = 1 if span < 5 else 0
-    return lambda v: f"${v:,.{decimals}f}B"
+
+    def label(v):
+        rounded = round(v, decimals)
+        sign = "−" if rounded < 0 else ""
+        return f"{sign}${abs(rounded):,.{decimals}f}B"
+
+    return label
+
+
+def legend_location(values):
+    """Where the legend clears the lines, which all start at zero on the left."""
+    return "lower left" if -min(values) > max(values) else "upper left"
 
 
 def series_from_sweep(path=SWEEP_PATH):
@@ -192,7 +203,7 @@ def draw(xs, ca, ca_sdi, other, out, source_note, measure_note=None,
     ax.tick_params(colors=TEXT_SECONDARY, length=0)
     for spine in ax.spines.values():
         spine.set_visible(False)
-    ax.legend(frameon=False, loc="upper left", fontsize=9.5, labelcolor=TEXT_PRIMARY)
+    ax.legend(frameon=False, loc=legend_location(drawn), fontsize=9.5, labelcolor=TEXT_PRIMARY)
 
     fig.text(0.06, 0.955, title_for(ca),
              fontsize=14, fontweight="bold", color=TEXT_PRIMARY, ha="left")

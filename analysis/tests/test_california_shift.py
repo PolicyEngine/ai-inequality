@@ -299,7 +299,12 @@ def test_chart_draws_california_only(tmp_path):
 
 def test_chart_titles_subtitles_and_formats():
     pytest.importorskip("matplotlib")
-    from analysis.california_chart import dollar_format, subtitle_for, title_for
+    from analysis.california_chart import (
+        dollar_format,
+        legend_location,
+        subtitle_for,
+        title_for,
+    )
 
     assert title_for([0.0, 1.0, 5.0]) == "California gains as labor income shifts to capital"
     assert title_for([0.0, -1.0, -5.0]) == "California loses as labor income shifts to capital"
@@ -309,6 +314,24 @@ def test_chart_titles_subtitles_and_formats():
     assert subtitle_for("study", False) == subtitle_for("study", True)
     assert dollar_format([0.0, 1.2, 3.4])(1.25) == "$1.2B"
     assert dollar_format([0.0, 12.0, 40.0])(12.4) == "$12B"
+    assert dollar_format([0.0, -243.2, 47.2])(-243.2) == "−$243B"
+    assert dollar_format([-1.0, 1.0])(-0.04) == "$0.0B"
+    assert legend_location([0.0, -243.2, 47.2]) == "lower left"
+    assert legend_location([0.0, -0.15, 47.2]) == "upper left"
+
+
+@given(
+    st.lists(st.floats(-1e4, 1e4), min_size=1, max_size=8),
+    st.floats(-1e4, 1e4),
+)
+def test_dollar_format_signs_only_a_nonzero_amount_and_puts_the_sign_first(values, value):
+    pytest.importorskip("matplotlib")
+    from analysis.california_chart import dollar_format
+
+    text = dollar_format(values)(value)
+    amount = float(text.removeprefix("−").removeprefix("$").removesuffix("B").replace(",", ""))
+    assert "-" not in text
+    assert text.startswith("−") == (value < 0 and amount > 0)
 
 
 COMPONENT_KEYS = (

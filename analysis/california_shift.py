@@ -53,11 +53,12 @@ The shift sets ``employment_income`` and ``self_employment_income`` on each
 branch, so anything that reads their ``*_before_lsr`` inputs sees pre-shift
 earnings. policyengine-us's default TANF earned-income list reads those inputs,
 as do Massachusetts's, Montana's and South Carolina's lists, so those states'
-TANF benefits don't respond and the TANF, other-states and all-government lines
-miss that response. SNAP's gross self-employment income reads them too.
-California's CalWORKs list reads the shifted variables, so California's line
-holds the response. The published sweep's shift (``_apply_shift``) has the same
-limit.
+TANF benefits respond to the added capital income and not to the wage cut, and
+can fall. The TANF, other-states and all-government lines and the study
+measure's federal lines miss the response to the wage cut. SNAP's gross
+self-employment income reads those inputs too. California's CalWORKs list reads
+the shifted variables, so California's line holds the response. The published
+sweep's shift (``_apply_shift``) has the same limit.
 
 Usage:
     python -m analysis.california_shift [--levels 0.1,0.2,0.5,1.0]
@@ -202,8 +203,10 @@ RUN_DESCRIPTION = (
     "branch, so anything that reads their *_before_lsr inputs sees pre-shift "
     "earnings: the default TANF earned-income list and Massachusetts's, "
     "Montana's and South Carolina's lists, so those states' TANF benefits "
-    "don't respond and the TANF, other-states and all-government lines miss "
-    "that response (SNAP's gross self-employment income reads them too). "
+    "respond to the added capital income and not to the wage cut, and can "
+    "fall. The TANF, other-states and all-government lines and the study "
+    "measure's federal lines miss the response to the wage cut (SNAP's gross "
+    "self-employment income reads those inputs too). "
     "California's CalWORKs list reads the shifted variables. "
     "'levels' allocate the new capital income across the country, as the "
     "published sweep does; 'within_state_levels' give each state's freed "
@@ -339,6 +342,13 @@ def _state_only_coverage(sim):
     overstates the state's cost by the federal share of their emergency care,
     an amount this accounting can't measure. CHIP's unborn-child coverage keeps
     its federal match (``_state_only_federal_share``).
+
+    This line depends on the immigration status the data assigns, and it doesn't
+    estimate California's actual state-only Medi-Cal cost. Microcosm treats
+    anyone who reports Medicaid in the CPS as documented, and from 2026
+    California's enrollment freeze keeps undocumented adults without existing
+    coverage out at every income, so the line stays small and only the groups
+    the freeze exempts can enter it.
     """
     p = _parameters(sim).gov.hhs.medicaid.eligibility
     status = sim.calculate("immigration_status", period=YEAR, decode_enums=True)
