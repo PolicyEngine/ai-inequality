@@ -11,10 +11,11 @@ SCOPE, and it decides how the ranking may be read
 policyengine-us 1.764.6: `state_income_tax_before_refundable_credits` and
 `state_use_tax`. So this script measures the **state income tax** channel
 (plus a small use-tax component), net of refundable state credits and the
-programs in `household_state_benefits`. A few local taxes and programs count
-in their states' figures: New York City's income tax and refundable credits;
-Maryland's county income taxes and Montgomery County's earned income credit;
-San Francisco's Working Families Tax Credit; and three Los Angeles programs.
+programs in `household_state_benefits`. A few local taxes, credits and
+programs count in their states' figures: New York City's income tax and
+refundable credits; Maryland's county income taxes and Montgomery County's
+earned income credit; San Francisco's Working Families Tax Credit; and three
+Los Angeles programs.
 
 It is *not* state own-source revenue in the budgetary sense. General sales
 tax, property tax, corporate income tax, severance taxes and fees are outside
@@ -70,12 +71,12 @@ SCOPE_NOTE = (
     "State income tax (plus use tax), less refundable state credits and the "
     "benefits PolicyEngine counts as state-paid: state supplements to SSI, "
     "child care subsidies and other programs, such as New Jersey's property "
-    "tax relief. A few local taxes and programs count in their states' "
-    "figures: New York City's income tax and refundable credits; Maryland's "
-    "county income taxes and Montgomery County's earned income credit; San "
-    "Francisco's Working Families Tax Credit; and three Los Angeles programs. "
-    "The measure leaves out Medicaid, CHIP and TANF (apart from "
-    "Massachusetts's TAFDC), and the model leaves out sales, property, "
+    "tax relief. A few local taxes, credits and programs count in their "
+    "states' figures: New York City's income tax and refundable credits; "
+    "Maryland's county income taxes and Montgomery County's earned income "
+    "credit; San Francisco's Working Families Tax Credit; and three Los "
+    "Angeles programs. The measure leaves out Medicaid, CHIP and TANF (apart "
+    "from Massachusetts's TAFDC), and the model leaves out sales, property, "
     "corporate and severance taxes, so a low score means low exposure through "
     "the income-tax channel, not budgetary resilience."
 )
