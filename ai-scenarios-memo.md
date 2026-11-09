@@ -327,7 +327,7 @@ and the labor shock hits its target aggregate to within 2e-16.
 
 Everything above runs from open source against openly published microdata:
 policyengine-us 1.764.6, policyengine.py 5.0.1 and Microcosm's certified US
-2024 build p (commit `cae8640`), with Head Start and Early Head Start kept out
+2024 build p (commit `cae8640`). We keep Head Start and Early Head Start out
 of household net income. The
 Budget Lab notes their PUF-based data cannot be released publicly, so this is a
 complement rather than a competitor: anyone can rerun these scenarios, or score
