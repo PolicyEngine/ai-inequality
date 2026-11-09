@@ -28,10 +28,20 @@ describe("microcosmBuildLabel", () => {
     // UK releases and SPM refreshes carry other id shapes.
     ["populace-uk-2023-buildp-abc1234-20260728T011454Z"],
     ["populace-us-2024-spm-20260915"],
-    // Month 13 can't name a date.
+    // Stamps that name no calendar date.
     ["populace-us-2024-buildp-abc1234-20261328T011454Z"],
+    ["populace-us-2024-buildp-abc1234-20260732T011454Z"],
+    ["populace-us-2024-buildp-abc1234-20260700T011454Z"],
+    ["populace-us-2024-buildp-abc1234-20260231T011454Z"],
+    ["populace-us-2024-buildp-abc1234-20270229T011454Z"],
   ])("returns null for %s", (buildId) => {
     expect(microcosmBuildLabel(buildId)).toBeNull();
+  });
+
+  test("accepts a leap day", () => {
+    expect(
+      microcosmBuildLabel("microcosm-us-2027-buildq-abc1234-20280229T120000Z"),
+    ).toBe("Microcosm US 2027 (build q, 29 February 2028)");
   });
 });
 

@@ -84,7 +84,7 @@ function PolicyEngineCapabilities() {
                 Explore AI features →
               </a>
               <a
-                href="https://github.com/policyengine"
+                href="https://github.com/PolicyEngine/policyengine-core"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="capability-link"

@@ -25,14 +25,22 @@ const MONTH_NAMES = [
 ];
 
 // Published release ids keep Microcosm's pre-August spelling, so pages show
-// this label and never the id. Returns null for anything other than a dated
-// Microcosm US build.
+// this label and never the id. Returns null for anything other than a
+// Microcosm US build stamped with a real calendar date.
 export function microcosmBuildLabel(buildId) {
   const match = MICROCOSM_US_BUILD_ID.exec(buildId ?? "");
-  const month = match && MONTH_NAMES[Number(match[4]) - 1];
-  if (!month) return null;
-  const [, dataYear, build, year, , day] = match;
-  return `Microcosm US ${dataYear} (build ${build}, ${Number(day)} ${month} ${year})`;
+  if (!match) return null;
+  const [, dataYear, build] = match;
+  const [year, month, day] = match.slice(3).map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return `Microcosm US ${dataYear} (build ${build}, ${day} ${MONTH_NAMES[month - 1]} ${year})`;
 }
 
 function hasNetIncomeExclusionRecord(record) {
