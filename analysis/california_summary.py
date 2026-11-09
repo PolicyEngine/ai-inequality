@@ -57,6 +57,16 @@ EMPLOYER_STATE_LOCAL_KEYS = (
 )
 
 
+#: The limit on the TANF lines, printed with any run that reports them.
+BEFORE_LSR_NOTE = (
+    "Note: the shift sets employment_income and self_employment_income on each branch, so "
+    "programs that read their *_before_lsr inputs see pre-shift earnings. The default TANF "
+    "earned-income list and Massachusetts's, Montana's and South Carolina's lists read them, "
+    "so those states' TANF response is missing from the TANF, other-states and all-government "
+    "lines. California's CalWORKs list reads the shifted variables."
+)
+
+
 def federal_split(components):
     """Split the federal net change ($B) into its parts.
 
@@ -240,6 +250,8 @@ def summarize(run, published=None):
                 f"({_pct(federal_published, p['federal']):+.1f}%)"
             )
     lines.extend(_within_state_lines(run))
+    if any("state_net_with_health_tanf_change_b" in r["california"] for r in run["levels"]):
+        lines.extend(["", BEFORE_LSR_NOTE])
     return "\n".join(lines)
 
 

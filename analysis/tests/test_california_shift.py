@@ -1264,7 +1264,9 @@ def test_medicaid_at_the_baseline_price_rises_with_enrollment():
         return branch
 
     # policyengine-us stores float32 values, so totals agree to about 1e-7.
+    assert (base_cost[:2] > 0).all()
     alone = np.asarray(shifted("alone", False).calculate("medicaid_cost", 2026), dtype=float)
+    assert (alone[2:] > 0).all()
     assert (alone * weights).sum() == pytest.approx((base_cost * weights).sum(), rel=1e-6)
 
     branch = shifted("priced", True)
@@ -1309,3 +1311,38 @@ def test_household_frame_drops_healthier_oregon_for_medicaid_enrollees():
     )
     assert frame["state_health_programs"].tolist() == pytest.approx((programs - oregon).tolist())
     assert frame["state_health"][0] > 0 and frame["tanf_in_state_benefits"].tolist() == [0.0]
+
+
+def test_household_frame_carries_the_unlisted_state_subsidies():
+    # ConnectorCare sits in STATE_HEALTH_UNLISTED. A Massachusetts adult at
+    # $30,000 with ACA take-up draws it, and the frame's state spending must
+    # hold it, or those dollars would leave every state's line.
+    pytest.importorskip("policyengine_us")
+    pd = pytest.importorskip("pandas")
+    from policyengine_us import Microsimulation
+
+    from analysis.california_shift import _household_frame
+
+    dataset = pd.DataFrame(
+        {
+            "person_id__2026": [0],
+            "person_household_id__2026": [0],
+            "person_tax_unit_id__2026": [0],
+            "person_spm_unit_id__2026": [0],
+            "person_family_id__2026": [0],
+            "person_marital_unit_id__2026": [0],
+            "age__2026": [45],
+            "state_fips__2026": [25],
+            "household_weight__2026": [1_000.0],
+            "employment_income__2026": [30_000.0],
+            "takes_up_aca_if_eligible__2026": [True],
+            "is_tax_unit_head__2026": [True],
+            "is_tax_unit_dependent__2026": [False],
+        }
+    )
+    sim = Microsimulation(dataset=dataset)
+    subsidy = np.asarray(sim.calculate("ma_connector_care", 2026, map_to="household"), dtype=float)
+    assert subsidy[0] > 0, "policyengine-us no longer pays this adult a ConnectorCare subsidy"
+    frame = _household_frame(sim)
+    assert frame["state_health_programs"].tolist() == pytest.approx(subsidy.tolist())
+    assert frame["state_health"][0] >= subsidy[0]

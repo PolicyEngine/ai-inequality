@@ -32,8 +32,9 @@ records:
   federal; the exception is a state whose program
   ``gov.household.household_state_benefits`` also lists (Massachusetts's
   TAFDC in policyengine-us 2.2.1, which later releases drop from that list),
-  which the state's line holds and the all-government total counts twice. These fields charge each state its share of Medicaid, CHIP and
-  Medicare Savings Program costs under federal matching rules
+  which the state's line holds and the all-government total counts twice.
+  These fields charge each state its share of Medicaid, CHIP and Medicare
+  Savings Program costs under federal matching rules
   (``state_benefit_cost``, from ``gov.hhs.medicaid.cost_share``), the whole
   cost of coverage it funds alone for people whose immigration status rules
   out federal matching (CHIP's unborn-child coverage keeps its federal match),
@@ -47,6 +48,16 @@ records:
   adds enrollees cuts every enrollee's cost and keeps the state's total. Each
   branch here takes the baseline's denominator, as policyengine-us's reform
   branches do, so a new enrollee adds cost.
+
+The shift sets ``employment_income`` and ``self_employment_income`` on each
+branch, so anything that reads their ``*_before_lsr`` inputs sees pre-shift
+earnings. policyengine-us's default TANF earned-income list reads those inputs,
+as do Massachusetts's, Montana's and South Carolina's lists, so those states'
+TANF benefits don't respond and the TANF, other-states and all-government lines
+miss that response. SNAP's gross self-employment income reads them too.
+California's CalWORKs list reads the shifted variables, so California's line
+holds the response. The published sweep's shift (``_apply_shift``) has the same
+limit.
 
 Usage:
     python -m analysis.california_shift [--levels 0.1,0.2,0.5,1.0]
@@ -98,8 +109,8 @@ STATE_HEALTH = (
 #: State premium subsidies that ``healthcare_benefit_value`` counts and
 #: policyengine-us 2.2.1's ``gov.household.household_health_benefits`` leaves
 #: out; later releases list them there (PolicyEngine/policyengine-us#9514).
-#: Each state pays insurers these amounts on top of the federal premium tax
-#: credit.
+#: Each lowers premiums on top of the federal premium tax credit, and this
+#: accounting charges it to the state.
 STATE_HEALTH_UNLISTED = (
     "ct_covered_connecticut",
     "ma_connector_care",
@@ -155,6 +166,49 @@ GROUPS = [
 ]
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "outputs")
+
+#: What a run measures, saved with its output.
+RUN_DESCRIPTION = (
+    "Positive employment and self-employment income fall by the shift "
+    "share; the same weighted total is added to positive capital income "
+    "(gains, interest, dividends and rent) in proportion to the capital "
+    "income each person already receives. Static, current law, no "
+    "behavioral response. State net revenue is state income tax plus use "
+    "tax, less refundable state credits and the state benefits in "
+    "gov.household.household_state_benefits (for California: SSP, CAPI, "
+    "child care subsidies, CVRP, CARE, FERA and three Los Angeles "
+    "programs; no Medi-Cal or CalWORKs); California's employee SDI "
+    "contribution is reported separately. Federal net revenue is the "
+    "all-government change less every state's net change and less state "
+    "payroll taxes (employee and employer) and local taxes, which the "
+    "all-government total counts but no state's line holds; "
+    "federal_net_published_definition_change_b keeps them, as the published "
+    "site does. Each shifted branch prices Medicaid enrollees at the "
+    "baseline's cost per enrollee (the baseline's "
+    "medicaid_slcsp_state_denominator), so state Medicaid totals move with "
+    "enrollment. The *_with_health_tanf fields "
+    "also charge each state its share of Medicaid, CHIP and Medicare "
+    "Savings Program costs under federal matching rules (state_benefit_cost), "
+    "the whole cost of coverage it funds alone for people whose immigration "
+    "status rules out federal matching (CHIP coverage through the "
+    "unborn-child option keeps its federal match), its own health subsidies "
+    "(for California, the Covered California premium subsidy; Healthier "
+    "Oregon only for people not also enrolled in Medicaid) and the TANF "
+    "change its line doesn't already hold (CalWORKs for California; "
+    "Massachusetts's TAFDC already sits in its state benefits), since the "
+    "federal TANF block grant is fixed; the all-government total adds every "
+    "program in healthcare_benefit_value and counts TANF once. "
+    "The shift sets employment_income and self_employment_income on each "
+    "branch, so anything that reads their *_before_lsr inputs sees pre-shift "
+    "earnings: the default TANF earned-income list and Massachusetts's, "
+    "Montana's and South Carolina's lists, so those states' TANF benefits "
+    "don't respond and the TANF, other-states and all-government lines miss "
+    "that response (SNAP's gross self-employment income reads them too). "
+    "California's CalWORKs list reads the shifted variables. "
+    "'levels' allocate the new capital income across the country, as the "
+    "published sweep does; 'within_state_levels' give each state's freed "
+    "labor income to that state's own capital holders."
+)
 
 
 def _package_version(name):
@@ -853,40 +907,7 @@ def run(
     return {
         "year": YEAR,
         "state": STATE,
-        "description": (
-            "Positive employment and self-employment income fall by the shift "
-            "share; the same weighted total is added to positive capital income "
-            "(gains, interest, dividends and rent) in proportion to the capital "
-            "income each person already receives. Static, current law, no "
-            "behavioral response. State net revenue is state income tax plus use "
-            "tax, less refundable state credits and the state benefits in "
-            "gov.household.household_state_benefits (for California: SSP, CAPI, "
-            "child care subsidies, CVRP, CARE, FERA and three Los Angeles "
-            "programs; no Medi-Cal or CalWORKs); California's employee SDI "
-            "contribution is reported separately. Federal net revenue is the "
-            "all-government change less every state's net change and less state "
-            "payroll taxes (employee and employer) and local taxes, which the "
-            "all-government total counts but no state's line holds; "
-            "federal_net_published_definition_change_b keeps them, as the published "
-            "site does. Each shifted branch prices Medicaid enrollees at the "
-            "baseline's cost per enrollee (the baseline's "
-            "medicaid_slcsp_state_denominator), so state Medicaid totals move with "
-            "enrollment. The *_with_health_tanf fields "
-            "also charge each state its share of Medicaid, CHIP and Medicare "
-            "Savings Program costs under federal matching rules (state_benefit_cost), "
-            "the whole cost of coverage it funds alone for people whose immigration "
-            "status rules out federal matching (CHIP coverage through the "
-            "unborn-child option keeps its federal match), its own health subsidies "
-            "(for California, the Covered California premium subsidy; Healthier "
-            "Oregon only for people not also enrolled in Medicaid) and the TANF "
-            "change its line doesn't already hold (CalWORKs for California; "
-            "Massachusetts's TAFDC already sits in its state benefits), since the "
-            "federal TANF block grant is fixed; the all-government total adds every "
-            "program in healthcare_benefit_value and counts TANF once. "
-            "'levels' allocate the new capital income across the country, as the "
-            "published sweep does; 'within_state_levels' give each state's freed "
-            "labor income to that state's own capital holders."
-        ),
+        "description": RUN_DESCRIPTION,
         "metadata": {
             "policyengine_version": bundle.get("policyengine_version")
             or _package_version("policyengine"),
