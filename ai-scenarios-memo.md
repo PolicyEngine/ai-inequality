@@ -308,8 +308,8 @@ the levels are context, the deltas are the result.
 
 **Stability across data builds.** We first computed these results on build o
 (22 July) of our Microcosm microdata, then reran them on build p (28 July, with
-revised capital gains calibration) under the identical model version, changing
-only the data. Both runs predate the Head Start correction, so this
+revised capital gains calibration) under the identical model version. Both
+runs predate the Head Start correction, so this
 comparison uses the net-income accounting they shared. No scenario's revenue
 estimate moved by more than $5.9B:
 Moderate and Rapid by at most 2.8%, and the Slow cells, whose revenue changes
