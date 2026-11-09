@@ -1,9 +1,10 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { PolicyEngineShell } from "@policyengine/ui-kit/layout";
 import { fireEvent, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { memoMarkdown } from "./data/memoContent";
 import BudgetLabMemo from "./views/BudgetLabMemo";
@@ -35,6 +36,17 @@ const PAGES_SHOWING_RETIRED_NAMES = [
   // The Python page's example loads the earlier dataset, and the model docs'
   // pipeline diagram names it.
   /^https?:\/\/(?:www\.)?policyengine\.org\/us\/(?:python|model\/data\/pipeline)\/?(?:[?#]|$)/i,
+  // The research listing shows a card for a post that names the earlier
+  // dataset.
+  /^https?:\/\/(?:www\.)?policyengine\.org\/us\/research\/?(?:[?#]|$)/i,
+];
+
+// Links in @policyengine/ui-kit's shared header and footer, which wrap every
+// page here as on policyengine.org, that open a page listed above. Remove one
+// once its page stops showing a retired name.
+const SHELL_LINKS_TO_RETIRED_PAGES = [
+  "https://policyengine.org/us/research",
+  "https://policyengine.org/us/python",
 ];
 
 const ROOT = process.cwd();
@@ -99,10 +111,12 @@ const sourceText = (path) =>
     : read(path);
 
 // Media can show text too, but this test can't read pixels, so check new images
-// by eye. Documents hold text it can't parse, so each needs a reviewed entry.
+// by eye. Documents and archives hold text it can't parse, so each needs a
+// reviewed entry.
 const MEDIA =
   /\.(?:png|jpe?g|gif|webp|avif|bmp|ico|woff2?|ttf|otf|eot|mp3|mp4|webm|mov|wav)$/i;
-const DOCUMENTS = /\.(?:pdf|docx?|pptx?|xlsx?|odt|odp|ods|epub|zip)$/i;
+const DOCUMENTS =
+  /\.(?:pdf|docx?|pptx?|xlsx?|odt|odp|ods|epub|zip|gz|tgz|tar|7z|rar|bz2|xz)$/i;
 // Documents in public/ that someone has read in full and found clean.
 const CHECKED_DOCUMENTS = [];
 const MARKUP = /\.(?:html?|svg|xml)$/i;
@@ -114,12 +128,20 @@ const publicText = publicFiles.filter(
 
 const URL_PATTERN = /https?:\/\/[^\s"'`<>()\\]+/g;
 
-// A frozen id can reach a page only through code that reads the data key
-// holding it. AIScenarios reads this one and prints microcosmBuildLabel's
-// label instead; any new read fails until someone confirms it prints no id.
-const ALLOWED_READS = ["src/components/AIScenarios.jsx: certifiedDataBuildId"];
+// A frozen id can reach a page only through code that names the data key
+// holding it. AIScenarios names this one only inside the call below, which
+// turns the id into a label. Any other mention of such a key fails until
+// someone confirms that it prints no id.
+const ALLOWED_READS = [
+  {
+    path: "src/components/AIScenarios.jsx",
+    key: "certifiedDataBuildId",
+    call: "microcosmBuildLabel(metadata.certifiedDataBuildId)",
+  },
+];
 
-// Toggles and disclosure controls that change what a page shows.
+// Toggles and disclosure controls that change what a page shows, and anything
+// styled with a pointer cursor, such as the research page's expandable cards.
 const CONTROLS = [
   "button[aria-pressed]",
   "button[aria-expanded]",
@@ -129,7 +151,12 @@ const CONTROLS = [
   "[role=checkbox]",
   "input[type=radio]",
   "input[type=checkbox]",
+  '[style*="cursor: pointer"]',
 ].join(",");
+
+// Radio groups, tab lists and selects each hold one value, and choosing one of
+// their options sets that value whatever the page showed before.
+const SETTERS = "[role=radiogroup],[role=tablist],select";
 
 // The country switch swaps the whole page. PAGES renders each country on its
 // own, so the sweep leaves the switch alone.
@@ -139,32 +166,53 @@ const COUNTRY_SWITCH = '[role=radiogroup][aria-label="Country"]';
 // others on every click, so it fails instead of looping.
 const MAX_CLICKS_PER_PASS = 500;
 
-// Renders a page, works each control and each select option, and records the
-// text, title, attribute values and links of every state it reaches.
+// Renders a page, works each control and option, and checks the text, title
+// and attribute values of every state it reaches. Returns the page's starting
+// text, the retired names it found, and every link it saw.
 function sweep(entry, View) {
   const body = document.body;
-  const states = [];
+  const found = { text: "", shown: new Set(), links: new Set() };
   const mount = () =>
     render(
       <MemoryRouter initialEntries={[entry]}>
         <View />
       </MemoryRouter>,
     );
+  const notCountry = (element) => !element.closest(COUNTRY_SWITCH);
   const controls = () =>
-    [...body.querySelectorAll(CONTROLS)].filter(
-      (control) => !control.closest(COUNTRY_SWITCH),
-    );
+    [...body.querySelectorAll(CONTROLS)].filter(notCountry);
+  const setters = () => [...body.querySelectorAll(SETTERS)].filter(notCountry);
+  const isSelect = (setter) => setter.matches("select");
+  const options = (setter) =>
+    isSelect(setter)
+      ? [...setter.options]
+      : [...setter.querySelectorAll("[role=radio],[role=tab]")];
+  const chosen = (setter) =>
+    isSelect(setter)
+      ? setter.options[setter.selectedIndex]
+      : options(setter).find(
+          (option) =>
+            option.getAttribute("aria-checked") === "true" ||
+            option.getAttribute("aria-selected") === "true",
+        );
+  const choose = (setter, option) =>
+    isSelect(setter)
+      ? fireEvent.change(setter, { target: { value: option.value } })
+      : fireEvent.click(option);
+  const name = (element) =>
+    (element.getAttribute("aria-label") ?? element.textContent)
+      .trim()
+      .slice(0, 40);
   const record = (label) => {
     const attributes = [...body.querySelectorAll("*")].flatMap((element) =>
       [...element.attributes].map((attribute) => attribute.value),
     );
-    states.push({
-      label,
-      texts: [body.textContent, document.title, ...attributes],
-      links: [...body.querySelectorAll("a[href]")].map((link) =>
-        link.getAttribute("href"),
-      ),
-    });
+    for (const text of [body.textContent, document.title, ...attributes]) {
+      if (showsRetiredName(text)) found.shown.add(`${label}: ${excerpt(text)}`);
+    }
+    for (const link of body.querySelectorAll("a[href]")) {
+      found.links.add(link.getAttribute("href"));
+    }
   };
   // Clicks every control the page shows, in page order and including any a
   // click reveals, until none is left unclicked. Returns the positions of the
@@ -188,18 +236,14 @@ function sweep(entry, View) {
   };
 
   let { unmount } = mount();
+  found.text = body.textContent;
   record("initial");
   const hidden = clickAll("first pass");
-  const selectCount = body.querySelectorAll("select").length;
-  for (let index = 0; index < selectCount; index += 1) {
-    const values = [
-      ...(body.querySelectorAll("select")[index]?.options ?? []),
-    ].map((option) => option.value);
-    for (const value of values) {
-      const select = body.querySelectorAll("select")[index];
-      if (!select) break;
-      fireEvent.change(select, { target: { value } });
-      record(`select ${index} = ${value}`);
+  for (const select of setters().filter(isSelect)) {
+    for (const option of options(select)) {
+      if (!select.isConnected) break;
+      choose(select, option);
+      record(`${name(select)} = ${option.value}`);
     }
   }
   clickAll("second pass");
@@ -214,7 +258,37 @@ function sweep(entry, View) {
     clickAll(`after control ${index}`);
     unmount();
   }
-  return states;
+
+  // Pairs each option of every group the page starts with with each option of
+  // every other group shown alongside it. Each first group gets a fresh
+  // render, and each second group returns to its starting option before the
+  // next one, so no choice hides the groups after it.
+  ({ unmount } = mount());
+  const groups = setters().length;
+  unmount();
+  for (let first = 0; first < groups; first += 1) {
+    ({ unmount } = mount());
+    const group = setters()[first];
+    for (const option of options(group)) {
+      choose(group, option);
+      const firstChoice = `${name(group)} = ${name(option)}`;
+      record(firstChoice);
+      const shown = setters().length;
+      for (let index = 0; index < shown; index += 1) {
+        const other = setters()[index];
+        if (!other || other === group) continue;
+        const start = chosen(other);
+        for (const second of options(other)) {
+          if (!second.isConnected) break;
+          choose(other, second);
+          record(`${firstChoice}, ${name(other)} = ${name(second)}`);
+        }
+        if (start?.isConnected) choose(other, start);
+      }
+    }
+    unmount();
+  }
+  return found;
 }
 
 const PAGES = [
@@ -231,22 +305,48 @@ const PAGES = [
 ];
 
 describe("retired dataset names", () => {
+  // The uprating explorer fetches its table from public/, which the tests
+  // below read directly, so the sweep leaves the explorer loading.
+  beforeAll(() => {
+    vi.stubGlobal("fetch", () => new Promise(() => {}));
+  });
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
+
   it.each(PAGES)(
     "%s shows none in any state and links no page that does",
     (entry, View) => {
-      const states = sweep(entry, View);
-      expect(states[0].texts[0].length).toBeGreaterThan(200);
-      const shown = states.flatMap(({ label, texts }) =>
-        texts
-          .filter(showsRetiredName)
-          .map((text) => `${label}: ${excerpt(text)}`),
-      );
-      expect([...new Set(shown)]).toEqual([]);
-      const links = new Set(states.flatMap((state) => state.links));
+      const { text, shown, links } = sweep(entry, View);
+      expect(text.length).toBeGreaterThan(200);
+      expect([...shown]).toEqual([]);
       expect([...links].filter(linksRetiredPage)).toEqual([]);
     },
     60_000,
   );
+
+  it("shows none in the shared header and footer, which link only the known pages that do", () => {
+    render(
+      <PolicyEngineShell country="us">
+        <p>Page</p>
+      </PolicyEngineShell>,
+    );
+    const body = document.body;
+    const attributes = [...body.querySelectorAll("*")].flatMap((element) =>
+      [...element.attributes].map((attribute) => attribute.value),
+    );
+    expect([body.textContent, ...attributes].filter(showsRetiredName)).toEqual(
+      [],
+    );
+    const links = new Set(
+      [...body.querySelectorAll("a[href]")].map((link) =>
+        link.getAttribute("href"),
+      ),
+    );
+    expect([...links].filter(linksRetiredPage)).toEqual(
+      SHELL_LINKS_TO_RETIRED_PAGES,
+    );
+  });
 
   it("stays out of the generated memo", () => {
     expect(memoMarkdown.length).toBeGreaterThan(1000);
@@ -307,14 +407,26 @@ describe("retired dataset names", () => {
       .forEach((path) => collect(JSON.parse(read(path))));
 
     const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const keyPattern = (key) => new RegExp(`\\b${escape(key)}\\b`);
+    const allowed = (path, key) =>
+      ALLOWED_READS.some((entry) => entry.path === path && entry.key === key);
     const reads = siteCode
       .filter((path) => !path.startsWith("src/data/"))
       .flatMap((path) => {
         const code = read(path);
         return [...keys]
-          .filter((key) => new RegExp(`\\b${escape(key)}\\b`).test(code))
+          .filter((key) => keyPattern(key).test(code) && !allowed(path, key))
           .map((key) => `${path}: ${key}`);
       });
-    expect(reads.filter((entry) => !ALLOWED_READS.includes(entry))).toEqual([]);
+    expect(reads).toEqual([]);
+
+    // Each allowed key appears only inside its call, so the page prints the
+    // label and never the id.
+    for (const { path, key, call } of ALLOWED_READS) {
+      const code = read(path);
+      const mentions = code.split(keyPattern(key)).length - 1;
+      const calls = code.split(call).length - 1;
+      expect(`${path}: ${key} x${mentions}`).toBe(`${path}: ${key} x${calls}`);
+    }
   });
 });
