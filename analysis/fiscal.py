@@ -240,7 +240,7 @@ def net_fiscal_impact(components, baseline_components):
 def federal_chart_change(delta):
     """The US federal chart's total, built from ``net_fiscal_impact`` deltas.
 
-    Mirrors ``buildFederalRow`` in ``src/components/ShiftSweep.jsx``: federal
+    Mirrors ``federalRow`` in ``src/utils/sweepRevenue.js``: federal
     income tax less federal refundable credits, payroll taxes (employee Social
     Security and Medicare, self-employment and every employer payroll tax), less
     benefits outside ``household_state_benefits`` and TANF, less the federal
@@ -267,7 +267,7 @@ def federal_chart_change(delta):
 def states_chart_change(delta):
     """Every state chart's total added up, from national ``net_fiscal_impact`` deltas.
 
-    Mirrors ``buildStateRow`` in ``src/components/ShiftSweep.jsx``: state tax
+    Mirrors ``stateDeltaRow`` in ``src/utils/sweepRevenue.js``: state tax
     before refundable credits, less refundable state credits, the benefits in
     ``household_state_benefits``, the TANF those benefits don't already hold,
     and the states' health spending.
