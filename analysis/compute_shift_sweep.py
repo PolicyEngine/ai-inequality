@@ -4,6 +4,17 @@ Runs the shift at 0%, 10%, 20%, ..., 100% and records:
   - Net income Gini and market Gini
   - SPM poverty rate
   - Revenue decomposition: income tax, payroll, EITC, CTC, SNAP
+  - Health spending and TANF by payer, which the revenue totals pay for
+
+``total_rev_change_b`` (and its alias ``revenue_change_b``) counts health
+coverage and TANF: it is ``fiscal.net_fiscal_impact``'s
+``total_change_with_health_tanf``. Each state's ``state_net_change_b`` likewise
+nets its share of health spending and its TANF. The rows keep the totals
+without them (``total_rev_change_excluding_health_b``,
+``total_rev_change_published_definition_b`` and each state's
+``state_net_excluding_health_tanf_change_b``). Every shifted branch prices
+Medicaid enrollees at the baseline's cost per enrollee
+(``health_tanf.price_medicaid_at_baseline``).
 """
 
 import gc
@@ -13,8 +24,10 @@ from importlib.metadata import PackageNotFoundError, version
 
 import numpy as np
 
+from . import health_tanf
 from .constants import CAPITAL_INCOME_VARS, YEAR
 from .fiscal import (
+    OUTSIDE_CHART_TAXES,
     net_fiscal_impact,
     revenue_components,
     state_revenue_components,
@@ -32,7 +45,15 @@ SHIFT_LEVELS = [pct / 100 for pct in range(0, 101, 10)]
 # Fiscal fields attached to each scenario row. The bucket names are the
 # storytelling primitives for the website chart and the EA Forum post.
 _FISCAL_FIELDS = [
-    ("total_rev_change_b", "total_change"),
+    # All governments, counting health coverage and TANF once.
+    ("total_rev_change_b", "total_change_with_health_tanf"),
+    # The same less health spending, with TANF counted once.
+    ("total_rev_change_excluding_health_b", "total_change_excluding_health"),
+    # Taxes less household_refundable_tax_credits and household_benefits, as
+    # the site defined the total before it counted health coverage and TANF:
+    # no health spending, and TANF twice where household_state_benefits also
+    # lists a state's program.
+    ("total_rev_change_published_definition_b", "total_change"),
     # Non-overlapping top-line aggregates.
     ("household_tax_change_b", "household_tax_before_refundable_credits_change"),
     ("refundable_credits_change_b", "household_refundable_tax_credits_change"),
@@ -66,11 +87,25 @@ _FISCAL_FIELDS = [
     ("ssi_change_b", "ssi_change"),
     ("tanf_change_b", "tanf_change"),
     ("wic_change_b", "wic_change"),
-    ("health_benefits_change_b", "health_benefits_change"),
+    # Health spending by payer (health_tanf), which household benefits leave out.
+    ("health_change_b", "health_total_change"),
+    ("health_federal_change_b", "federal_health_change"),
+    ("health_state_change_b", "state_health_change"),
+    ("health_value_change_b", "health_value_change"),
+    ("healthier_oregon_overlap_change_b", "healthier_oregon_overlap_change"),
+    ("state_only_coverage_change_b", "state_only_coverage_change"),
+    # TANF the states pay that household_state_benefits doesn't already hold,
+    # and the TANF it does hold, which household_benefits counts twice.
+    ("tanf_state_charge_change_b", "tanf_charge_change"),
+    ("tanf_counted_twice_change_b", "tanf_in_state_benefits_change"),
+    # Taxes the totals count that no chart band holds.
+    ("taxes_outside_charts_change_b", "taxes_outside_charts_change"),
+    *((f"{variable}_change_b", f"{variable}_change") for variable in OUTSIDE_CHART_TAXES),
     # Identity diagnostics.
     ("market_income_change_b", "household_market_income_change"),
     ("net_income_change_b", "household_net_income_change"),
     ("identity_residual_b", "_identity_residual"),
+    ("chart_identity_residual_b", "_chart_identity_residual"),
 ]
 
 # Legacy aliases preserved so downstream code/tests reading older keys still
@@ -83,7 +118,10 @@ _LEGACY_ALIASES = {
 
 
 def _fiscal_row(delta):
-    row = {name: delta.get(key, 0.0) / 1e9 for name, key in _FISCAL_FIELDS}
+    missing = [key for _, key in _FISCAL_FIELDS if key not in delta]
+    if missing:
+        raise KeyError(f"net_fiscal_impact returned no {missing}")
+    row = {name: delta[key] / 1e9 for name, key in _FISCAL_FIELDS}
     for alias, source in _LEGACY_ALIASES.items():
         row[alias] = row[source]
     return row
@@ -96,64 +134,84 @@ def _zero_fiscal_row():
     return row
 
 
+#: Each state's health and TANF fields, as (row field, state component).
+_STATE_HEALTH_TANF_FIELDS = (
+    ("state_health_change_b", "state_health"),
+    ("federal_health_change_b", "federal_health"),
+    ("health_change_b", "health_total"),
+    ("state_only_coverage_change_b", "state_only_coverage"),
+    ("healthier_oregon_overlap_change_b", "healthier_oregon_overlap"),
+    ("tanf_change_b", "tanf"),
+    ("tanf_state_charge_change_b", "tanf_charge"),
+    ("tanf_in_state_benefits_change_b", "tanf_in_state_benefits"),
+)
+
+
 def _state_delta_rows(scenario_states, baseline_states):
-    """Return per-state delta dicts keyed by two-letter state code, in $B."""
+    """Return per-state delta dicts keyed by two-letter state code, in $B.
+
+    ``state_net_change_b`` is state tax less refundable state credits, the
+    benefits in ``household_state_benefits``, the state's TANF that those
+    benefits don't already hold, and the state's share of health spending.
+    ``state_net_excluding_health_tanf_change_b`` leaves out the last two, as
+    the site's state measure did before it counted them. Refuses state
+    components built without a ``health_frame``.
+    """
+    for states in (scenario_states, baseline_states):
+        for code, components in states.items():
+            if "state_health" not in components:
+                raise KeyError(
+                    f"{code}: the state components carry no health spending; pass "
+                    "a health_frame to state_revenue_components"
+                )
     # Sorted so the output's key order does not depend on the hash seed.
     codes = sorted(set(scenario_states) | set(baseline_states))
     rows = {}
     for code in codes:
         scen = scenario_states.get(code, {})
         base = baseline_states.get(code, {})
-        state_tax = (
-            scen.get("household_state_tax_before_refundable_credits", 0.0)
-            - base.get("household_state_tax_before_refundable_credits", 0.0)
-        )
-        state_credits = (
-            scen.get("household_refundable_state_tax_credits", 0.0)
-            - base.get("household_refundable_state_tax_credits", 0.0)
-        )
-        state_benefits = (
-            scen.get("household_state_benefits", 0.0)
-            - base.get("household_state_benefits", 0.0)
-        )
-        fed_tax_before = (
-            scen.get("household_tax_before_refundable_credits", 0.0)
-            - base.get("household_tax_before_refundable_credits", 0.0)
-        )
-        fed_refundable = (
-            scen.get("household_refundable_tax_credits", 0.0)
-            - base.get("household_refundable_tax_credits", 0.0)
-        )
-        hh_benefits = (
-            scen.get("household_benefits", 0.0) - base.get("household_benefits", 0.0)
-        )
-        rows[code] = {
+
+        def change(component, scen=scen, base=base):
+            return scen.get(component, 0.0) - base.get(component, 0.0)
+
+        state_tax = change("household_state_tax_before_refundable_credits")
+        state_credits = change("household_refundable_state_tax_credits")
+        state_benefits = change("household_state_benefits")
+        excluding = state_tax - state_credits - state_benefits
+        row = {
             "state_tax_before_refundable_credits_change_b": state_tax / 1e9,
             "state_refundable_credits_change_b": state_credits / 1e9,
             "state_benefits_change_b": state_benefits / 1e9,
-            "state_net_change_b": (state_tax - state_credits - state_benefits) / 1e9,
-            "household_tax_before_refundable_credits_change_b": fed_tax_before / 1e9,
-            "household_refundable_tax_credits_change_b": fed_refundable / 1e9,
-            "household_benefits_change_b": hh_benefits / 1e9,
-            "eitc_change_b": (scen.get("eitc", 0.0) - base.get("eitc", 0.0)) / 1e9,
-            "snap_change_b": (scen.get("snap", 0.0) - base.get("snap", 0.0)) / 1e9,
-            "capital_gains_tax_change_b": (
-                scen.get("capital_gains_tax", 0.0)
-                - base.get("capital_gains_tax", 0.0)
+            "state_net_change_b": (
+                excluding - change("tanf_charge") - change("state_health")
             ) / 1e9,
-            "amt_change_b": (
-                scen.get("alternative_minimum_tax", 0.0)
-                - base.get("alternative_minimum_tax", 0.0)
-            ) / 1e9,
-            "niit_change_b": (
-                scen.get("net_investment_income_tax", 0.0)
-                - base.get("net_investment_income_tax", 0.0)
-            ) / 1e9,
-            "household_weight": scen.get(
-                "household_weight", base.get("household_weight", 0.0)
-            ),
+            "state_net_excluding_health_tanf_change_b": excluding / 1e9,
         }
+        row.update(
+            {field: change(component) / 1e9 for field, component in _STATE_HEALTH_TANF_FIELDS}
+        )
+        row.update(
+            {
+                "household_tax_before_refundable_credits_change_b": change(
+                    "household_tax_before_refundable_credits"
+                ) / 1e9,
+                "household_refundable_tax_credits_change_b": change(
+                    "household_refundable_tax_credits"
+                ) / 1e9,
+                "household_benefits_change_b": change("household_benefits") / 1e9,
+                "eitc_change_b": change("eitc") / 1e9,
+                "snap_change_b": change("snap") / 1e9,
+                "capital_gains_tax_change_b": change("capital_gains_tax") / 1e9,
+                "amt_change_b": change("alternative_minimum_tax") / 1e9,
+                "niit_change_b": change("net_investment_income_tax") / 1e9,
+                "household_weight": scen.get(
+                    "household_weight", base.get("household_weight", 0.0)
+                ),
+            }
+        )
+        rows[code] = row
     return rows
+
 
 OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "outputs", "shift_sweep.json")
 MICRODATA_OUTPUT_DIR = os.path.join(
@@ -392,6 +450,8 @@ def _metadata(baseline):
         "dataset_uri": bundle.get("runtime_dataset_uri"),
         "policyengine_bundle": bundle or None,
         "baseline_facts": _baseline_facts(baseline),
+        # total_rev_change_b and each state's state_net_change_b net these.
+        "health_tanf_programs": health_tanf.programs_metadata(baseline, YEAR),
     }
 
 
@@ -406,7 +466,9 @@ def run_shift_sweep(
 
     Each shift level is simulated from a fresh baseline microsimulation. This
     avoids retaining many live PolicyEngine branches in memory at once, which
-    becomes expensive when sweeping the full 0–100% grid.
+    becomes expensive when sweeping the full 0–100% grid. Each shifted branch
+    takes the baseline's Medicaid denominator before it calculates anything,
+    so its Medicaid enrollees cost what they cost in the baseline.
     """
     if shift_levels is None:
         shift_levels = SHIFT_LEVELS
@@ -423,8 +485,11 @@ def run_shift_sweep(
         else []
     )
     base_metrics = _extract_results(baseline, "Baseline")
-    base_rev = revenue_components(baseline)
-    base_states = state_revenue_components(baseline)
+    base_frame = health_tanf.household_frame(baseline, YEAR)
+    base_rev = revenue_components(baseline, health_frame=base_frame)
+    base_states = state_revenue_components(baseline, health_frame=base_frame)
+    medicaid_denominator = health_tanf.medicaid_denominator(baseline, YEAR)
+    del base_frame
     metadata = _metadata(baseline)
     microdata_files = []
     if microdata_output_dir:
@@ -473,6 +538,8 @@ def run_shift_sweep(
 
         sim = microsim_factory()
         branch, _ = _apply_shift(sim, f"sweep_{int(pct * 100)}", pct)
+        # Before anything reads Medicaid costs, so new enrollees add cost.
+        health_tanf.price_medicaid_at_baseline(branch, medicaid_denominator, YEAR)
         # Compute MTRs on a freshly-shifted branch before any downstream
         # metrics populate PE's memoization cache.
         scenario_mtrs = (
@@ -481,9 +548,11 @@ def run_shift_sweep(
             else []
         )
         metrics = _extract_results(branch, label)
-        rev = revenue_components(branch)
+        frame = health_tanf.household_frame(branch, YEAR)
+        rev = revenue_components(branch, health_frame=frame)
         delta = net_fiscal_impact(rev, base_rev)
-        scenario_states = state_revenue_components(branch)
+        scenario_states = state_revenue_components(branch, health_frame=frame)
+        del frame
         state_deltas = _state_delta_rows(scenario_states, base_states)
         if microdata_output_dir:
             if verbose:
@@ -522,8 +591,15 @@ def run_shift_sweep(
         if verbose:
             print(f"  Net Gini: {metrics['net_gini']:.4f}  Market Gini: {metrics['market_gini']:.4f}")
             print(f"  Poverty: {metrics['spm_poverty_rate']:.2%}")
-            print(f"  Revenue change: ${delta['total_change']/1e9:+.1f}B")
-            print(f"  Identity residual: ${delta['_identity_residual']/1e9:+.2f}B")
+            print(
+                f"  Revenue change: ${delta['total_change_with_health_tanf']/1e9:+.1f}B "
+                f"(health ${-delta['health_total_change']/1e9:+.1f}B; "
+                f"without health ${delta['total_change_excluding_health']/1e9:+.1f}B)"
+            )
+            print(
+                f"  Identity residuals: net income ${delta['_identity_residual']/1e9:+.2f}B, "
+                f"charts ${delta['_chart_identity_residual']/1e9:+.3f}B"
+            )
 
         del branch
         del sim

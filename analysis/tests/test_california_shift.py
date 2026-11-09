@@ -60,36 +60,34 @@ from hypothesis import strategies as st
 
 from analysis.california_shift import (
     CAPITAL_INCOME_VARS,
-    FEDERAL_HEALTH,
-    FEDERAL_SHARE_COSTS,
-    FMAP_SPLIT_HEALTH,
     GROUPS,
     LABOR_VARS,
     LOCAL_TAXES,
-    MEDICAID_DENOMINATOR,
     OTHER_TAX_VARIABLES,
     STATE,
-    STATE_HEALTH,
-    STATE_HEALTH_UNLISTED,
     STATE_PAYROLL_TAXES,
-    STATE_SHARE_COSTS,
     _apply_within_state_shift,
     _baseline_concentration,
     _california_rows,
-    _check_health_lists,
-    _check_health_split,
-    _federally_eligible_status,
     _freed_labor,
     _health_tanf_accounting,
     _outside_state_measure,
     _price_medicaid_at_baseline,
     _scale_by_state,
-    _state_only_federal_share,
-    _tanf_states_in_state_benefits,
     _weighted_rank,
     _weighted_sum_by,
     _with_derived,
     _within_state_scales,
+)
+from analysis.health_tanf import (
+    FEDERAL_SHARE_COSTS,
+    MEDICAID_DENOMINATOR,
+    check_health_split,
+    federally_eligible_status,
+    health_programs,
+    state_only_coverage,
+    state_only_federal_share,
+    tanf_states_in_state_benefits,
 )
 
 VALUE_KEYS = (
@@ -553,6 +551,12 @@ def test_summary_reads_a_run():
     assert "(with health and TANF +4.00B)" in text
     assert "Published: California +5.00B (+0.0%)" in text
     assert "Within-state variant" not in text
+    # A run from before the shift set the stored labor inputs carries the
+    # caveat on its TANF lines; a later run says it sets them and prints none.
+    assert "*_before_lsr inputs see pre-shift earnings" in text
+    run["metadata"]["sets_stored_labor_inputs"] = True
+    assert "_before_lsr" not in summarize(run, published)
+    del run["metadata"]["sets_stored_labor_inputs"]
 
     within_ca = dict(ca, state_net_change_b=3.5, market_income_change_b=0.0)
     run["within_state_levels"] = [
@@ -795,6 +799,9 @@ def test_run_records_both_allocations(monkeypatch):
     )
     monkeypatch.setattr(cs, "_household_frame", lambda sim: frame)
     monkeypatch.setattr(cs, "_medicaid_denominator", lambda sim: np.array([7.0, 8.0, 9.0]))
+    monkeypatch.setattr(
+        cs.health_tanf, "programs_metadata", lambda sim, year: {"state": ["co_omnisalud"]}
+    )
 
     # One California household leaves three of the four groups empty, so their
     # mean income divides by zero; the real data fills every group.
@@ -811,6 +818,8 @@ def test_run_records_both_allocations(monkeypatch):
     assert row["other_states_net_change_b"] == pytest.approx(-1.0)
     assert row["states_gaining"] == [STATE]
     assert out["metadata"]["policyengine_version"] == "test"
+    assert out["metadata"]["sets_stored_labor_inputs"] is True
+    assert out["metadata"]["health_tanf_programs"] == {"state": ["co_omnisalud"]}
     # The fake changes no health spending or TANF, so those fields match the sweep's.
     assert row["federal_net_with_health_tanf_change_b"] == pytest.approx(row["federal_net_change_b"])
     assert row["other_states_net_with_health_tanf_change_b"] == pytest.approx(-1.0)
@@ -922,7 +931,7 @@ def test_health_spending_is_conserved(pair):
             atol=1e-6,
         )
         # Generated frames satisfy the run's own checks.
-        _check_health_split(frame)
+        check_health_split(frame)
 
 
 @settings(max_examples=300, deadline=None)
@@ -991,11 +1000,11 @@ def test_tanf_a_state_line_already_holds_is_charged_once():
     assert out["tanf_counted_twice_change_b"] == pytest.approx(1.0)
 
 
-def test_tanf_states_in_state_benefits():
+def testtanf_states_in_state_benefits():
     programs = ["ca_tanf", "ma_tafdc", "ny_tanf", "vt_reach_up"]
-    assert _tanf_states_in_state_benefits(programs, ["ma_tafdc", "ca_capi", "ma_eaedc"]) == ["MA"]
-    assert _tanf_states_in_state_benefits(programs, ["ca_capi"]) == []
-    assert _tanf_states_in_state_benefits(programs, ["vt_reach_up", "ma_tafdc"]) == ["MA", "VT"]
+    assert tanf_states_in_state_benefits(programs, ["ma_tafdc", "ca_capi", "ma_eaedc"]) == ["MA"]
+    assert tanf_states_in_state_benefits(programs, ["ca_capi"]) == []
+    assert tanf_states_in_state_benefits(programs, ["vt_reach_up", "ma_tafdc"]) == ["MA", "VT"]
 
 
 def test_state_only_coverage_moves_to_the_state():
@@ -1012,7 +1021,7 @@ def test_state_only_coverage_moves_to_the_state():
         state_health_split=[500.0],
         state_only_coverage=[500.0],
     )
-    _check_health_split(scen)
+    check_health_split(scen)
     out = _health_tanf_accounting(base, scen, {STATE: 0.0}, 0.0)
     assert out["state_net_with_health_tanf_change_b"][STATE] == pytest.approx(-1000.0)
     assert out["health_federal_change_b"] == pytest.approx(0.0)
@@ -1025,7 +1034,7 @@ def test_check_health_split_refuses_gaps():
         [STATE], [1.0], fmap_split_cost=[100.0], federal_health_split=[50.0], state_health_split=[40.0]
     )
     with pytest.raises(AssertionError, match="differ"):
-        _check_health_split(gap)
+        check_health_split(gap)
     overmoved = _frame(
         [STATE],
         [1.0],
@@ -1035,53 +1044,7 @@ def test_check_health_split_refuses_gaps():
         state_only_coverage=[60.0],
     )
     with pytest.raises(AssertionError, match="moves more"):
-        _check_health_split(overmoved)
-
-
-LISTED_HEALTH = list(FMAP_SPLIT_HEALTH) + list(FEDERAL_HEALTH) + list(STATE_HEALTH)
-EVERY_HEALTH = LISTED_HEALTH + list(STATE_HEALTH_UNLISTED)
-
-
-def _health_parameters(flag=False, health=None, federal=None, state=None, state_benefits=None):
-    household = SimpleNamespace(
-        household_health_benefits=health or LISTED_HEALTH,
-        federal_benefit_cost=federal or list(FEDERAL_SHARE_COSTS),
-        state_benefit_cost=state or list(STATE_SHARE_COSTS),
-        household_state_benefits=state_benefits or ["ca_capi", "ma_tafdc"],
-    )
-    simulation = SimpleNamespace(include_health_benefits_in_net_income=flag)
-    return SimpleNamespace(gov=SimpleNamespace(household=household, simulation=simulation))
-
-
-def test_check_health_lists():
-    _check_health_lists(_health_parameters(), EVERY_HEALTH)
-    # Releases after policyengine-us 2.2.1 list the five state subsidies in
-    # household_health_benefits too; the classification is the same.
-    _check_health_lists(_health_parameters(health=EVERY_HEALTH), EVERY_HEALTH)
-    # That longer list gets the same checks.
-    with pytest.raises(ValueError, match="new_program"):
-        _check_health_lists(_health_parameters(health=EVERY_HEALTH + ["new_program"]), EVERY_HEALTH)
-    dropped = LISTED_HEALTH[0]
-    with pytest.raises(ValueError, match=f"missing.*{dropped}"):
-        _check_health_lists(
-            _health_parameters(health=[p for p in EVERY_HEALTH if p != dropped]), EVERY_HEALTH
-        )
-    with pytest.raises(ValueError, match="twice"):
-        _check_health_lists(_health_parameters(flag=True), EVERY_HEALTH)
-    with pytest.raises(ValueError, match="new_program"):
-        _check_health_lists(_health_parameters(health=LISTED_HEALTH + ["new_program"]), EVERY_HEALTH)
-    # A health program policyengine-us values but this module doesn't classify.
-    with pytest.raises(ValueError, match="healthcare_benefit_value.*new_subsidy"):
-        _check_health_lists(_health_parameters(), EVERY_HEALTH + ["new_subsidy"])
-    with pytest.raises(ValueError, match="missing.*wa_cascade_care_savings"):
-        _check_health_lists(_health_parameters(), EVERY_HEALTH[:-1])
-    with pytest.raises(ValueError, match="state_benefit_cost"):
-        _check_health_lists(_health_parameters(state=["medicaid_state_cost"]), EVERY_HEALTH)
-    # A health program the state measure already nets would count twice.
-    with pytest.raises(ValueError, match="ma_connector_care"):
-        _check_health_lists(
-            _health_parameters(state_benefits=["ca_capi", "ma_connector_care"]), EVERY_HEALTH
-        )
+        check_health_split(overmoved)
 
 
 def test_federally_eligible_status_examples():
@@ -1100,7 +1063,7 @@ def test_federally_eligible_status_examples():
         "TPS",
     ]
     years = [0, 5, 2, 0, 20, 20, 20]
-    got = _federally_eligible_status(statuses, years, p)
+    got = federally_eligible_status(statuses, years, p)
     assert got.tolist() == [True, True, False, True, False, False, False]
 
 
@@ -1141,7 +1104,7 @@ def test_federally_eligible_status_matches_policyengine():
     sim = Simulation(situation=_situation("TX", people))
     expected = np.asarray(sim.calculate("is_medicaid_immigration_status_eligible", 2026))
     p = sim.tax_benefit_system.parameters("2026-01-01").gov.hhs.medicaid.eligibility
-    got = _federally_eligible_status(statuses, years, p)
+    got = federally_eligible_status(statuses, years, p)
     assert got.tolist() == expected.tolist()
     assert got.any() and not got.all()
 
@@ -1149,8 +1112,6 @@ def test_federally_eligible_status_matches_policyengine():
 def test_state_only_coverage_matches_policyengine():
     pytest.importorskip("policyengine_us")
     from policyengine_us import Simulation
-
-    from analysis.california_shift import _state_only_coverage
 
     # A California household with no income: a citizen parent, a citizen child
     # and an undocumented child whom state-funded Medi-Cal covers. The
@@ -1167,7 +1128,7 @@ def test_state_only_coverage_matches_policyengine():
     federal = sum(np.asarray(sim.calculate(v, 2026), dtype=float) for v in FEDERAL_SHARE_COSTS)
     assert federal[2] > 0, "the undocumented child should be enrolled with a federal share booked"
     assert federal[1] > 0, "the citizen child should be enrolled with a federal share booked"
-    assert _state_only_coverage(sim).tolist() == pytest.approx([federal[2]])
+    assert state_only_coverage(sim, 2026).tolist() == pytest.approx([federal[2]])
 
 
 def test_state_only_federal_share_examples():
@@ -1181,7 +1142,7 @@ def test_state_only_federal_share_examples():
         "msp_federal_cost": [0.0, 0.0, 0.0, 10.0],
     }
     fcep = [False, True, False, False]
-    got = _state_only_federal_share(federal, shares, fcep)
+    got = state_only_federal_share(federal, shares, fcep)
     assert got.tolist() == [0.0, 0.0, 200.0, 910.0]
 
 
@@ -1195,7 +1156,7 @@ def test_state_only_federal_share_bounds(data):
         for v in FEDERAL_SHARE_COSTS
     }
     fcep = np.asarray(data.draw(st.lists(st.booleans(), min_size=n, max_size=n)))
-    moved = _state_only_federal_share(federal, shares, fcep)
+    moved = state_only_federal_share(federal, shares, fcep)
     total = sum(shares.values())
     assert (moved >= 0).all()
     assert (moved <= total + 1e-9).all()
@@ -1210,8 +1171,6 @@ def test_state_only_federal_share_bounds(data):
 def test_state_only_coverage_keeps_fcep_match_federal():
     pytest.importorskip("policyengine_us")
     from policyengine_us import Simulation
-
-    from analysis.california_shift import _state_only_coverage
 
     # Texas covers no undocumented adults in Medicaid, so an undocumented
     # pregnant woman with no income qualifies only through CHIP's unborn-child
@@ -1229,7 +1188,7 @@ def test_state_only_coverage_keeps_fcep_match_federal():
     assert np.asarray(sim.calculate("is_chip_fcep_eligible_person", 2026)).tolist() == [True]
     assert np.asarray(sim.calculate("chip_enrolled", 2026)).tolist() == [True]
     assert float(np.asarray(sim.calculate("chip_federal_cost", 2026))[0]) > 0
-    assert _state_only_coverage(sim).tolist() == pytest.approx([0.0])
+    assert state_only_coverage(sim, 2026).tolist() == pytest.approx([0.0])
 
 
 # --- Medicaid priced at the baseline ------------------------------------------
@@ -1277,31 +1236,31 @@ def test_medicaid_at_the_baseline_price_rises_with_enrollment():
     from policyengine_us import Microsimulation
 
     weights = np.asarray([1_000.0, 2_000.0, 1_500.0, 500.0])
-    dataset = _california_dataset([0.0, 5_000.0, 60_000.0, 90_000.0], weights)
+    income = np.asarray([0.0, 5_000.0, 60_000.0, 90_000.0])
+    dataset = _california_dataset(income, weights)
     base = Microsimulation(dataset=dataset)
     assert base.is_over_dataset
+    # A branch copies whatever its parent has already calculated, so both
+    # branches take the cut before the baseline calculates anything.
+    cut = np.where(income > 50_000, 10_000.0, income)
+    branches = {name: base.get_branch(name) for name in ("alone", "priced")}
+    for shifted in branches.values():
+        shifted.set_input("employment_income", 2026, cut)
     assert np.asarray(base.calculate("medicaid_enrolled", 2026)).tolist() == [True, True, False, False]
     base_cost = np.asarray(base.calculate("medicaid_cost", 2026), dtype=float)
     base_index = np.asarray(base.calculate("medicaid_slcsp_cost_index_filled", 2026), dtype=float)
     denominator = np.asarray(base.calculate(MEDICAID_DENOMINATOR, 2026), dtype=float)
-    income = np.asarray(base.calculate("employment_income", 2026), dtype=float)
-    cut = np.where(income > 50_000, 10_000.0, income)
-
-    def shifted(name, price_at_baseline):
-        branch = base.get_branch(name)
-        branch.set_input("employment_income", 2026, cut)
-        if price_at_baseline:
-            _price_medicaid_at_baseline(branch, denominator)
-        assert np.asarray(branch.calculate("medicaid_enrolled", 2026)).all()
-        return branch
+    _price_medicaid_at_baseline(branches["priced"], denominator)
+    for shifted in branches.values():
+        assert np.asarray(shifted.calculate("medicaid_enrolled", 2026)).all()
 
     # policyengine-us stores float32 values, so totals agree to about 1e-7.
     assert (base_cost[:2] > 0).all()
-    alone = np.asarray(shifted("alone", False).calculate("medicaid_cost", 2026), dtype=float)
+    alone = np.asarray(branches["alone"].calculate("medicaid_cost", 2026), dtype=float)
     assert (alone[2:] > 0).all()
     assert (alone * weights).sum() == pytest.approx((base_cost * weights).sum(), rel=1e-6)
 
-    branch = shifted("priced", True)
+    branch = branches["priced"]
     priced = np.asarray(branch.calculate("medicaid_cost", 2026), dtype=float)
     index = np.asarray(branch.calculate("medicaid_slcsp_cost_index_filled", 2026), dtype=float)
     np.testing.assert_allclose(priced[:2], base_cost[:2], rtol=1e-6)
@@ -1339,19 +1298,25 @@ def test_household_frame_drops_healthier_oregon_for_medicaid_enrollees():
     assert frame["healthier_oregon_overlap"].tolist() == pytest.approx([oregon])
     programs = sum(
         np.asarray(sim.calculate(v, 2026, map_to="household"), dtype=float)
-        for v in STATE_HEALTH + STATE_HEALTH_UNLISTED
+        for v in health_programs(sim, 2026)[2]
     )
     assert frame["state_health_programs"].tolist() == pytest.approx((programs - oregon).tolist())
     assert frame["state_health"][0] > 0 and frame["tanf_in_state_benefits"].tolist() == [0.0]
 
 
 def test_household_frame_carries_the_unlisted_state_subsidies():
-    # ConnectorCare sits in STATE_HEALTH_UNLISTED. A Massachusetts adult at
-    # $30,000 with ACA take-up draws it, and the frame's state spending must
-    # hold it, or those dollars would leave every state's line.
+    # ConnectorCare is one of the state subsidies policyengine-us 2.2.1's
+    # household_health_benefits leaves out. A Massachusetts adult at $30,000
+    # with ACA take-up draws it, and the frame's state spending must hold it,
+    # or those dollars would leave every state's line. Releases before 2.x
+    # don't model it.
     pytest.importorskip("policyengine_us")
     pd = pytest.importorskip("pandas")
     from policyengine_us import Microsimulation
+    from policyengine_us.system import system
+
+    if "ma_connector_care" not in system.variables:
+        pytest.skip("this policyengine-us doesn't model ConnectorCare")
 
     from analysis.california_shift import _household_frame
 
