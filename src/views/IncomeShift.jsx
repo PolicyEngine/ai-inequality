@@ -187,9 +187,10 @@ function IncomeShift() {
               <h2>The experiment</h2>
               <p>
                 We reduce positive employment and self-employment income by 0%
-                to 100% in 10-point steps, then redistribute the same weighted
-                total to positive capital income in proportion to existing
-                holdings.
+                to 100% in 10-point steps, then add the same weighted total to
+                positive capital income. One common factor scales every
+                positive amount, so each person gains in proportion to the
+                capital income they already receive.
               </p>
             </div>
             <div className="policy-analysis-brief-card">
