@@ -194,13 +194,13 @@ function UpratingViewer() {
           fontSize: "1.1rem",
         }}
       >
-        Explore <strong>{datasetCounts.parameters}</strong> of the parameters
-        and <strong>{datasetCounts.variables}</strong> of the variables that
+        Explore <strong>{datasetCounts.parameters} parameters</strong> and{" "}
+        <strong>{datasetCounts.variables} variables</strong> that
         PolicyEngine-US {POLICYENGINE_US_SNAPSHOT.version} (
-        {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time
-        based on economic indicators. Each source link opens the file in that
-        release. These growth factors create correlated uncertainty in long-term
-        policy projections.
+        {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time in
+        line with economic indicators. Each source link opens the file as it
+        stood in that release. These growth factors create correlated
+        uncertainty in long-term policy projections.
       </p>
       <div
         style={{
