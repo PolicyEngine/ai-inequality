@@ -149,12 +149,11 @@ function UpratingViewer() {
         }}
       >
         Explore the <strong>{datasetCounts.parameters} parameters</strong> and{" "}
-        <strong>{datasetCounts.variables} variables</strong> that
+        <strong>{datasetCounts.variables} input variables</strong> that
         PolicyEngine-US {POLICYENGINE_US_SNAPSHOT.version} (
-        {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time in
-        line with economic indicators. Each source link opens the file as it
-        stood in that release. These growth factors create correlated
-        uncertainty in long-term policy projections.
+        {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time
+        with economic indexes. Each source link opens the file as it stood in
+        that release.
       </p>
       <div
         style={{
@@ -182,9 +181,10 @@ function UpratingViewer() {
             style={{ flexShrink: 0, marginTop: "2px" }}
           />
           <span>
-            <strong>CBO Income by Source</strong> projections (highlighted in
-            yellow) are critical for AI scenarios, as AI-driven wage compression
-            and capital income shifts directly impact these growth rates.
+            We mark in yellow the categories PolicyEngine-US grows with
+            CBO&apos;s projections of income by source. AI could change how fast
+            those incomes grow by compressing wages or shifting income toward
+            capital.
           </span>
         </p>
       </div>
@@ -229,7 +229,7 @@ function UpratingViewer() {
               flex: 1,
             }}
           >
-            <option value="all">All Categories ({data.length} total)</option>
+            <option value="all">All categories ({data.length} total)</option>
             {categories.map((category) => {
               const total =
                 groupedData[category].parameters.length +
@@ -438,17 +438,17 @@ function UpratingViewer() {
       >
         <h3>How PolicyEngine-US grows these values</h3>
         <p>
-          PolicyEngine-US grows most parameters by the index their metadata
-          names, starting from the latest published value. Lawmakers set
-          specific indexing rules for some amounts, such as the payroll tax cap
-          and HSA contribution limits, and PolicyEngine-US applies those rules
-          with formulas in <code>uprating_extensions.py</code>.
+          PolicyEngine-US grows most parameters with the index their metadata
+          names, starting from the latest value in their file. Lawmakers wrote
+          indexing formulas into law for some amounts, such as the payroll tax
+          cap and HSA contribution limits, and PolicyEngine-US applies those
+          formulas in <code>uprating_extensions.py</code>.
         </p>
         <p style={{ marginTop: "1rem" }}>
           PolicyEngine-US grows dollar inputs that name no index with CBO&apos;s
           projection of adjusted gross income per person. It grows an input that
-          names a national total, such as total employment income, with that
-          total per person.
+          names a national total, such as the IRS&apos;s total of wages, with
+          that total per person.
         </p>
       </div>
     </div>

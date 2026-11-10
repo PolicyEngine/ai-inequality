@@ -57,7 +57,7 @@ export const UPRATING_CARDS = [
     title: "Chained CPI-U",
     includes: among("IRS chained CPI-U", "Chained CPI-U"),
     description:
-      "The IRS adjusts federal income tax brackets, deductions and credits for chained CPI-U each year, and PolicyEngine grows them and many state tax amounts with the same index.",
+      "The IRS adjusts federal income tax brackets, deductions and credits for inflation each year with chained CPI-U. PolicyEngine-US grows them, and many state tax amounts, with the same index.",
     examples: [
       { label: "Federal income tax brackets", path: "gov.irs.income.bracket" },
       {
@@ -76,7 +76,7 @@ export const UPRATING_CARDS = [
     title: "Income by source",
     includes: (category) => category.startsWith("CBO "),
     description:
-      "PolicyEngine grows each source of income in its microdata with CBO's projection for that source per person, and grows other dollar inputs with CBO's projection of adjusted gross income per person.",
+      "PolicyEngine-US grows wages, self-employment income, capital gains, dividends, interest, pensions, Social Security benefits and unemployment compensation in its microdata with the IRS's total for each, per person. It extends those totals with CBO's projections, and grows other dollar inputs with CBO's projection of adjusted gross income per person.",
     examples: [
       { label: "Employment income", path: "employment_income_before_lsr" },
       {
@@ -101,9 +101,13 @@ export const UPRATING_CARDS = [
       "Federal poverty guidelines (CPI-U)",
     ),
     description:
-      "PolicyEngine grows the federal poverty guidelines, SNAP and WIC amounts, several state tax amounts, and household expenses, assets and debts with CPI-U.",
+      "PolicyEngine-US grows the federal poverty guidelines, SNAP, WIC and school meal amounts, Medicaid's long-term care limits and several state and city tax amounts with CPI-U. In its microdata, it grows household expenses, assets and debts with the same index.",
     examples: [
       { label: "Federal poverty guidelines", path: "gov.hhs.fpg" },
+      {
+        label: "Medicaid home equity limit",
+        path: "gov.hhs.medicaid.eligibility.long_term_care.home_equity.limit",
+      },
       {
         label: "SNAP standard deduction",
         path: "gov.usda.snap.income.deductions.standard",
@@ -121,7 +125,7 @@ export const UPRATING_CARDS = [
     title: "California CPI",
     includes: among("California CPI"),
     description:
-      "PolicyEngine grows California's income tax brackets, standard deduction, exemptions and credits with the California CPI, which it projects with chained CPI-U.",
+      "PolicyEngine-US grows California's income tax brackets, standard deduction, exemptions and credits with the California CPI, which it projects with chained CPI-U.",
     examples: [
       {
         label: "California income tax brackets for single filers",
@@ -142,15 +146,20 @@ export const UPRATING_CARDS = [
       "National average wage index",
     ),
     description:
-      "PolicyEngine grows SSI payments, and the state amounts tied to them, with Social Security's cost-of-living adjustment, which follows CPI-W. It grows the payroll tax cap and other wage-indexed amounts with the national average wage index.",
+      "PolicyEngine-US grows SSI payments, state supplements and veterans benefits with the cost-of-living adjustment that the Social Security Administration sets each year from CPI-W. It grows the payroll tax cap, the bend points in Social Security's benefit formula and other wage-indexed amounts with the national average wage index.",
     examples: [
       {
         label: "Maximum federal SSI payment",
         path: "gov.ssa.ssi.amount.individual",
       },
+      { label: "Veterans benefits", path: "veterans_benefits" },
       {
         label: "Social Security payroll tax cap",
         path: "gov.irs.payroll.social_security.cap",
+      },
+      {
+        label: "Bend points in Social Security's benefit formula",
+        path: "gov.ssa.social_security.pia.formula_factors",
       },
     ],
   },
@@ -163,13 +172,17 @@ export const UPRATING_CARDS = [
       "CPI-U medical care",
     ),
     description:
-      "PolicyEngine grows medical expenses and insurance premiums with CMS's health spending projections, ACA benchmark premiums with their national average, and long-term care premiums with CPI-U for medical care.",
+      "PolicyEngine-US grows medical expenses and insurance premiums with CMS's health spending projections, and ACA benchmark premiums with the national average benchmark premium. It grows long-term care insurance premiums, and the cap on deducting them, with CPI-U for medical care.",
     examples: [
       { label: "Health insurance premiums", path: "health_insurance_premiums" },
       { label: "Emergency room visit expenses", path: "er_visit_expense" },
       {
         label: "ACA benchmark premiums by rating area",
         path: "gov.aca.state_rating_area_cost",
+      },
+      {
+        label: "Cap on deducting long-term care premiums",
+        path: "gov.irs.deductions.itemized.medical.long_term_care_premium_limit",
       },
     ],
   },
@@ -178,11 +191,15 @@ export const UPRATING_CARDS = [
     title: "Population",
     includes: among("Population"),
     description:
-      "PolicyEngine grows household and family weights, and its targets for tax returns and program participation, with CBO's population projections.",
+      "PolicyEngine-US grows household and family weights with CBO's population projections, along with its counts of tax returns and of Social Security, SSI and SNAP participants.",
     examples: [
       { label: "Household weights", path: "household_weight" },
       {
-        label: "SNAP participation",
+        label: "Tax returns by filing status",
+        path: "calibration.gov.irs.soi.returns_by_filing_status",
+      },
+      {
+        label: "SNAP participants",
         path: "calibration.gov.usda.snap.participation",
       },
     ],

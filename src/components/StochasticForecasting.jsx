@@ -94,13 +94,14 @@ function StochasticForecasting() {
           <strong>{shown(uprating.parameters)} parameters</strong> and{" "}
           <strong>{shown(uprating.variables)} input variables</strong> over time
           with economic indexes, from CPI-U and chained CPI-U to wages,
-          population and CBO&apos;s income projections. Those indexes carry
-          uncertainty and move together, so estimates of policy impacts under
-          AI-driven economic scenarios depend on their joint distribution.
+          population and CBO&apos;s income projections. Each index could grow
+          faster or slower than forecast, and the indexes tend to move together,
+          so our estimates of policy impacts under AI-driven economic scenarios
+          depend on their joint distribution.
         </p>
       </div>
 
-      <h3>Uprating parameters in PolicyEngine-US</h3>
+      <h3>Uprating in PolicyEngine-US</h3>
       <p style={{ textAlign: "center", marginBottom: "2rem" }}>
         Parameters and variables by the index that grows them
       </p>
@@ -186,7 +187,7 @@ function StochasticForecasting() {
             color: "#319795",
           }}
         >
-          {showUpratingViewer ? "▼" : "▶"} Interactive Uprating Explorer
+          {showUpratingViewer ? "▼" : "▶"} Interactive uprating explorer
         </button>
         {showUpratingViewer && (
           <div style={{ marginTop: "2rem" }}>
