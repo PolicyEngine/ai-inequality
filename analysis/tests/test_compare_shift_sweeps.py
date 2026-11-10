@@ -7,6 +7,8 @@ Invariants:
 * decompose's parts add up to the change in the total for any pair of runs,
   and decompose_state's to the change in a state's chart total;
 * comparing a run with itself leaves nothing in ``same_definition``;
+* distribution_changes and decile_changes report each measure both runs carry,
+  and nothing else;
 * once the site's sweep counts health coverage and TANF, it passes check_sweep.
 """
 
@@ -80,6 +82,7 @@ def synthetic_sweep(seed):
             row["total_rev_change_excluding_health_b"] - row["health_change_b"]
         )
         row["revenue_change_b"] = row["total_rev_change_b"]
+        row.update(_distribution(rng, scale))
         rows.append(row)
     return {
         "metadata": {
@@ -88,10 +91,39 @@ def synthetic_sweep(seed):
                 "model_version": "1.764.6",
                 "net_income_excluded_benefits": ["early_head_start", "head_start"],
             },
-            "baseline_facts": {"decile_impacts": [{"decile": 1}]},
+            "baseline_facts": {"decile_impacts": _decile_impacts(rng)},
             "health_tanf_programs": {"medicaid": {}},
         },
         "scenarios": rows,
+    }
+
+
+def _distribution(rng, scale):
+    return {
+        "net_gini": 0.45 + 0.1 * scale + rng.uniform(-0.01, 0.01),
+        "market_gini": 0.6 + 0.2 * scale,
+        "net_top_10_share": 0.4 + 0.1 * scale,
+        "net_top_1_share": 0.15 + 0.1 * scale,
+        "spm_poverty_rate": 0.12 + 0.05 * scale,
+    }
+
+
+def _decile_impacts(rng):
+    return {
+        "scenarios": [
+            {
+                "shift_pct": pct,
+                "deciles": [
+                    {
+                        "decile": decile,
+                        "pct_change": -pct / 10 * rng.uniform(0, 1),
+                        "baseline_mean_net": 10_000 * decile,
+                    }
+                    for decile in range(1, 11)
+                ],
+            }
+            for pct in cmp.SHIFT_GRID
+        ]
     }
 
 
@@ -122,10 +154,14 @@ def earlier_sweep(seed):
                 "revenue_change_b": total,
                 "total_rev_change_b": total,
                 "state_deltas": states,
+                **_distribution(rng, scale),
             }
         )
     return {
-        "metadata": {"policyengine_bundle": {"model_version": "1.764.6"}},
+        "metadata": {
+            "policyengine_bundle": {"model_version": "1.764.6"},
+            "baseline_facts": {"decile_impacts": _decile_impacts(rng)},
+        },
         "scenarios": rows,
     }
 
@@ -278,6 +314,31 @@ def test_report_and_main_run_on_a_pair_of_files(tmp_path, capsys):
     _skew_total(broken)
     new_path.write_text(json.dumps(broken))
     assert cmp.main([str(new_path), "--old", str(old_path)]) == 1
+
+
+def test_distribution_and_decile_changes_cover_what_both_runs_carry():
+    new, old = synthetic_sweep(9), earlier_sweep(10)
+    changes = cmp.distribution_changes(new, old)
+    assert len(changes) == len(cmp.SHIFT_GRID) * len(cmp.DISTRIBUTION_FIELDS)
+    old_rows = {row["shift_pct"]: row for row in old["scenarios"]}
+    for c in changes:
+        assert c["earlier"] == old_rows[c["shift_pct"]][c["field"]]
+        assert c["change"] == pytest.approx(c["rerun"] - c["earlier"])
+    # A measure one run lacks drops out rather than reading as zero.
+    del old["scenarios"][3]["spm_poverty_rate"]
+    assert len(cmp.distribution_changes(new, old)) == len(changes) - 1
+    deciles = cmp.decile_changes(new, old, 10)
+    assert [d["decile"] for d in deciles] == list(range(1, 11))
+    assert cmp.decile_changes(new, old, 15) == []
+    del old["metadata"]["baseline_facts"]
+    assert cmp.decile_changes(new, old, 10) == []
+    text = cmp.report(synthetic_sweep(9), earlier_sweep(10))
+    assert (
+        "| Shift | Net Gini | Market Gini | Net top 10% | Net top 1% | SPM poverty |"
+        in text
+    )
+    assert "Decile impacts at a 10% shift" in text
+    assert "breaks ties in baseline market income by row order" in text
 
 
 def test_metadata_differences_name_what_changed():
