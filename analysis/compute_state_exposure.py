@@ -14,18 +14,19 @@ policyengine-us 1.764.6: `state_income_tax_before_refundable_credits` and
 programs in `household_state_benefits`. New York's and Maryland's figures
 include New York City's income tax and refundable credits, Maryland's county
 income taxes and Montgomery County's earned income credit. California's
-include San Francisco's Working Families Tax Credit and Los Angeles County's
-EZ Save program, infant supplement and expectant parent payment.
+include San Francisco's Working Families Tax Credit, the Los Angeles
+Department of Water and Power's EZ Save program, and Los Angeles County's
+infant supplement and expectant parent payment.
 
-It is *not* state own-source revenue in the budgetary sense. General sales
-tax, property tax, corporate income tax, severance taxes and fees are outside
-the model. Nationally those are roughly half of state and local own-source
+It is *not* state own-source revenue in the budgetary sense. This script
+counts no general sales, property, corporate income or severance taxes, and
+no fees. Nationally those are roughly half of state and local own-source
 revenue, and they are exactly the bases that no-income-tax states rely on.
 
 A state that scores near zero here is therefore making a statement about the
 **income-tax channel**, not about budgetary resilience: Texas and Florida
-collect through sales taxes this model does not carry, so their true exposure
-to an AI boom is unmeasured rather than absent. The one informative
+collect through sales taxes, which this script doesn't count, so their true
+exposure to an AI boom is unmeasured rather than absent. The one informative
 zero-income-tax case is Washington, whose capital-gains excise is modelled and
 so does register.
 
@@ -69,16 +70,16 @@ CAPITAL_ONLY_INCOME_TAX_STATES = {"WA"}
 
 SCOPE_NOTE = (
     "Net = state income and use tax − refundable state credits − state-paid "
-    "benefits. PolicyEngine counts state supplements to SSI, child care "
-    "subsidies and other programs, such as New Jersey's property tax relief, "
-    "as state-paid. New York's and Maryland's figures include New York City's "
-    "income tax and refundable credits, Maryland's county income taxes and "
-    "Montgomery County's earned income credit. California's include San "
-    "Francisco's Working Families Tax Credit and Los Angeles County's EZ Save "
-    "program, infant supplement and expectant parent payment. We leave out "
-    "Medicaid, CHIP and TANF, apart from Massachusetts's TAFDC. PolicyEngine "
-    "doesn't model sales, property, corporate or severance taxes, so the "
-    "score measures exposure through the income-tax channel alone."
+    "benefits. We count state supplements to SSI, child care subsidies and "
+    "other programs, such as New Jersey's property tax relief, as state-paid. "
+    "New York's and Maryland's figures include New York City's income tax and "
+    "refundable credits, Maryland's county income taxes and Montgomery "
+    "County's earned income credit. California's include San Francisco's "
+    "Working Families Tax Credit, the Los Angeles Department of Water and "
+    "Power's EZ Save program, and Los Angeles County's infant supplement and "
+    "expectant parent payment. We leave out Medicaid, CHIP and TANF, apart "
+    "from Massachusetts's TAFDC. We count no sales, property, corporate or "
+    "severance taxes, so we measure no exposure through them."
 )
 
 

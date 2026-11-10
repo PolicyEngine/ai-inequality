@@ -89,7 +89,7 @@ const FEDERAL_BUCKETS_US_HEALTH_TANF = [
 // than taking the all-government total less the states, so some taxes that
 // the total counts sit in no chart's bands.
 const OUTSIDE_CHART_TAXES_NOTE =
-  "We count three groups of taxes only in the net government revenue total: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations. New York City's and Maryland's local income taxes count in those states' charts instead.";
+  "We count three groups of taxes only in the net government revenue total: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations. We put New York City's and Maryland's local income taxes in those states' charts instead.";
 
 const FEDERAL_LINE_NOTE_US = `The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band includes TANF. ${OUTSIDE_CHART_TAXES_NOTE}`;
 
@@ -482,7 +482,7 @@ function summaryForMetric(
         {endValue.toFixed(3)} at a 100% shift.{" "}
         {conceptKey === "net"
           ? "Current law dampens the shock, but it does not come close to offsetting it."
-          : `Before taxes and transfers, the rise comes from moving ${laborTerm} income to people in proportion to the capital income they already receive.`}
+          : `We move ${laborTerm} income to people in proportion to the capital income they already receive.`}
       </>
     );
   }
@@ -1048,32 +1048,33 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
           <>
             Net = state income and use tax before refundable credits −
             refundable state credits − other state-paid benefits − TANF − state
-            health coverage spending. PolicyEngine counts state SSI supplements,
-            child care subsidies and other programs, such as New Jersey&apos;s
-            property tax relief, as state-paid. For health coverage, we count
-            the programs the state runs on its own and its matching share of
-            Medicaid, CHIP and the Medicare Savings Programs. We also charge the
-            state the federal share of coverage for enrollees whose immigration
-            status bars federal matching. The federal government still matches
-            those enrollees&apos; emergency care, so we overstate the
-            state&apos;s cost.
+            health coverage spending. We count state SSI supplements, child care
+            subsidies and other programs, such as New Jersey&apos;s property tax
+            relief, as state-paid. For health coverage, we count the programs
+            the state runs on its own and its matching share of Medicaid, CHIP
+            and the Medicare Savings Programs. We also charge the state the
+            federal share of coverage for enrollees whose immigration status
+            bars federal matching. The federal government still matches those
+            enrollees&apos; emergency care, so we overstate the state&apos;s
+            cost.
           </>
         ) : (
           <>
             Net = state income and use tax before refundable credits −
-            refundable state credits − state-paid benefits. PolicyEngine counts
-            state SSI supplements, child care subsidies and other programs, such
-            as New Jersey&apos;s property tax relief, as state-paid. We leave
-            Medicaid, CHIP and TANF out of these figures, apart from
-            Massachusetts&apos;s TAFDC.
+            refundable state credits − state-paid benefits. We count state SSI
+            supplements, child care subsidies and other programs, such as New
+            Jersey&apos;s property tax relief, as state-paid. We leave Medicaid,
+            CHIP and TANF out of these figures, apart from Massachusetts&apos;s
+            TAFDC.
           </>
         )}{" "}
         New York&apos;s and Maryland&apos;s figures include New York City&apos;s
         income tax and refundable credits, Maryland&apos;s county income taxes
         and Montgomery County&apos;s earned income credit. California&apos;s
-        include San Francisco&apos;s Working Families Tax Credit and Los Angeles
-        County&apos;s EZ Save program, infant supplement and expectant parent
-        payment. Teal gains, orange loses.
+        include San Francisco&apos;s Working Families Tax Credit, the Los
+        Angeles Department of Water and Power&apos;s EZ Save program, and Los
+        Angeles County&apos;s infant supplement and expectant parent payment.
+        Teal gains, orange loses.
         {unit === "share"
           ? " In share mode, we divide each state's change by its own baseline net state revenue and leave out states whose baseline doesn't exceed zero."
           : ""}
