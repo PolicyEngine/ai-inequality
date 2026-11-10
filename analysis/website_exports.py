@@ -4,11 +4,11 @@ from importlib.metadata import PackageNotFoundError, version
 
 LABOR_SHIFT_DESCRIPTION = (
     "Positive employment and self-employment income fall by X%, and the same "
-    "total goes to positive capital income (capital gains, taxable interest, "
-    "dividends and rental income) in proportion to the capital income each "
-    "person already receives, so total modeled market income stays constant. "
-    "Website resource metrics count the cash-equivalent value of Medicaid, "
-    "CHIP, and ACA premium support in household resources."
+    "total goes to positive capital income: capital gains, taxable interest, "
+    "dividends and rental income. Each person gains in proportion to the "
+    "capital income they already receive, and total modeled market income "
+    "stays constant. We count the cash-equivalent value of Medicaid, CHIP and "
+    "ACA premium support in household resources."
 )
 
 

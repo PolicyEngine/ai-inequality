@@ -67,7 +67,7 @@ const NATIONAL_BUCKETS_UK = [
 // than taking the all-government total less the states, so some taxes that
 // the total counts sit in no chart's bands.
 const FEDERAL_LINE_NOTE_US =
-  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band counts TANF as federal. Three groups of taxes appear only in the net government revenue total, not in this chart or the state charts: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and city and county taxes on income and occupations such as Louisville's occupational license tax. New York City's and Maryland's local income taxes count in those states' charts.";
+  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band includes TANF. We count three groups of taxes only in the net government revenue total: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations. New York City's and Maryland's local income taxes count in those states' charts instead.";
 
 function federalBuckets(countryId) {
   return countryId === "uk" ? NATIONAL_BUCKETS_UK : FEDERAL_BUCKETS_US;
@@ -242,7 +242,7 @@ function measuresForMetadata(metadata) {
         billionFmt(value, { precision: 1, currencySymbol }),
       description:
         metadata.revenue_description ??
-        "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. It leaves out health coverage such as Medicaid, CHIP and ACA premium tax credits. Reconciles to the household net-income identity.",
+        "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. We leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.",
     },
   };
 }
@@ -394,7 +394,7 @@ function summaryForMetric(measureKey, conceptKey, config, chartData, metadata) {
         {endValue.toFixed(3)} at a 100% shift.{" "}
         {conceptKey === "net"
           ? "Current law dampens the shock, but it does not come close to offsetting it."
-          : `This is the pre-tax, pre-transfer distributional effect of moving ${laborTerm} income to people in proportion to the capital income they already receive.`}
+          : `Before taxes and transfers, the rise comes from moving ${laborTerm} income to people in proportion to the capital income they already receive.`}
       </>
     );
   }
@@ -415,9 +415,9 @@ function summaryForMetric(measureKey, conceptKey, config, chartData, metadata) {
     return (
       <>
         {config.label} {direction} from {config.valueFormatter(startValue)} at
-        baseline to {config.valueFormatter(endValue)} at a 100% shift. This
-        traces how the income distribution changes when {laborTerm} income moves
-        to people in proportion to the capital income they already receive.
+        baseline to {config.valueFormatter(endValue)} at a 100% shift. We
+        move {laborTerm} income to people in proportion to the capital income
+        they already receive.
       </>
     );
   }
@@ -941,16 +941,17 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
       <p className="shift-sweep-description">
         The chart ranks every state by its net change in state revenue at the
         selected shift level, largest first. Net = state income and use tax
-        before refundable credits − refundable state credits − the benefits
-        PolicyEngine counts as state-paid (state SSI supplements, child care
+        before refundable credits − refundable state credits − state-paid
+        benefits. PolicyEngine counts state SSI supplements, child care
         subsidies and other programs, such as New Jersey&apos;s property tax
-        relief). It leaves out Medicaid, CHIP and TANF (apart from
-        Massachusetts&apos;s TAFDC). A few local taxes, credits and programs
-        count in their states&apos; figures: New York City&apos;s income tax and
-        refundable credits; Maryland&apos;s county income taxes and Montgomery
-        County&apos;s earned income credit; San Francisco&apos;s Working
-        Families Tax Credit; and three Los Angeles programs. Teal gains, orange
-        loses.
+        relief, as state-paid. We leave Medicaid, CHIP and TANF out of these
+        figures, apart from Massachusetts&apos;s TAFDC. New York&apos;s and
+        Maryland&apos;s figures include New York City&apos;s income tax and
+        refundable credits, Maryland&apos;s county income taxes and Montgomery
+        County&apos;s earned income credit. California&apos;s include San
+        Francisco&apos;s Working Families Tax Credit and Los Angeles
+        County&apos;s EZ Save program, infant supplement and expectant parent
+        payment. Teal gains, orange loses.
         {unit === "share"
           ? " In share mode, each state's change is expressed as % of its own baseline net state revenue — states without income tax (FL, TX, etc.) are dropped."
           : ""}

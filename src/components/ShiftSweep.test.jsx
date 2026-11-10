@@ -68,7 +68,7 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
   );
   expect(document.body).toHaveTextContent(/capital-gains tax and niit/i);
   expect(document.body).toHaveTextContent(
-    /leaves out health coverage such as medicaid/i,
+    /we leave out health coverage such as medicaid/i,
   );
   expect(
     screen.getByRole("heading", { name: /federal revenue decomposition/i }),
@@ -78,9 +78,9 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
   );
   expect(document.body).toHaveTextContent(/the additional medicare tax/i);
   expect(document.body).toHaveTextContent(
-    /new york city's and maryland's local income taxes count in those states' charts/i,
+    /new york city's and maryland's local income taxes count in those states' charts instead/i,
   );
   expect(document.body).toHaveTextContent(
-    /montgomery county's earned income credit; san francisco's working families tax credit; and three los angeles programs/i,
+    /montgomery county's earned income credit\. california's include san francisco's working families tax credit and los angeles county's ez save program, infant supplement and expectant parent payment\./i,
   );
 });
