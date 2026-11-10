@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import stateHealthPrograms from "../../analysis/tests/fixtures/state_health_programs.json";
 import sweepData from "../data/shiftSweepData.json";
+import ukSweepData from "../data/ukShiftSweepData.json";
 import ShiftSweep, {
   healthProgramState,
   stateLineNoteHealthTanf,
@@ -394,6 +395,16 @@ test("the revenue summary names its low point and where it ends", () => {
     expect(document.body).toHaveTextContent(summary);
     cleanup();
   }
+});
+
+test("the UK revenue summary names its low point and what it counts", () => {
+  renderSweep(ukSweepData);
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    "We estimate net government revenue falls by £115B at a 50% shift and by £130B at a 70% shift, its low point. At a 100% shift, the fall narrows to £79B. We count Income Tax, Capital Gains Tax and National Insurance, employers' contributions included, and subtract household benefits.",
+  );
 });
 
 test("the old copy survives on a run without health coverage and TANF", () => {
