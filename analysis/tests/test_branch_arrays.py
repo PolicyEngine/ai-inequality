@@ -1,6 +1,5 @@
-"""analysis.branch_arrays: a branch shares its parent's cached arrays, each
-simulation copies a shared array the first time it reads it, and every read
-gives what copying every array up front would give.
+"""analysis.branch_arrays: a branch shares its parent's cached arrays, and each
+simulation copies a shared array the first time it reads it.
 
 Invariants (policyengine-core#556's, plus the parent's copy on first read, on
 the pinned core 3.30.3):
@@ -11,12 +10,18 @@ the pinned core 3.30.3):
 - Snapshot: a branch reads its parent's values as they were when the branch
   was made, whatever the parent stores, deletes or writes afterwards.
 - Differential: every read equals, in dtype and bytes, the read the same steps
-  give when each branch copies every array up front. The one exception is a
-  write through a reference taken before the branch was made; with frozen
-  sources it raises instead (intended, pinned below).
+  give when each branch copies every array up front.
 - No copy without a read: an array neither simulation has read since the
   branch was made shares memory between them, and nothing can write through
   either simulation's copy.
+
+Isolation and the differential fail only after an in-place write, in three
+cases, each intended and pinned below: a write through a reference from before
+the branch, which raises instead with frozen sources; a write through a view
+made before the branch; and a write into the parent's copy of an array that
+something else still holds, such as a reference from before the branch or a
+second variable core stored the same array under. The first two reach a
+branch; the third changes only what the parent reads.
 
 Every test here but the first needs policyengine-core 3.30.3, and the last
 needs policyengine-us; CI installs neither, so they skip there.
@@ -133,8 +138,7 @@ def test_frozen_sources_turn_a_write_through_an_earlier_reference_into_an_error(
 
 
 def test_without_frozen_sources_a_write_through_an_earlier_reference_reaches_the_branch():
-    # Intended: the one difference left from copying up front, and the reason
-    # the sweep freezes sources.
+    # Intended, and the reason the sweep freezes sources.
     sim = _template()
     with branch_arrays.shared_branch_arrays(freeze_sources=False):
         tax = sim.calculate("income_tax", "2022-01")
@@ -144,6 +148,103 @@ def test_without_frozen_sources_a_write_through_an_earlier_reference_reaches_the
         np.testing.assert_array_equal(
             branch.calculate("income_tax", "2022-01"), expected + 1
         )
+
+
+def _view_write_after_branching(sim):
+    """What a branch reads after a write through a view made before it."""
+    tax = sim.calculate("income_tax", "2022-01")
+    expected = np.array(tax)
+    view = tax[:]
+    branch = sim.get_branch("raise")
+    view += 1
+    return expected, branch.calculate("income_tax", "2022-01")
+
+
+def test_frozen_sources_leave_a_view_from_before_the_branch_writeable():
+    # Intended: marking an array read-only leaves its existing views writeable,
+    # so a write through one reaches a branch that hasn't read the array, where
+    # copying up front keeps the branch's values. The module docstring says why
+    # the sweep makes no such write.
+    expected, read = _view_write_after_branching(_template())
+    np.testing.assert_array_equal(read, expected)
+    with branch_arrays.shared_branch_arrays(freeze_sources=True):
+        expected, read = _view_write_after_branching(_template())
+    np.testing.assert_array_equal(read, expected + 1)
+
+
+def _alias_variable():
+    """A variable whose formula returns ``income_tax``'s own array, so core
+    stores that one array under two variables."""
+    pytest.importorskip("policyengine_core")
+    from policyengine_core.country_template.entities import Person
+    from policyengine_core.periods import MONTH
+    from policyengine_core.variables import Variable
+
+    class income_tax_alias(Variable):
+        value_type = float
+        entity = Person
+        definition_period = MONTH
+        label = "income_tax, stored again under a second variable"
+
+        def formula(person, period, parameters):
+            return person("income_tax", period)
+
+    return income_tax_alias
+
+
+def _template_with(*variables):
+    template = pytest.importorskip("policyengine_core.country_template")
+    from policyengine_core.country_template.situation_examples import couple
+
+    system = template.CountryTaxBenefitSystem()
+    system.add_variables(*variables)
+    sim = template.Simulation(tax_benefit_system=system, situation=couple)
+    for period in PERIODS:
+        sim.set_input("salary", period, np.array([4000.0, 2500.0], dtype=np.float32))
+    return sim
+
+
+def _write_into_a_fresh_read_after_branching(sim):
+    """After the parent writes into a fresh read of ``income_tax``: what a
+    reference from before the branch holds, what ``income_tax_alias`` holds,
+    what the parent stores and what the branch reads."""
+    sim.calculate("income_tax_alias", "2022-01")
+    held = sim.calculate("income_tax", "2022-01")
+    expected = np.array(held)
+    branch = sim.get_branch("raise")
+    fresh = sim.calculate("income_tax", "2022-01")
+    fresh -= 5
+    return {
+        "expected": expected,
+        "held": np.array(held),
+        "alias": np.array(sim.calculate("income_tax_alias", "2022-01")),
+        "stored": np.array(sim.calculate("income_tax", "2022-01")),
+        "branch": np.array(branch.calculate("income_tax", "2022-01")),
+    }
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_the_parent_s_first_read_after_branching_splits_an_array_core_shares(
+    freeze_sources,
+):
+    # Intended: the parent copies a shared array the first time it reads it,
+    # so a write into that copy misses whatever still holds the array it
+    # replaced. Core never copies in the parent, so there the write lands in
+    # the one array every holder sees. Nothing writes through the frozen array,
+    # so freezing can't catch this; the module docstring says why the sweep
+    # makes no such write.
+    core = _write_into_a_fresh_read_after_branching(_template_with(_alias_variable()))
+    with branch_arrays.shared_branch_arrays(freeze_sources=freeze_sources):
+        port = _write_into_a_fresh_read_after_branching(
+            _template_with(_alias_variable())
+        )
+    for run in (core, port):
+        np.testing.assert_array_equal(run["stored"], run["expected"] - 5)
+        np.testing.assert_array_equal(run["branch"], run["expected"])
+    np.testing.assert_array_equal(core["held"], core["expected"] - 5)
+    np.testing.assert_array_equal(core["alias"], core["expected"] - 5)
+    np.testing.assert_array_equal(port["held"], port["expected"])
+    np.testing.assert_array_equal(port["alias"], port["expected"])
 
 
 def test_what_the_parent_stores_after_branching_stays_out_of_the_branch():

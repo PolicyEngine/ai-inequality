@@ -19,25 +19,38 @@ and closes the one gap #556's docstrings state.
 
 That gap: under #556, code that writes in place into one of a parent's cached
 arrays after branching changes the value a branch reads, if the branch hasn't
-read that array yet. policyengine-us 1.764.6 has two such writes on the
-baseline's path: ``ga_deductions`` runs ``itemized -= ...`` on the cached
-``itemized_taxable_income_deductions``, and ``ut_personal_exemption`` adds
-newborns into the cached ``ut_total_dependents`` (policyengine-us#9739 made
-both build new arrays on 2 Oct 2026). So here the parent copies too: making a
-branch marks each array
-it shares in both simulations, and each copies a marked array the first time it
-reads it, so neither ever reads the other's writes. Making a branch also drops
-the parent's fast-cache entries (``Simulation._fast_cache``) for the arrays it
-shares, so the parent's reads reach its storage, which copies.
+read that array yet. So here the parent copies too: making a branch marks each
+array it shares in both simulations, and each simulation copies a marked array
+the first time it reads it, so neither reads the other's writes. Making a
+branch also drops the parent's fast-cache entries (``Simulation._fast_cache``)
+for the arrays it shares, so the parent's reads reach its storage, which
+copies. With ``freeze_sources`` (the sweep's setting), making a branch also
+marks every array it shares read-only, so a formula that writes through a
+reference it took before the branch raises ``ValueError`` instead of changing
+a result.
 
-A write can still reach a shared array through a reference taken before the
-branch was made, such as an array a formula read and still holds while a
-calculation it calls makes a branch. With ``freeze_sources`` (the sweep's
-setting), making a branch marks every array it shares read-only, so such a
-write raises ``ValueError`` instead of changing a result, unless it goes
-through a separate view of the array made before the branch. With that
-setting, a run that finishes reads the values copying every array up front
-gives, byte for byte.
+A run can still read values that copying every array up front wouldn't give,
+but only through an in-place write after a branch, in one of two ways:
+
+- through a view of a shared array made before the branch, since marking an
+  array read-only leaves its views writeable;
+- into the parent's copy of an array while something else still holds the
+  array that copy replaced: a formula's reference from before the branch, or a
+  second storage key that core filled with the same object. Under core the
+  write lands in the one array every holder sees; here the other holder keeps
+  the old values.
+
+policyengine-us#9739's scan finds five formulas in policyengine-us 1.764.6 that
+write in place into arrays they read from variables, and none can do either in
+the sweep. ``basic_income_phase_in`` writes only when
+``include_ss_benefits_as_earnings`` is set, and it isn't; CRFB's ``agi_surtax``
+reform is off; ``nj_gross_income`` adds into a new array that ``add`` builds;
+``ga_deductions`` subtracts an adjustment the microdata don't carry, so it
+subtracts zero; and ``ut_personal_exemption``, the only formula that reads
+``ut_total_dependents``, reads and writes it in one call, with no branch made
+in between. ``analysis.check_branch_arrays`` checks the whole sweep: it runs
+``run_shift_sweep`` both ways on a subset of the microdata and compares every
+array in every branch, byte for byte.
 
 ``Simulation.clone()`` called directly, as ``Simulation.derivative`` does, still
 copies every array straight away. ``Holder.get_memory_usage`` counts an array a
