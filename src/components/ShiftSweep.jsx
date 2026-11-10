@@ -93,7 +93,10 @@ const OUTSIDE_CHART_TAXES_NOTE =
 
 const FEDERAL_LINE_NOTE_US = `The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band includes TANF. ${OUTSIDE_CHART_TAXES_NOTE}`;
 
-const FEDERAL_LINE_NOTE_US_HEALTH_TANF = `The payroll band includes employers' state unemployment insurance and other state and local payroll taxes. The health band includes what the federal government spends on ACA premium tax credits, the Basic Health Program, and its matching share of Medicaid, CHIP and the Medicare Savings Programs. Congress sets each state's TANF block grant at a fixed amount, so we charge every change in TANF benefits to the states. ${OUTSIDE_CHART_TAXES_NOTE}`;
+// REVENUE_DESCRIPTION_US_HEALTH_TANF, above the chart, names the taxes outside
+// the charts, so this note leaves them out.
+const FEDERAL_LINE_NOTE_US_HEALTH_TANF =
+  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes. The health band includes what the federal government spends on ACA premium tax credits, the Basic Health Program, and its matching share of Medicaid, CHIP and the Medicare Savings Programs. Congress sets each state's TANF block grant at a fixed amount, so we charge every change in TANF benefits to the states.";
 
 // Display names for the health programs a state runs on its own, keyed by the
 // policyengine-us variable that the sweep's metadata.health_tanf_programs.state
@@ -121,7 +124,7 @@ export function stateLineNoteHealthTanf(stateCode, statePrograms = []) {
     .filter(Boolean);
   let ownClause = "";
   if (own.length > 0 && named.length === own.length) {
-    ownClause = `, and on ${named.join(" and ")}, which it runs on its own`;
+    ownClause = `, and on its own ${named.join(" and ")} ${named.length > 1 ? "programs" : "program"}`;
   } else if (named.length > 0) {
     ownClause = `, and on ${named.join(" and ")} and other health programs it runs on its own`;
   } else if (own.length > 0) {
@@ -263,7 +266,7 @@ const REVENUE_DESCRIPTION_US =
   "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. We leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.";
 
 const REVENUE_DESCRIPTION_US_HEALTH_TANF =
-  "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits + health coverage), across federal, state and local governments. We count what governments spend on Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax credits, the Basic Health Program and state programs such as Colorado's OmniSalud. We price each new Medicaid enrollee at the cost, before the shift, of an enrollee in their state with the same ACA benchmark premium. The federal and state charts add up to the total, apart from three groups of taxes. We count workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations only in the total. New York City's and Maryland's local income taxes count in those states' charts instead.";
+  "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits + health coverage), across federal, state and local governments. We count what governments spend on Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax credits, the Basic Health Program and state programs such as Colorado's OmniSalud. We price each new Medicaid enrollee at the baseline cost of an enrollee in their state with the same ACA benchmark premium. The federal and state charts add up to the total, apart from three groups of taxes. We count workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations only in the total. We put New York City's and Maryland's local income taxes in those states' charts instead.";
 
 function measuresForMetadata(metadata, withHealthTanf = false) {
   const currencySymbol = metadata.currency_symbol ?? "$";
@@ -447,17 +450,37 @@ function proseBillions(value, currencySymbol = "$") {
   })}B`;
 }
 
-// The second sentence of the revenue summary for a run that counts health
-// coverage and TANF: how much more each level of government spends on health
-// coverage at the sweep's last shift, which every form of the first sentence
-// names last.
+// "at a 50% shift", or "at an 80% shift": "an" before 8, 11, 18 and 80 to 89,
+// which a reader says with a vowel sound first.
+function atShift(shift) {
+  const article = /^(8|11|18|8\d)$/.test(String(shift)) ? "an" : "a";
+  return `at ${article} ${shift}% shift`;
+}
+
+// "falls by $970B at a 50% shift and by $2,011B at a 100% shift": each point's
+// change from baseline, in order, without repeating a verb.
+function revenueChanges(points, currencySymbol) {
+  let previous = null;
+  return points
+    .map(({ value, shift }) => {
+      const verb = value >= 0 ? "rises" : "falls";
+      const lead = verb === previous ? "" : `${verb} `;
+      previous = verb;
+      return `${lead}by ${proseBillions(value, currencySymbol)} ${atShift(shift)}`;
+    })
+    .join(" and ");
+}
+
+// The sentence after the revenue path for a run that counts health coverage
+// and TANF: how much more each level of government spends on health coverage
+// at the sweep's last shift, which every form of the path names last.
 function healthSpendingNote(endPoint, currencySymbol) {
   const scenario = endPoint?._scenario ?? {};
   const federal = scenario.federal_health_change_b ?? 0;
   const states = scenario.state_health_change_b ?? 0;
   const amount = (value) =>
     `${proseBillions(value, currencySymbol)} ${value >= 0 ? "more" : "less"}`;
-  return `At that shift, we estimate the federal government spends ${amount(federal)} on health coverage and the states ${amount(states)}.`;
+  return `At that shift, the federal government spends ${amount(federal)} on health coverage and the states ${amount(states)}.`;
 }
 
 function summaryForMetric(
@@ -514,29 +537,36 @@ function summaryForMetric(
     (min, row) => (row.revenue < min.revenue ? row : min),
     chartData[0],
   );
-  const atEnd = `${config.valueFormatter(endPoint?.revenue ?? 0)} at a ${endPoint?.shift}% shift`;
-  const atTrough = `${config.valueFormatter(trough?.revenue ?? 0)} at a ${trough?.shift}% shift`;
+  const currencySymbol = metadata.currency_symbol ?? "$";
+  // The label names the change ("Net government revenue change"); the path
+  // names what changes.
+  const measure = config.label.replace(/ change$/i, "");
+  const subject = measure.charAt(0).toLowerCase() + measure.slice(1);
+  const point = (row) => ({ value: row?.revenue ?? 0, shift: row?.shift });
+  const changes = (...points) =>
+    revenueChanges(points.filter(Boolean), currencySymbol);
   // The 50% point, when the sweep has one short of its last shift.
-  const midway =
-    shift50 && shift50 !== endPoint
-      ? `reaches ${config.valueFormatter(shift50.revenue)} at a 50% shift`
-      : null;
+  const midway = shift50 && shift50 !== endPoint ? point(shift50) : null;
+  const endRevenue = endPoint?.revenue ?? 0;
+  const atEnd = atShift(endPoint?.shift);
+  const afterLowPoint =
+    endRevenue < 0
+      ? `${atEnd.charAt(0).toUpperCase()}${atEnd.slice(1)}, the fall narrows to ${proseBillions(endRevenue, currencySymbol)}.`
+      : `${atEnd.charAt(0).toUpperCase()}${atEnd.slice(1)}, it exceeds its baseline by ${proseBillions(endRevenue, currencySymbol)}.`;
   let path;
   if (trough === basePoint) {
-    path = `${config.label} never falls below zero and reaches ${atEnd}.`;
+    path = `We estimate ${subject} never falls below its baseline and ${changes(point(endPoint))}.`;
   } else if (trough === endPoint) {
-    path = midway
-      ? `${config.label} ${midway} and falls to ${atEnd}.`
-      : `${config.label} falls to ${atEnd}.`;
+    path = `We estimate ${subject} ${changes(midway, point(endPoint))}.`;
   } else if (trough.shift > 50 && midway) {
-    path = `${config.label} ${midway}, bottoms out at ${atTrough}, and rebounds to ${atEnd}.`;
+    path = `We estimate ${subject} ${changes(midway, point(trough))}, its low point. ${afterLowPoint}`;
   } else {
-    path = `${config.label} bottoms out at ${atTrough} and recovers to ${atEnd}.`;
+    path = `We estimate ${subject} ${changes(point(trough))}, its low point. ${afterLowPoint}`;
   }
   const note =
     metadata.revenue_summary_note ??
     (withHealthTanf
-      ? healthSpendingNote(endPoint, metadata.currency_symbol ?? "$")
+      ? healthSpendingNote(endPoint, currencySymbol)
       : "Capital-gains tax and NIIT accelerate at the top of the sweep, while EITC and refundable CTC collapse once labor income approaches zero.");
   return (
     <>

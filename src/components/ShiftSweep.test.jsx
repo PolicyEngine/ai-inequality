@@ -63,11 +63,16 @@ function renderSweep(data) {
 }
 
 test("switches the single sweep chart between inequality and revenue outcomes", () => {
+  const shift50 = sweepData.scenarios.find(
+    (scenario) => scenario.shift_pct === 50,
+  );
   const shift100 = sweepData.scenarios.find(
     (scenario) => scenario.shift_pct === 100,
   );
-  const formatBillions = (value) =>
-    `$${value >= 0 ? "+" : ""}${value.toFixed(0)}B`;
+  // The revenue summary's amounts: the verb carries the sign, and amounts of
+  // $10B or more print whole.
+  const proseBillions = (value) =>
+    `$${Math.abs(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}B`;
   const formatShare = (value) => {
     const pct = value * 100;
     if (Math.abs(pct) >= 10) {
@@ -117,8 +122,10 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
   expect(
     screen.queryByRole("radiogroup", { name: /income concept/i }),
   ).not.toBeInTheDocument();
+  // The site's sweep falls at every step, so the summary names the 50% and
+  // 100% shifts and no low point before the end.
   expect(document.body).toHaveTextContent(
-    formatBillions(shift100.revenue_change_b),
+    `We estimate net government revenue falls by ${proseBillions(shift50.revenue_change_b)} at a 50% shift and by ${proseBillions(shift100.revenue_change_b)} at a 100% shift.`,
   );
   expect(document.body).toHaveTextContent(/capital-gains tax and niit/i);
   expect(document.body).toHaveTextContent(
@@ -160,7 +167,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   // The description names the taxes outside the charts, since a state's view
   // shows no list of them.
   expect(document.body).toHaveTextContent(
-    /the federal and state charts add up to the total, apart from three groups of taxes\. we count workers' state payroll taxes such as california's sdi, the additional medicare tax, and local taxes on income and occupations only in the total\. new york city's and maryland's local income taxes count in those states' charts instead\./i,
+    /the federal and state charts add up to the total, apart from three groups of taxes\. we count workers' state payroll taxes such as california's sdi, the additional medicare tax, and local taxes on income and occupations only in the total\. we put new york city's and maryland's local income taxes in those states' charts instead\./i,
   );
   expect(document.body).toHaveTextContent(/the additional medicare tax/i);
   expect(document.body).not.toHaveTextContent(
@@ -176,7 +183,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   // Revenue falls at every step of the mock, so the summary has no rebound,
   // and its second sentence gives health spending rather than tax drivers.
   expect(document.body).toHaveTextContent(
-    /reaches \$-50B at a 50% shift and falls to \$-100B at a 100% shift\. At that shift, we estimate the federal government spends \$10B more on health coverage and the states \$5\.0B more\./i,
+    /we estimate net government revenue falls by \$50B at a 50% shift and by \$100B at a 100% shift\. at that shift, the federal government spends \$10B more on health coverage and the states \$5\.0B more\./i,
   );
   expect(document.body).not.toHaveTextContent(/capital-gains tax and niit/i);
   // The state ranking charges each state the federal share it moves.
@@ -202,7 +209,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     target: { value: "CO" },
   });
   expect(document.body).toHaveTextContent(
-    /medicare savings programs, and on omnisalud, which it runs on its own\./i,
+    /medicare savings programs, and on its own omnisalud program\./i,
   );
 });
 
@@ -223,10 +230,10 @@ test("a state's health note names only the programs that state runs", () => {
   // At policyengine-us 1.764.6, the sweep's metadata lists these two.
   const programs = ["co_omnisalud", "or_healthier_oregon_cost"];
   expect(stateLineNoteHealthTanf("OR", programs)).toMatch(
-    /Medicare Savings Programs, and on Healthier Oregon, which it runs on its own\./,
+    /Medicare Savings Programs, and on its own Healthier Oregon program\./,
   );
   expect(stateLineNoteHealthTanf("CO", programs)).toMatch(
-    /Medicare Savings Programs, and on OmniSalud, which it runs on its own\./,
+    /Medicare Savings Programs, and on its own OmniSalud program\./,
   );
   expect(stateLineNoteHealthTanf("TX", programs)).toMatch(
     /Medicare Savings Programs\. For enrollees/,
@@ -308,9 +315,10 @@ test("the revenue summary handles a sweep that never falls or ends early", () =>
     screen.getByRole("radio", { name: /net government revenue change/i }),
   );
   expect(document.body).toHaveTextContent(
-    /never falls below zero and reaches \$\+100B at a 100% shift/i,
+    /we estimate net government revenue never falls below its baseline and rises by \$100B at a 100% shift\./i,
   );
-  expect(document.body).not.toHaveTextContent(/bottoms out at \$\+0B/i);
+  // The baseline is the lowest point, so the summary names no low point.
+  expect(document.body).not.toHaveTextContent(/its low point|at a 0% shift/i);
   cleanup();
 
   const toNinety = withRevenue(withoutHealthTanf(sweepData), (pct) => -pct);
@@ -322,8 +330,49 @@ test("the revenue summary handles a sweep that never falls or ends early", () =>
     screen.getByRole("radio", { name: /net government revenue change/i }),
   );
   expect(document.body).toHaveTextContent(
-    /reaches \$-50B at a 50% shift and falls to \$-90B at a 90% shift/i,
+    /we estimate net government revenue falls by \$50B at a 50% shift and by \$90B at a 90% shift\./i,
   );
+});
+
+test("the revenue summary names its low point and where it ends", () => {
+  const summaries = [
+    // A fall that ends at 80%.
+    [
+      (pct) => -pct,
+      80,
+      /we estimate net government revenue falls by \$50B at a 50% shift and by \$80B at an 80% shift\./i,
+    ],
+    // A rebound after a low point past 50%, as in the UK sweep.
+    [
+      (pct) => (pct <= 70 ? -pct : pct - 140),
+      100,
+      /we estimate net government revenue falls by \$50B at a 50% shift and by \$70B at a 70% shift, its low point\. at a 100% shift, the fall narrows to \$40B\./i,
+    ],
+    // A recovery above baseline after an early low point.
+    [
+      (pct) => (pct <= 30 ? -pct : pct - 60),
+      100,
+      /we estimate net government revenue falls by \$30B at a 30% shift, its low point\. at a 100% shift, it exceeds its baseline by \$40B\./i,
+    ],
+    // A rise at 50% before a fall to the end.
+    [
+      (pct) => (pct <= 50 ? pct / 5 : 60 - pct),
+      100,
+      /we estimate net government revenue rises by \$10B at a 50% shift and falls by \$40B at a 100% shift\./i,
+    ],
+  ];
+  for (const [revenueAt, lastShift, summary] of summaries) {
+    const run = withRevenue(withoutHealthTanf(sweepData), revenueAt);
+    run.scenarios = run.scenarios.filter(
+      (scenario) => scenario.shift_pct <= lastShift,
+    );
+    renderSweep(run);
+    fireEvent.click(
+      screen.getByRole("radio", { name: /net government revenue change/i }),
+    );
+    expect(document.body).toHaveTextContent(summary);
+    cleanup();
+  }
 });
 
 test("the old copy survives on a run without health coverage and TANF", () => {

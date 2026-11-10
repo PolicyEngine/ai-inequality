@@ -332,6 +332,15 @@ def state_only_coverage(sim, year):
     the federal share of their emergency care, an amount this accounting can't
     measure. The line depends on the immigration status the data assign:
     Microcosm treats anyone who reports Medicaid in the CPS as documented.
+
+    The federal test leaves out the election in 42 USC 1396b(v)(4)(A). Under
+    it, a state can cover lawfully residing children under 21 and pregnant
+    women with federal matching, even during the five-year bar.
+    policyengine-us 1.764.6 models no such election. Microcosm's build p
+    assigns no one Temporary Protected Status and leaves
+    ``years_since_us_entry`` at its default of 5, so everyone this moves has
+    undocumented or DACA status. The Marketplace rule, 45 CFR 155.20, counts
+    TPS holders as lawfully present and leaves out both of those groups.
     """
     p = _parameters(sim, year).gov.hhs.medicaid.eligibility
     status = sim.calculate("immigration_status", period=year, decode_enums=True)
