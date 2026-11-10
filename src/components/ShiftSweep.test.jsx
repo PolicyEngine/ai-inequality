@@ -81,6 +81,6 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
     /we put new york city's and maryland's local income taxes in those states' charts instead/i,
   );
   expect(document.body).toHaveTextContent(
-    /montgomery county's earned income credit\. california's include san francisco's working families tax credit, the los angeles department of water and power's ez save program, and los angeles county's infant supplement and expectant parent payment\./i,
+    /montgomery county's earned income credit\. california's include san francisco's working families tax credit\. teal gains, orange loses\./i,
   );
 });

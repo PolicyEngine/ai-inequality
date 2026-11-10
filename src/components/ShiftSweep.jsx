@@ -949,9 +949,7 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
         include New York City&apos;s income tax and refundable credits,
         Maryland&apos;s county income taxes and Montgomery County&apos;s earned
         income credit. California&apos;s include San Francisco&apos;s Working
-        Families Tax Credit, the Los Angeles Department of Water and
-        Power&apos;s EZ Save program, and Los Angeles County&apos;s infant
-        supplement and expectant parent payment. Teal gains, orange loses.
+        Families Tax Credit. Teal gains, orange loses.
         {unit === "share"
           ? " In share mode, each state's change is expressed as % of its own baseline net state revenue — states without income tax (FL, TX, etc.) are dropped."
           : ""}
