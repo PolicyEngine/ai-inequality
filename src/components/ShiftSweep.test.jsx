@@ -2,7 +2,10 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import sweepData from "../data/shiftSweepData.json";
-import ShiftSweep, { stateLineNoteHealthTanf } from "./ShiftSweep";
+import ShiftSweep, {
+  healthProgramState,
+  stateLineNoteHealthTanf,
+} from "./ShiftSweep";
 
 // The site's sweep file as a run before d2671 wrote it: no health coverage or
 // TANF fields, so the page keeps the bands and copy it published with.
@@ -156,7 +159,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   // The description names the taxes outside the charts, since a state's view
   // shows no list of them.
   expect(document.body).toHaveTextContent(
-    /apart from three groups of taxes\. workers' state payroll taxes such as california's sdi, the additional medicare tax, and most city and county taxes on income and occupations count only in the total/i,
+    /apart from three groups of taxes that count only in the total: workers' state payroll taxes such as california's sdi, the additional medicare tax, and city and county taxes on income and occupations, except new york city's and maryland's local income taxes, which count in those states' charts\./i,
   );
   expect(document.body).toHaveTextContent(/the additional medicare tax/i);
   expect(document.body).not.toHaveTextContent(
@@ -172,7 +175,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   // Revenue falls at every step of the mock, so the summary has no rebound,
   // and its second sentence gives health spending rather than tax drivers.
   expect(document.body).toHaveTextContent(
-    /reaches \$-50B at a 50% shift and falls to \$-100B at a 100% shift\. At a 100% shift, the federal government spends \$10B more on health coverage and the states \$5\.0B more\./i,
+    /reaches \$-50B at a 50% shift and falls to \$-100B at a 100% shift\. At that shift, we estimate the federal government spends \$10B more on health coverage and the states \$5\.0B more\./i,
   );
   expect(document.body).not.toHaveTextContent(/capital-gains tax and niit/i);
   // The state ranking charges each state the federal share it moves.
@@ -202,18 +205,52 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   );
 });
 
+// analysis/health_tanf.py's STATE_HEALTH: every state health program the
+// sweep's metadata can list, across policyengine-us releases.
+const STATE_HEALTH = [
+  "assigned_ca_premium_subsidy",
+  "co_omnisalud",
+  "assigned_co_premium_assistance",
+  "md_premium_assistance",
+  "assigned_nm_premium_assistance",
+  "or_healthier_oregon_cost",
+  "ct_covered_connecticut",
+  "ma_connector_care",
+  "nj_njhps",
+  "vt_premium_assistance",
+  "wa_cascade_care_savings",
+];
+
+test("each state health program maps to its state", () => {
+  expect(STATE_HEALTH.map(healthProgramState)).toEqual([
+    "CA", "CO", "CO", "MD", "NM", "OR", "CT", "MA", "NJ", "VT", "WA",
+  ]);
+});
+
 test("a state's health note names only the programs that state runs", () => {
+  // At policyengine-us 1.764.6, the sweep's metadata lists these two.
   const programs = ["co_omnisalud", "or_healthier_oregon_cost"];
   expect(stateLineNoteHealthTanf("OR", programs)).toMatch(
     /Medicare Savings Programs, and on Healthier Oregon, which it runs on its own\./,
+  );
+  expect(stateLineNoteHealthTanf("CO", programs)).toMatch(
+    /Medicare Savings Programs, and on OmniSalud, which it runs on its own\./,
   );
   expect(stateLineNoteHealthTanf("TX", programs)).toMatch(
     /Medicare Savings Programs\. For enrollees/,
   );
   expect(stateLineNoteHealthTanf("TX")).not.toMatch(/OmniSalud|Oregon/);
-  // A program without a display name still gets a mention.
-  expect(stateLineNoteHealthTanf("CA", ["ca_state_premium_subsidy"])).toMatch(
-    /, and on health programs it runs on its own\./,
+  // Later releases add programs the page has no display name for.
+  expect(stateLineNoteHealthTanf("CO", STATE_HEALTH)).toMatch(
+    /Medicare Savings Programs, and on OmniSalud and other health programs it runs on its own\./,
+  );
+  for (const state of ["CA", "NM", "MD", "MA"]) {
+    expect(stateLineNoteHealthTanf(state, STATE_HEALTH)).toMatch(
+      /Medicare Savings Programs, and on health programs it runs on its own\./,
+    );
+  }
+  expect(stateLineNoteHealthTanf("TX", STATE_HEALTH)).toMatch(
+    /Medicare Savings Programs\. For enrollees/,
   );
 });
 

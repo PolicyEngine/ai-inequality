@@ -97,22 +97,32 @@ const FEDERAL_LINE_NOTE_US_HEALTH_TANF = `The payroll band includes employers' s
 
 // Display names for the health programs a state runs on its own, keyed by the
 // policyengine-us variable that the sweep's metadata.health_tanf_programs.state
-// lists (analysis/health_tanf.py). Each variable starts with its state's code.
+// lists (analysis/health_tanf.py's STATE_HEALTH).
 const OWN_HEALTH_PROGRAM_NAMES = {
   co_omnisalud: "OmniSalud",
   or_healthier_oregon_cost: "Healthier Oregon",
 };
 
+// The state a state health program belongs to: each variable starts with its
+// state's code, after the "assigned_" that some later releases put in front.
+export function healthProgramState(variable) {
+  return variable.replace(/^assigned_/, "").split("_", 1)[0].toUpperCase();
+}
+
 export function stateLineNoteHealthTanf(stateCode, statePrograms = []) {
   const own = statePrograms.filter(
-    (variable) => variable.split("_", 1)[0].toUpperCase() === stateCode,
+    (variable) => healthProgramState(variable) === stateCode,
   );
-  const named = own.map((variable) => OWN_HEALTH_PROGRAM_NAMES[variable]);
+  const named = own
+    .map((variable) => OWN_HEALTH_PROGRAM_NAMES[variable])
+    .filter(Boolean);
   let ownClause = "";
-  if (own.length > 0) {
-    ownClause = named.every(Boolean)
-      ? `, and on ${named.join(" and ")}, which it runs on its own`
-      : ", and on health programs it runs on its own";
+  if (own.length > 0 && named.length === own.length) {
+    ownClause = `, and on ${named.join(" and ")}, which it runs on its own`;
+  } else if (named.length > 0) {
+    ownClause = `, and on ${named.join(" and ")} and other health programs it runs on its own`;
+  } else if (own.length > 0) {
+    ownClause = ", and on health programs it runs on its own";
   }
   return `The health band includes what the state spends on its matching share of Medicaid, CHIP and the Medicare Savings Programs${ownClause}. For enrollees whose immigration status bars federal matching, we charge the state the federal share as well. Federal funds still match their emergency care, so the charge overstates the state's cost. Federal law fixes each state's TANF block grant, so we charge the state every change in its TANF benefits, and the TANF band holds them.`;
 }
@@ -250,7 +260,7 @@ const REVENUE_DESCRIPTION_US =
   "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. It leaves out health coverage such as Medicaid, CHIP and ACA premium tax credits. Reconciles to the household net-income identity.";
 
 const REVENUE_DESCRIPTION_US_HEALTH_TANF =
-  "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits + health coverage), across federal, state and local governments. We count what governments spend on Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax credits, the Basic Health Program and state programs such as Colorado's OmniSalud. We price each new Medicaid enrollee at what their state's Medicaid program spent before the shift on an enrollee with the same ACA benchmark premium. The federal and state charts add up to this total, apart from three groups of taxes. Workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and most city and county taxes on income and occupations count only in the total.";
+  "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits + health coverage), across federal, state and local governments. We count what governments spend on Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax credits, the Basic Health Program and state programs such as Colorado's OmniSalud. We price each new Medicaid enrollee at what their state's Medicaid program spent before the shift on an enrollee with the same ACA benchmark premium. The federal and state charts add up to this total, apart from three groups of taxes that count only in the total: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and city and county taxes on income and occupations, except New York City's and Maryland's local income taxes, which count in those states' charts.";
 
 function measuresForMetadata(metadata, withHealthTanf = false) {
   const currencySymbol = metadata.currency_symbol ?? "$";
@@ -436,14 +446,15 @@ function proseBillions(value, currencySymbol = "$") {
 
 // The second sentence of the revenue summary for a run that counts health
 // coverage and TANF: how much more each level of government spends on health
-// coverage at the sweep's last shift.
+// coverage at the sweep's last shift, which every form of the first sentence
+// names last.
 function healthSpendingNote(endPoint, currencySymbol) {
   const scenario = endPoint?._scenario ?? {};
   const federal = scenario.federal_health_change_b ?? 0;
   const states = scenario.state_health_change_b ?? 0;
   const amount = (value) =>
     `${proseBillions(value, currencySymbol)} ${value >= 0 ? "more" : "less"}`;
-  return `At a ${endPoint?.shift}% shift, the federal government spends ${amount(federal)} on health coverage and the states ${amount(states)}.`;
+  return `At that shift, we estimate the federal government spends ${amount(federal)} on health coverage and the states ${amount(states)}.`;
 }
 
 function summaryForMetric(
