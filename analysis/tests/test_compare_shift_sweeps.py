@@ -25,17 +25,23 @@ CODES = ("CA", "MA", "NY", "TX")
 
 
 def _state_row(draw, code):
-    tanf = draw(1)
-    in_state_benefits = tanf if code == "MA" else 0.0
+    # household_state_benefits holds Massachusetts's TAFDC at its full amount
+    # for every eligible family, and tanf holds it only for families that take
+    # TANF up, so the two move apart.
+    in_state_benefits = draw(1) if code == "MA" else 0.0
     d = {
         "state_tax_before_refundable_credits_change_b": draw(10),
         "state_refundable_credits_change_b": draw(2),
         "state_benefits_change_b": draw(2) + in_state_benefits,
-        "tanf_change_b": tanf,
+        "tanf_change_b": draw(1),
         "tanf_in_state_benefits_change_b": in_state_benefits,
         "state_health_change_b": draw(3),
+        "federal_health_change_b": draw(5),
+        "state_only_coverage_change_b": draw(0.5),
+        "healthier_oregon_overlap_change_b": draw(0.1),
     }
-    d["tanf_state_charge_change_b"] = tanf - in_state_benefits
+    d["health_change_b"] = d["federal_health_change_b"] + d["state_health_change_b"]
+    d["tanf_state_charge_change_b"] = d["tanf_change_b"] - in_state_benefits
     d["state_net_excluding_health_tanf_change_b"] = (
         d["state_tax_before_refundable_credits_change_b"]
         - d["state_refundable_credits_change_b"]
@@ -61,18 +67,14 @@ def synthetic_sweep(seed):
 
         states = {code: _state_row(draw, code) for code in CODES} if pct else {}
         row = {"shift_pct": pct, "state_deltas": states}
-        for national, state_field in cmp.STATE_SUMS:
-            row[national] = sum(d[state_field] for d in states.values())
-        row["health_federal_change_b"] = draw(5)
-        row["health_change_b"] = (
-            row["health_federal_change_b"] + row["health_state_change_b"]
-        )
+        for field in cmp.STATE_SUMS:
+            row[field] = sum(d[field] for d in states.values())
         row["taxes_outside_charts_change_b"] = draw(1)
         row["chart_identity_residual_b"] = draw(0.05)
         row["total_rev_change_published_definition_b"] = draw(200)
         row["total_rev_change_excluding_health_b"] = (
             row["total_rev_change_published_definition_b"]
-            + row["tanf_counted_twice_change_b"]
+            + row["tanf_in_state_benefits_change_b"]
         )
         row["total_rev_change_b"] = (
             row["total_rev_change_excluding_health_b"] - row["health_change_b"]
@@ -138,7 +140,19 @@ def _row(sweep, pct):
 
 
 def _drop_health(s):
-    del _row(s, 50)["health_federal_change_b"]
+    del _row(s, 50)["federal_health_change_b"]
+
+
+def _skew_national_federal_health(s):
+    _row(s, 50)["federal_health_change_b"] += 0.01
+
+
+def _skew_state_health_total(s):
+    _row(s, 50)["state_deltas"]["CA"]["health_change_b"] += 0.1
+
+
+def _drop_state_federal_health(s):
+    del _row(s, 50)["state_deltas"]["MA"]["federal_health_change_b"]
 
 
 def _skew_state_net(s):
@@ -170,7 +184,7 @@ def _drop_last_shift(s):
 
 
 def _nonzero_baseline(s):
-    _row(s, 0)["health_federal_change_b"] = 0.5
+    _row(s, 0)["federal_health_change_b"] = 0.5
 
 
 def _drop_state_rows(s):
@@ -184,7 +198,10 @@ def _drop_deciles(s):
 @pytest.mark.parametrize(
     "mutate, expected",
     [
-        (_drop_health, "no health_federal_change_b"),
+        (_drop_health, "no federal_health_change_b"),
+        (_skew_national_federal_health, "the states' federal_health_change_b"),
+        (_skew_state_health_total, "CA: health_change_b"),
+        (_drop_state_federal_health, "50% MA: no federal_health_change_b"),
         (_skew_state_net, "CA: state_net_change_b"),
         (
             _skew_national_state_tax,
@@ -195,7 +212,7 @@ def _drop_deciles(s):
         (_skew_tanf_charge, "MA: tanf_state_charge_change_b"),
         (_drop_exclusion_record, "net_income_excluded_benefits"),
         (_drop_last_shift, "shift grid"),
-        (_nonzero_baseline, "0%: nonzero health_federal_change_b"),
+        (_nonzero_baseline, "0%: nonzero federal_health_change_b"),
         (_drop_state_rows, "50%: no state rows"),
         (_drop_deciles, "decile_impacts"),
     ],
@@ -277,7 +294,7 @@ def test_the_site_sweep_passes_once_it_counts_health_and_tanf():
     with open(SITE) as f:
         payload = json.load(f)
     if not any(
-        row.get("health_federal_change_b") is not None for row in payload["scenarios"]
+        row.get("federal_health_change_b") is not None for row in payload["scenarios"]
     ):
         pytest.skip("the site's sweep predates health coverage and TANF")
     assert cmp.check_sweep(copy.deepcopy(payload)) == []

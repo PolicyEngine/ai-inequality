@@ -8,8 +8,11 @@ Savings Program, ACA premium tax credit or state health program. ``tanf`` sits
 in ``household_benefits`` but in no state's line, apart from a state TANF
 program that ``gov.household.household_state_benefits`` also lists
 (Massachusetts's TAFDC at policyengine-us 1.764.6 and 2.2.1).
-``household_benefits`` counts that program twice, once through ``tanf`` and
-once through ``household_state_benefits``.
+``household_benefits`` adds that program through ``tanf`` for families that
+take TANF up (``takes_up_tanf_if_eligible``) and through
+``household_state_benefits`` for every eligible family. The totals that count
+health and TANF drop the second copy (``tanf_in_state_benefits``), so each
+family's TANF counts once, as ``tanf`` pays it.
 
 This module prices each household's coverage with policyengine-us's
 ``healthcare_benefit_value`` and splits it between the federal government and
@@ -17,9 +20,11 @@ the household's state:
 
 * Medicaid, CHIP and the Medicare Savings Programs follow federal matching
   rules (``federal_benefit_cost`` and ``state_benefit_cost``, which
-  policyengine-us builds from ``gov.hhs.medicaid.cost_share``). The state pays
-  the whole cost of coverage that federal law won't match because of the
-  enrollee's immigration status (42 USC 1396b(v)); CHIP coverage through the
+  policyengine-us builds from ``gov.hhs.medicaid.cost_share``). We also charge
+  the state the federal share policyengine-us books for enrollees whose
+  immigration status bars federal matching (42 USC 1396b(v)). Federal funds
+  still match their emergency care, which this accounting can't separate, so
+  the charge overstates the state's cost. CHIP coverage through the
   unborn-child option keeps its federal match (42 CFR 457.10).
 * The federal government pays ACA premium tax credits and the Basic Health
   Program.
@@ -28,8 +33,8 @@ the household's state:
   releases model. Healthier Oregon counts only for people policyengine-us
   doesn't also enroll in Medicaid, because it prices their coverage in both.
 
-The states pay every TANF change, since the federal block grant is a fixed
-amount, and each TANF dollar counts once.
+Federal law fixes each state's TANF block grant, so we charge every TANF change
+to the states, and each TANF dollar counts once.
 
 policyengine-us spreads each state's fixed Medicaid spending over the
 enrollees in each simulation (``medicaid_slcsp_state_denominator``). Left to
@@ -221,6 +226,10 @@ def programs_metadata(sim, year):
         "split_by_federal_matching": list(fmap_split),
         "federal": list(federal),
         "state": list(state),
+        "tanf_programs_in_state_benefits": tanf_programs_in_state_benefits(
+            state_tanf_variables(sim),
+            _parameters(sim, year).gov.household.household_state_benefits,
+        ),
         "tanf_states_in_state_benefits": tanf_states_in_state_benefits(
             state_tanf_variables(sim),
             _parameters(sim, year).gov.household.household_state_benefits,
@@ -249,14 +258,25 @@ def state_tanf_variables(sim):
     return list(names)
 
 
+def tanf_programs_in_state_benefits(state_tanf_variables, state_benefits):
+    """The state TANF programs ``household_state_benefits`` also lists, in ``tanf``'s order.
+
+    ``tanf`` adds every state program for families that take TANF up;
+    ``household_state_benefits`` adds each program it lists for every eligible
+    family, with no take-up test.
+    """
+    listed = set(state_benefits)
+    return [v for v in state_tanf_variables if v in listed]
+
+
 def tanf_states_in_state_benefits(state_tanf_variables, state_benefits):
-    """States whose TANF program ``household_state_benefits`` already lists.
+    """States whose TANF program ``household_state_benefits`` also lists.
 
     ``state_tanf_variables`` holds every state TANF program, each named with its
     state's code first (``ca_tanf``, ``ma_tafdc``).
     """
-    listed = set(state_benefits)
-    return sorted({v.split("_", 1)[0].upper() for v in state_tanf_variables if v in listed})
+    programs = tanf_programs_in_state_benefits(state_tanf_variables, state_benefits)
+    return sorted({v.split("_", 1)[0].upper() for v in programs})
 
 
 def federally_eligible_status(status, years_since_entry, p):
@@ -304,8 +324,8 @@ def state_only_coverage(sim, year):
 
     ``medicaid_federal_share`` and ``chip_federal_share`` apply federal matching
     rates to every enrollee, including people a state covers whatever their
-    immigration status, such as California's Medi-Cal for undocumented, DACA
-    and TPS residents. Federal law matches only emergency care for such people
+    immigration status, such as California's Medi-Cal for undocumented and
+    DACA residents. Federal law matches only emergency care for such people
     (42 USC 1396b(v)), so this moves their whole federal share to the state. If
     the state spending totals that ``medicaid_cost`` spreads count that
     federally matched emergency care, the move overstates the state's cost by
@@ -342,8 +362,11 @@ def with_derived(frame):
     ``state_health`` is each household's health spending that falls on its
     state and ``federal_health`` the part that falls on the federal government;
     between them they hold every program in ``healthcare_benefit_value`` once,
-    less the Healthier Oregon overlap. ``tanf_charge`` is the TANF its state's
-    line doesn't already hold.
+    less the Healthier Oregon overlap. ``tanf_charge`` is the household's TANF
+    less the copy its state's line already holds (``tanf_in_state_benefits``),
+    so that line and the charge hold its TANF once, as ``tanf`` pays it. The
+    charge turns negative for a family eligible for a listed program that
+    doesn't take TANF up.
     """
     frame["state_health"] = (
         frame["state_health_split"] + frame["state_only_coverage"] + frame["state_health_programs"]
@@ -437,8 +460,12 @@ def household_frame(sim, year):
         else np.zeros_like(weight)
     )
     tanf = hh(TANF_VARIABLE)
-    tanf_states = tanf_states_in_state_benefits(
-        state_tanf_variables(sim), parameters.gov.household.household_state_benefits
+    # The copy of TANF that household_state_benefits holds: each program it
+    # lists at its full amount, whether or not the family takes TANF up.
+    tanf_in_state_benefits = total(
+        tanf_programs_in_state_benefits(
+            state_tanf_variables(sim), parameters.gov.household.household_state_benefits
+        )
     )
     frame = {
         "state": state,
@@ -452,7 +479,7 @@ def household_frame(sim, year):
         "state_only_coverage": state_only_coverage(sim, year),
         "health_value": hh(HEALTH_VALUE_VARIABLE),
         "tanf": tanf,
-        "tanf_in_state_benefits": np.where(np.isin(state, tanf_states), tanf, 0.0),
+        "tanf_in_state_benefits": tanf_in_state_benefits,
     }
     with_derived(frame)
     check_frame(frame)

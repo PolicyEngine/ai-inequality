@@ -2,7 +2,7 @@
 //
 // Each function reads scenario rows of src/data/shiftSweepData.json, which
 // analysis/compute_shift_sweep.py writes. A run that counts health coverage
-// and TANF (analysis/health_tanf.py) gives every row health_federal_change_b
+// and TANF (analysis/health_tanf.py) gives every row federal_health_change_b
 // and the other health and TANF fields. For those rows the builders mirror
 // federal_chart_change and states_chart_change in analysis/fiscal.py: the
 // federal chart, every state's chart and the taxes outside them add up to
@@ -23,7 +23,7 @@ function withTotal(bands) {
 // True when the sweep's rows count health coverage and TANF.
 export function countsHealthTanf(sweepData) {
   return (sweepData?.scenarios ?? []).some(
-    (scenario) => scenario.health_federal_change_b != null,
+    (scenario) => scenario.federal_health_change_b != null,
   );
 }
 
@@ -39,9 +39,9 @@ export function federalRow(scenario, withHealthTanf = false) {
     amount(scenario, "employee_medicare_tax_change_b") +
     amount(scenario, "self_employment_tax_change_b");
   // Household benefits less household_state_benefits (the programs
-  // PolicyEngine counts as state-paid). Runs that count health coverage and
-  // TANF charge every TANF change to the states, since the federal block grant
-  // is a fixed amount.
+  // PolicyEngine counts as state-paid). Federal law fixes each state's TANF
+  // block grant, so runs that count health coverage and TANF charge every
+  // change in TANF benefits to the states.
   const federalBenefits =
     amount(scenario, "benefits_change_b") -
     amount(scenario, "state_benefits_change_b") -
@@ -52,7 +52,7 @@ export function federalRow(scenario, withHealthTanf = false) {
     rev_fed_benefits: -federalBenefits,
   };
   if (withHealthTanf) {
-    bands.rev_fed_health = -amount(scenario, "health_federal_change_b");
+    bands.rev_fed_health = -amount(scenario, "federal_health_change_b");
   }
   return withTotal(bands);
 }
@@ -70,8 +70,9 @@ export function stateDeltaRow(delta, withHealthTanf = false) {
     });
   }
   // household_state_benefits lists some states' TANF programs (Massachusetts's
-  // TAFDC at policyengine-us 1.764.6). The TANF band holds all of the state's
-  // TANF, so the benefits band leaves those programs out.
+  // TAFDC at policyengine-us 1.764.6) at their full amount for every eligible
+  // family. The TANF band holds the state's TANF as tanf pays it, to families
+  // that take it up, so the benefits band leaves that copy out.
   return withTotal({
     rev_state_income_tax_net,
     rev_state_benefits: -(

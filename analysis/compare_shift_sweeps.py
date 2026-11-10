@@ -15,15 +15,16 @@ three parts that add up to the change:
   (``total_rev_change_published_definition_b``) less the earlier run's total.
   It holds everything else that differs between the runs: code, engine and
   data.
-* ``tanf_counted_once``: ``tanf_counted_twice_change_b``. The earlier
-  definition subtracts a state's TANF twice where ``household_state_benefits``
-  also lists the program.
+* ``tanf_counted_once``: ``tanf_in_state_benefits_change_b``, the copy of
+  each state TANF program that ``household_state_benefits`` also lists, at the
+  full amount for every eligible family. The earlier definition subtracts it
+  on top of ``tanf``.
 * ``health``: minus ``health_change_b``, what governments spend on health
   coverage.
 
 ``decompose_state`` splits one state's chart total the same way, with the TANF
-its state pays (``tanf_state_charge_change_b``) in place of the TANF counted
-twice.
+charged to its state beyond that copy (``tanf_state_charge_change_b``) in place
+of the copy.
 """
 
 from __future__ import annotations
@@ -46,11 +47,13 @@ ROW_FIELDS = (
     "total_rev_change_excluding_health_b",
     "total_rev_change_published_definition_b",
     "health_change_b",
-    "health_federal_change_b",
-    "health_state_change_b",
+    "federal_health_change_b",
+    "state_health_change_b",
+    "state_only_coverage_change_b",
+    "healthier_oregon_overlap_change_b",
     "tanf_change_b",
     "tanf_state_charge_change_b",
-    "tanf_counted_twice_change_b",
+    "tanf_in_state_benefits_change_b",
     "taxes_outside_charts_change_b",
     "chart_identity_residual_b",
 )
@@ -63,23 +66,28 @@ STATE_FIELDS = (
     "state_net_change_b",
     "state_net_excluding_health_tanf_change_b",
     "state_health_change_b",
+    "federal_health_change_b",
+    "health_change_b",
+    "state_only_coverage_change_b",
+    "healthier_oregon_overlap_change_b",
     "tanf_change_b",
     "tanf_state_charge_change_b",
     "tanf_in_state_benefits_change_b",
 )
 
-#: Each national row field, and the state row field whose states add up to it.
+#: National row fields that add up the same field across the states' rows.
 STATE_SUMS = (
-    (
-        "state_tax_before_refundable_credits_change_b",
-        "state_tax_before_refundable_credits_change_b",
-    ),
-    ("state_refundable_credits_change_b", "state_refundable_credits_change_b"),
-    ("state_benefits_change_b", "state_benefits_change_b"),
-    ("tanf_change_b", "tanf_change_b"),
-    ("tanf_state_charge_change_b", "tanf_state_charge_change_b"),
-    ("tanf_counted_twice_change_b", "tanf_in_state_benefits_change_b"),
-    ("health_state_change_b", "state_health_change_b"),
+    "state_tax_before_refundable_credits_change_b",
+    "state_refundable_credits_change_b",
+    "state_benefits_change_b",
+    "tanf_change_b",
+    "tanf_state_charge_change_b",
+    "tanf_in_state_benefits_change_b",
+    "state_health_change_b",
+    "federal_health_change_b",
+    "health_change_b",
+    "state_only_coverage_change_b",
+    "healthier_oregon_overlap_change_b",
 )
 
 #: Largest chart identity residual check_sweep accepts, in $B. policyengine-us
@@ -123,8 +131,14 @@ def _check_state(label, code, d):
     if not _close(d["tanf_state_charge_change_b"], charge):
         problems.append(
             f"{label} {code}: tanf_state_charge_change_b "
-            f"{d['tanf_state_charge_change_b']:.6f} differs from TANF less the TANF in "
-            f"state benefits, {charge:.6f}"
+            f"{d['tanf_state_charge_change_b']:.6f} differs from TANF less the TANF "
+            f"copy in state benefits, {charge:.6f}"
+        )
+    health = d["federal_health_change_b"] + d["state_health_change_b"]
+    if not _close(d["health_change_b"], health):
+        problems.append(
+            f"{label} {code}: health_change_b {d['health_change_b']:.6f} differs from "
+            f"federal plus state health spending, {health:.6f}"
         )
     return problems
 
@@ -150,18 +164,18 @@ def _check_row(row):
         (
             "total_rev_change_excluding_health_b",
             row["total_rev_change_published_definition_b"]
-            + row["tanf_counted_twice_change_b"],
-            "the earlier definition's total plus the TANF it counts twice",
+            + row["tanf_in_state_benefits_change_b"],
+            "the earlier definition's total plus the TANF copy in state benefits",
         ),
         (
             "health_change_b",
-            row["health_federal_change_b"] + row["health_state_change_b"],
+            row["federal_health_change_b"] + row["state_health_change_b"],
             "federal plus state health spending",
         ),
         (
             "tanf_state_charge_change_b",
-            row["tanf_change_b"] - row["tanf_counted_twice_change_b"],
-            "TANF less the TANF in state benefits",
+            row["tanf_change_b"] - row["tanf_in_state_benefits_change_b"],
+            "TANF less the TANF copy in state benefits",
         ),
     )
     for field, expected, description in identities:
@@ -181,12 +195,16 @@ def _check_row(row):
         return problems + [f"{label}: no state rows"]
     for code, d in states.items():
         problems.extend(_check_state(label, code, d))
-    for national, state_field in STATE_SUMS:
-        summed = sum(d.get(state_field) or 0.0 for d in states.values())
-        if not _close(row[national], summed):
+    for field in STATE_SUMS:
+        value = row.get(field)
+        if value is None:
+            problems.append(f"{label}: no {field}")
+            continue
+        summed = sum(d.get(field) or 0.0 for d in states.values())
+        if not _close(value, summed):
             problems.append(
-                f"{label}: {national} {row[national]:.6f} differs from the states' "
-                f"{state_field} added up, {summed:.6f}"
+                f"{label}: {field} {value:.6f} differs from the states' "
+                f"{field} added up, {summed:.6f}"
             )
     return problems
 
@@ -252,7 +270,7 @@ def decompose(new, old):
             "shift_pct": row["shift_pct"],
             "earlier_total": earlier,
             "same_definition": row["total_rev_change_published_definition_b"] - earlier,
-            "tanf_counted_once": row["tanf_counted_twice_change_b"],
+            "tanf_counted_once": row["tanf_in_state_benefits_change_b"],
             "health": -row["health_change_b"],
             "total": row["total_rev_change_b"],
         }
@@ -362,7 +380,7 @@ def report(new, old, state="CA"):
         lines.append(
             f"| {row['shift_pct']}% | {_b(row['total_rev_change_b'])} "
             f"| {_b(charts['federal'])} | {_b(charts['states'])} | {_b(charts['outside'])} "
-            f"| {_b(-row['health_federal_change_b'])} | {_b(-row['health_state_change_b'])} "
+            f"| {_b(-row['federal_health_change_b'])} | {_b(-row['state_health_change_b'])} "
             f"| {_b(-row['tanf_change_b'])} | {_b(row['total_rev_change_excluding_health_b'])} "
             f"| {_b(row['total_rev_change_published_definition_b'])} |"
         )

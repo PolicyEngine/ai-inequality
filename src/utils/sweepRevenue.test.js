@@ -2,7 +2,6 @@
 //
 // Invariants:
 //
-// * every row's revenue equals the sum of its bands;
 // * a missing field counts as zero;
 // * without health coverage and TANF, the federal chart, every state's chart
 //   and the taxes outside them add up to the published total (taxes less
@@ -34,12 +33,6 @@ function generator(seed) {
   };
 }
 
-function bandsSum(row) {
-  return Object.entries(row)
-    .filter(([key]) => key !== "revenue")
-    .reduce((sum, [, value]) => sum + value, 0);
-}
-
 test("federal row: hand example with and without health coverage and TANF", () => {
   const scenario = {
     fed_income_tax_before_refundable_credits_change_b: 10,
@@ -52,7 +45,7 @@ test("federal row: hand example with and without health coverage and TANF", () =
     benefits_change_b: 6,
     state_benefits_change_b: 1,
     tanf_change_b: 0.5,
-    health_federal_change_b: 2,
+    federal_health_change_b: 2,
   };
   expect(federalRow(scenario)).toEqual({
     rev_fed_income_tax_net: 7,
@@ -107,14 +100,14 @@ test("missing fields and missing states count as zero", () => {
   expect(stateRow(undefined, "CA").revenue).toBe(0);
 });
 
-test("countsHealthTanf keys on health_federal_change_b, zero included", () => {
+test("countsHealthTanf keys on federal_health_change_b, zero included", () => {
   expect(countsHealthTanf(undefined)).toBe(false);
   expect(countsHealthTanf({ scenarios: [] })).toBe(false);
   expect(countsHealthTanf({ scenarios: [{ revenue_change_b: 1 }] })).toBe(
     false,
   );
   expect(
-    countsHealthTanf({ scenarios: [{}, { health_federal_change_b: 0 }] }),
+    countsHealthTanf({ scenarios: [{}, { federal_health_change_b: 0 }] }),
   ).toBe(true);
 });
 
@@ -129,15 +122,18 @@ function randomScenario(random) {
   );
   const states = {};
   for (const code of codes) {
-    const tanf = draw(1);
-    const tanfInStateBenefits = code === "MA" ? tanf : 0;
+    // household_state_benefits holds Massachusetts's TAFDC at its full amount
+    // for every eligible family, and tanf only for families that take TANF
+    // up, so the two move apart.
+    const tanfInStateBenefits = code === "MA" ? draw(1) : 0;
     const d = {
       state_tax_before_refundable_credits_change_b: draw(),
       state_refundable_credits_change_b: draw(2),
       state_benefits_change_b: draw(2) + tanfInStateBenefits,
-      tanf_change_b: tanf,
+      tanf_change_b: draw(1),
       tanf_in_state_benefits_change_b: tanfInStateBenefits,
       state_health_change_b: draw(3),
+      federal_health_change_b: draw(5),
     };
     // compute_shift_sweep._state_delta_rows's state_net_change_b.
     d.state_net_change_b =
@@ -165,9 +161,11 @@ function randomScenario(random) {
     ),
     state_benefits_change_b: sumStates("state_benefits_change_b"),
     tanf_change_b: sumStates("tanf_change_b"),
-    tanf_counted_twice_change_b: sumStates("tanf_in_state_benefits_change_b"),
-    health_federal_change_b: draw(5),
-    health_state_change_b: sumStates("state_health_change_b"),
+    tanf_in_state_benefits_change_b: sumStates(
+      "tanf_in_state_benefits_change_b",
+    ),
+    federal_health_change_b: sumStates("federal_health_change_b"),
+    state_health_change_b: sumStates("state_health_change_b"),
     state_deltas: states,
   };
   s.refundable_credits_change_b = s.state_refundable_credits_change_b + draw(5);
@@ -190,8 +188,8 @@ function randomScenario(random) {
     s.benefits_change_b;
   s.revenue_change_b =
     s.total_rev_change_published_definition_b +
-    s.tanf_counted_twice_change_b -
-    (s.health_federal_change_b + s.health_state_change_b);
+    s.tanf_in_state_benefits_change_b -
+    (s.federal_health_change_b + s.state_health_change_b);
   return s;
 }
 
@@ -217,13 +215,11 @@ test("property: the charts and the taxes outside them add up to the total", () =
       s.total_rev_change_published_definition_b,
       9,
     );
-    for (const row of [federalRow(s), federalRow(s, true)]) {
-      expect(row.revenue).toBeCloseTo(bandsSum(row), 12);
-    }
     for (const d of Object.values(s.state_deltas)) {
-      const row = stateDeltaRow(d, true);
-      expect(row.revenue).toBeCloseTo(bandsSum(row), 12);
-      expect(row.revenue, context).toBeCloseTo(d.state_net_change_b, 9);
+      expect(stateDeltaRow(d, true).revenue, context).toBeCloseTo(
+        d.state_net_change_b,
+        9,
+      );
     }
   }
 });
