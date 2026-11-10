@@ -38,17 +38,20 @@ records:
   sits in ``household_benefits`` but in no state's line, so the sweep books it
   federal; the exception is a state whose program
   ``gov.household.household_state_benefits`` also lists (Massachusetts's
-  TAFDC in policyengine-us 2.2.1, which later releases drop from that list),
-  which the state's line holds and the all-government total counts twice.
-  These fields charge each state its share of Medicaid, CHIP and Medicare
-  Savings Program costs under federal matching rules
-  (``state_benefit_cost``, from ``gov.hhs.medicaid.cost_share``), the whole
-  cost of coverage it funds alone for people whose immigration status rules
-  out federal matching (CHIP's unborn-child coverage keeps its federal match),
-  its own health subsidies, and the TANF change its line doesn't already hold,
-  because the federal TANF block grant is a fixed amount. The all-government
-  total adds every program in ``healthcare_benefit_value`` and counts TANF
-  once; federal net revenue is again what the states and localities leave.
+  TAFDC in policyengine-us 2.2.1, which later releases drop from that list).
+  That list holds the program at its full amount for every eligible family,
+  and ``tanf`` adds it again for families that take TANF up. These fields
+  charge each state its share of Medicaid, CHIP and Medicare Savings Program
+  costs under federal matching rules (``state_benefit_cost``, from
+  ``gov.hhs.medicaid.cost_share``), the federal share policyengine-us books
+  for people whose immigration status rules out federal matching (federal
+  funds still match their emergency care, so this overstates the state's
+  cost; CHIP's unborn-child coverage keeps its federal match), its own health
+  subsidies, and its TANF change beyond the copy its line holds, because
+  federal law fixes each state's TANF block grant. The all-government total
+  adds every program in ``healthcare_benefit_value`` and counts TANF once, as
+  ``tanf`` pays it; federal net revenue is again what the states and
+  localities leave.
 * Medicaid at the baseline's cost per enrollee. policyengine-us spreads each
   state's fixed Medicaid spending over the enrollees in each simulation
   (``medicaid_slcsp_state_denominator``), so on its own a shifted branch that
@@ -471,11 +474,13 @@ def _health_tanf_accounting(base, scen, state_net, all_government):
 
     ``state_net`` ($B by state) and ``all_government`` ($B) follow the sweep:
     ``tanf`` sits in all-government benefits but in no state's line, except a
-    program ``household_state_benefits`` also lists, which sits in its state's
-    line and twice in the all-government total; health spending sits in
-    neither. Here each state also pays its health share (``state_health``) and
-    the TANF change its line doesn't already hold, the all-government total
-    pays every health dollar and counts TANF once, and federal net revenue is
+    program ``household_state_benefits`` also lists: that list holds it, in
+    its state's line and the all-government total, at its full amount for
+    every eligible family, and ``tanf`` adds it again for families that take
+    TANF up. Health spending sits in neither. Here each state also pays its
+    health share (``state_health``) and its TANF change beyond the copy its
+    line holds, the all-government total pays every health dollar and counts
+    TANF once, as ``tanf`` pays it, and federal net revenue is
     what the states and localities leave, so TANF moves from the federal line to
     the states'.
     """
@@ -491,7 +496,7 @@ def _health_tanf_accounting(base, scen, state_net, all_government):
     state_health = by_state("state_health")
     tanf_charge = by_state("tanf_charge")
     federal_health = total("federal_health")
-    counted_twice = total("tanf_in_state_benefits")
+    tanf_copy = total("tanf_in_state_benefits")
     states = {
         code: state_net.get(code, 0.0)
         - (state_health.get(code, 0.0) + tanf_charge.get(code, 0.0)) / 1e9
@@ -499,7 +504,7 @@ def _health_tanf_accounting(base, scen, state_net, all_government):
     }
     all_states = sum(states.values())
     all_government_with_health = (
-        all_government - (federal_health + sum(state_health.values()) - counted_twice) / 1e9
+        all_government - (federal_health + sum(state_health.values()) - tanf_copy) / 1e9
     )
     outside = _outside_state_measure(base, scen)
     return {
@@ -507,7 +512,9 @@ def _health_tanf_accounting(base, scen, state_net, all_government):
         "health_state_change_b": sum(state_health.values()) / 1e9,
         "healthier_oregon_overlap_change_b": total("healthier_oregon_overlap") / 1e9,
         "tanf_change_b": total("tanf") / 1e9,
-        "tanf_counted_twice_change_b": counted_twice / 1e9,
+        # The copy of TANF in household_state_benefits, under the name the
+        # committed outputs and california_summary use.
+        "tanf_counted_twice_change_b": tanf_copy / 1e9,
         "all_government_with_health_change_b": all_government_with_health,
         "all_states_net_with_health_tanf_change_b": all_states,
         "federal_net_with_health_tanf_change_b": all_government_with_health

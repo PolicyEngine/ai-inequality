@@ -26,15 +26,20 @@ for attribution only; they are already inside the refundable-credit and
 benefit aggregates.
 
 Health coverage and TANF: ``household_benefits`` holds no health coverage,
-because policyengine-us keeps it out of household net income, and it counts a
-state TANF program twice when ``gov.household.household_state_benefits`` also
-lists it (Massachusetts's TAFDC at policyengine-us 1.764.6). Pass a
+because policyengine-us keeps it out of household net income. It adds a state
+TANF program that ``gov.household.household_state_benefits`` also lists
+(Massachusetts's TAFDC at policyengine-us 1.764.6) through ``tanf`` for
+families that take TANF up and again through ``household_state_benefits``, at
+the full amount, for every eligible family. Pass a
 ``health_tanf.household_frame`` as ``health_frame`` to add each household's
 health spending by payer and its TANF; ``net_fiscal_impact`` then reports
 
-    total_change_excluding_health = total_change + TANF counted twice
+    total_change_excluding_health = total_change
+                                    + the TANF copy in household_state_benefits
     total_change_with_health_tanf = total_change_excluding_health
                                     - health spending
+
+so each family's TANF counts once, as ``tanf`` pays it.
 
 Build the frame only on a simulation whose Medicaid enrollees cost what they
 cost in the baseline (``health_tanf.price_medicaid_at_baseline``).

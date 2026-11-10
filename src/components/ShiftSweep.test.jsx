@@ -11,7 +11,7 @@ function withoutHealthTanf(data) {
     ...data,
     scenarios: data.scenarios.map((scenario) => {
       const row = { ...scenario };
-      delete row.health_federal_change_b;
+      delete row.federal_health_change_b;
       return row;
     }),
   };
@@ -27,7 +27,7 @@ const MOCK_HEALTH_TANF_PAYLOAD = {
     ...scenario,
     revenue_change_b: -scenario.shift_pct,
     total_rev_change_b: -scenario.shift_pct,
-    health_federal_change_b: scenario.shift_pct / 10,
+    federal_health_change_b: scenario.shift_pct / 10,
     tanf_change_b: scenario.shift_pct / 100,
     state_deltas: Object.fromEntries(
       Object.entries(scenario.state_deltas ?? {}).map(([code, delta]) => [

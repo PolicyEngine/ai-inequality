@@ -185,8 +185,13 @@ def frames(draw, n=None):
     share = np.asarray(draw(st.lists(SHARES, min_size=n, max_size=n)))
     frame["state_only_coverage"] = frame["federal_health_split"] * share
     frame["fmap_split_cost"] = frame["federal_health_split"] + frame["state_health_split"]
-    # Massachusetts's state benefits hold its TAFDC.
-    frame["tanf_in_state_benefits"] = np.where(state == "MA", frame["tanf"], 0.0)
+    # household_state_benefits holds Massachusetts's TAFDC at its full amount
+    # for every eligible family; tanf holds it only for families that take
+    # TANF up.
+    takes_up = np.asarray(draw(st.lists(st.booleans(), min_size=n, max_size=n)))
+    copy = spending()
+    frame["tanf_in_state_benefits"] = np.where(state == "MA", copy, 0.0)
+    frame["tanf"] = np.where(state == "MA", np.where(takes_up, copy, 0.0), frame["tanf"])
     # healthcare_benefit_value prices the overlap too; the frame's state
     # programs leave it out.
     frame["health_value"] = (
@@ -214,9 +219,15 @@ def test_health_spending_is_conserved(frame):
         frame["health_total"], frame["health_value"] - frame["healthier_oregon_overlap"],
         rtol=1e-12, atol=1e-6,
     )
-    np.testing.assert_allclose(
-        frame["tanf_charge"], np.where(frame["state"] == "MA", 0.0, frame["tanf"]), atol=1e-9
+    # A Massachusetts family that takes TANF up owes nothing beyond the copy in
+    # its state's line, one that doesn't takes that copy back out, and every
+    # other state pays all of its TANF.
+    expected = np.where(
+        frame["state"] == "MA",
+        np.where(frame["tanf"] > 0, 0.0, -frame["tanf_in_state_benefits"]),
+        frame["tanf"],
     )
+    np.testing.assert_allclose(frame["tanf_charge"], expected, atol=1e-9)
     # Moving state-only coverage moves spending from the federal line to the
     # state's and never below zero.
     assert (frame["federal_health"] >= -1e-6).all()
@@ -224,21 +235,25 @@ def test_health_spending_is_conserved(frame):
 
 
 def _frame_example():
-    """A California and a Massachusetts household whose pieces add up."""
+    """Households whose pieces add up: one in California and two in Massachusetts.
+
+    Both Massachusetts families qualify for TAFDC; the first takes TANF up and
+    the second doesn't.
+    """
     frame = {
-        "state": np.asarray(["CA", "MA"]),
-        "weight": np.asarray([100.0, 200.0]),
-        "federal_health_split": np.asarray([600.0, 500.0]),
-        "state_health_split": np.asarray([400.0, 500.0]),
-        "federal_health_other": np.asarray([0.0, 2_000.0]),
-        "state_health_programs": np.asarray([50.0, 0.0]),
-        "healthier_oregon_overlap": np.zeros(2),
-        "state_only_coverage": np.asarray([600.0, 0.0]),
-        "tanf": np.asarray([3_000.0, 9_536.0]),
+        "state": np.asarray(["CA", "MA", "MA"]),
+        "weight": np.asarray([100.0, 200.0, 50.0]),
+        "federal_health_split": np.asarray([600.0, 500.0, 0.0]),
+        "state_health_split": np.asarray([400.0, 500.0, 0.0]),
+        "federal_health_other": np.asarray([0.0, 2_000.0, 0.0]),
+        "state_health_programs": np.asarray([50.0, 0.0, 0.0]),
+        "healthier_oregon_overlap": np.zeros(3),
+        "state_only_coverage": np.asarray([600.0, 0.0, 0.0]),
+        "tanf": np.asarray([3_000.0, 9_536.0, 0.0]),
     }
     frame["fmap_split_cost"] = frame["federal_health_split"] + frame["state_health_split"]
-    frame["tanf_in_state_benefits"] = np.asarray([0.0, 9_536.0])
-    frame["health_value"] = np.asarray([1_050.0, 3_000.0])
+    frame["tanf_in_state_benefits"] = np.asarray([0.0, 9_536.0, 9_536.0])
+    frame["health_value"] = np.asarray([1_050.0, 3_000.0, 0.0])
     return with_derived(frame)
 
 
@@ -246,11 +261,18 @@ def test_frame_example_by_hand():
     frame = _frame_example()
     check_frame(frame)
     # California pays its share and all of the undocumented enrollee's federal
-    # share; Massachusetts's TAFDC already sits in its state benefits.
-    assert frame["state_health"].tolist() == [1_050.0, 500.0]
-    assert frame["federal_health"].tolist() == [0.0, 2_500.0]
-    assert frame["tanf_charge"].tolist() == [3_000.0, 0.0]
+    # share. Massachusetts's state benefits hold TAFDC for both of its
+    # families, so the charge adds nothing for the family that takes TANF up
+    # and takes the copy back out for the one that doesn't.
+    assert frame["state_health"].tolist() == [1_050.0, 500.0, 0.0]
+    assert frame["federal_health"].tolist() == [0.0, 2_500.0, 0.0]
+    assert frame["tanf_charge"].tolist() == [3_000.0, 0.0, -9_536.0]
     assert national_totals(frame)["health_total"] == 100 * 1_050.0 + 200 * 3_000.0
+    # Massachusetts's line holds both families' TAFDC; with the charge it
+    # holds the TAFDC tanf pays, the first family's.
+    massachusetts = state_totals(frame)["MA"]
+    assert massachusetts["tanf_in_state_benefits"] == 250 * 9_536.0
+    assert massachusetts["tanf_in_state_benefits"] + massachusetts["tanf_charge"] == 200 * 9_536.0
 
 
 def test_check_frame_refuses_a_gap():
@@ -273,9 +295,13 @@ def test_check_frame_allows_float32_rounding_of_large_amounts():
     # the sum of its programs. A millionth of the amount passes; more doesn't.
     frame = _frame_example()
     big = {k: v if k in ("state", "weight") else v * 1e5 for k, v in frame.items()}
-    check_frame(dict(big, health_value=big["health_value"] + 4.0))
+    covered = big["health_value"] > 0
+    check_frame(dict(big, health_value=big["health_value"] + 4.0 * covered))
     with pytest.raises(AssertionError, match="healthcare_benefit_value"):
-        check_frame(dict(big, health_value=big["health_value"] + 200.0))
+        check_frame(dict(big, health_value=big["health_value"] + 200.0 * covered))
+    # A household with no coverage gets no such allowance.
+    with pytest.raises(AssertionError, match="healthcare_benefit_value"):
+        check_frame(dict(big, health_value=big["health_value"] + 4.0 * ~covered))
 
 
 @settings(max_examples=200, deadline=None)
@@ -745,8 +771,10 @@ TAKE_UP = {
     "takes_up_snap_if_eligible": True,
 }
 #: A low-income California parent and child, a Massachusetts parent and child
-#: on TAFDC, a Texas earner buying ACA coverage, and two capital holders who
-#: receive the shifted income.
+#: on TAFDC, a Texas earner buying ACA coverage, two capital holders who
+#: receive the shifted income, and a Massachusetts family like the first that
+#: doesn't take TANF up.
+NO_TANF = {**TAKE_UP, "takes_up_tanf_if_eligible": False}
 PEOPLE = [
     (0, 6, 30, {"employment_income_before_lsr": 9_000.0, **TAKE_UP}),
     (0, 6, 5, dict(TAKE_UP)),
@@ -757,6 +785,8 @@ PEOPLE = [
                  "long_term_capital_gains": 100_000.0, **TAKE_UP}),
     (4, 6, 40, {"employment_income_before_lsr": 150_000.0,
                 "qualified_dividend_income": 30_000.0, **TAKE_UP}),
+    (5, 25, 28, {"employment_income_before_lsr": 6_000.0, **NO_TANF}),
+    (5, 25, 3, dict(NO_TANF)),
 ]
 
 
@@ -804,11 +834,14 @@ def test_classification_matches_the_installed_engine():
     listed = sim.tax_benefit_system.parameters("2026-01-01").gov.household.household_state_benefits
     # Massachusetts's TAFDC sits in household_state_benefits until
     # policyengine-us 2.4.4 drops it; no other state's TANF ever has.
+    programs = health_tanf.tanf_programs_in_state_benefits(tanf_programs, listed)
+    assert set(programs) <= {"ma_tafdc"}
     assert set(health_tanf.tanf_states_in_state_benefits(tanf_programs, listed)) <= {"MA"}
     record = health_tanf.programs_metadata(sim, 2026)
     assert record["split_by_federal_matching"] == list(fmap)
     assert record["federal"] == list(federal)
     assert record["state"] == list(state)
+    assert record["tanf_programs_in_state_benefits"] == programs
     assert set(record["tanf_states_in_state_benefits"]) <= {"MA"}
 
 
@@ -838,9 +871,41 @@ def test_chart_identity_and_labor_inputs_on_policyengine():
         frames[name] = health_tanf.household_frame(sim, 2026)
         deltas[name] = revenue_components(sim, 2026, health_frame=frames[name])
     assert frames["base"]["health_total"].sum() > 0
-    # Only Massachusetts's TANF sits in its state benefits (at 1.764.6).
-    in_lists = frames["base"]["tanf_in_state_benefits"]
-    assert (in_lists[frames["base"]["state"] != "MA"] == 0).all()
+    # Only Massachusetts's TANF sits in its state benefits (at 1.764.6), at
+    # TAFDC's full twelve months for every eligible family, while tanf holds it
+    # only for families that take TANF up: households 1 and 5 differ only in
+    # that.
+    frame = frames["base"]
+    in_lists = frame["tanf_in_state_benefits"]
+    assert (in_lists[frame["state"] != "MA"] == 0).all()
+    listed = base.tax_benefit_system.parameters("2026-01-01").gov.household.household_state_benefits
+    if "ma_tafdc" in health_tanf.tanf_programs_in_state_benefits(
+        health_tanf.state_tanf_variables(base), listed
+    ):
+        months = sum(
+            np.asarray(
+                base.calculate("ma_tafdc", f"2026-{month:02d}", map_to="household"),
+                dtype=float,
+            )
+            for month in range(1, 13)
+        )
+        np.testing.assert_allclose(in_lists, months, rtol=1e-6, atol=0.01)
+        # The flat dataset leaves household_id unset, so find the two by input.
+        takes_up = np.asarray(
+            base.calculate("takes_up_tanf_if_eligible", 2026, map_to="household"), dtype=float
+        )
+        taker, skipper = (
+            int(np.flatnonzero((frame["state"] == "MA") & (takes_up == flag))[0])
+            for flag in (1.0, 0.0)
+        )
+        assert months[taker] > 1_000
+        assert months[skipper] == pytest.approx(months[taker], rel=1e-6)
+        assert frame["tanf"][taker] == pytest.approx(months[taker], rel=1e-6)
+        assert frame["tanf"][skipper] == 0
+        assert frame["tanf_charge"][taker] == pytest.approx(0.0, abs=0.01)
+        assert frame["tanf_charge"][skipper] == pytest.approx(-months[skipper], rel=1e-6)
+    else:
+        assert (in_lists == 0).all()
     delta = net_fiscal_impact(deltas["branch"], deltas["base"])
     # The engine's aggregates hold exactly the parts the charts add, so the
     # charts and the taxes outside them account for every dollar, up to
@@ -873,7 +938,7 @@ def test_two_level_sweep_rows_add_up():
         + half["employee_medicare_tax_change_b"]
         + half["self_employment_tax_change_b"]
         - (half["benefits_change_b"] - half["state_benefits_change_b"] - half["tanf_change_b"])
-        - half["health_federal_change_b"]
+        - half["federal_health_change_b"]
     )
     all_states = sum(row["state_net_change_b"] for row in states.values())
     rows_total = federal_chart + all_states + half["taxes_outside_charts_change_b"]
@@ -891,5 +956,5 @@ def test_two_level_sweep_rows_add_up():
     )
     assert half["revenue_change_b"] == half["total_rev_change_b"]
     assert sum(row["state_health_change_b"] for row in states.values()) == pytest.approx(
-        half["health_state_change_b"], abs=1e-12
+        half["state_health_change_b"], abs=1e-12
     )

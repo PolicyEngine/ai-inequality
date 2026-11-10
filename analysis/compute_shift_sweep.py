@@ -51,8 +51,9 @@ _FISCAL_FIELDS = [
     ("total_rev_change_excluding_health_b", "total_change_excluding_health"),
     # Taxes less household_refundable_tax_credits and household_benefits, as
     # the site defined the total before it counted health coverage and TANF:
-    # no health spending, and TANF twice where household_state_benefits also
-    # lists a state's program.
+    # no health spending, and a second copy of each state TANF program that
+    # household_state_benefits also lists, at the full amount for every
+    # eligible family.
     ("total_rev_change_published_definition_b", "total_change"),
     # Non-overlapping top-line aggregates.
     ("household_tax_change_b", "household_tax_before_refundable_credits_change"),
@@ -89,15 +90,15 @@ _FISCAL_FIELDS = [
     ("wic_change_b", "wic_change"),
     # Health spending by payer (health_tanf), which household benefits leave out.
     ("health_change_b", "health_total_change"),
-    ("health_federal_change_b", "federal_health_change"),
-    ("health_state_change_b", "state_health_change"),
+    ("federal_health_change_b", "federal_health_change"),
+    ("state_health_change_b", "state_health_change"),
     ("health_value_change_b", "health_value_change"),
     ("healthier_oregon_overlap_change_b", "healthier_oregon_overlap_change"),
     ("state_only_coverage_change_b", "state_only_coverage_change"),
-    # TANF the states pay that household_state_benefits doesn't already hold,
-    # and the TANF it does hold, which household_benefits counts twice.
+    # The TANF charged to the states beyond the copy household_state_benefits
+    # holds, and that copy, which the totals above drop.
     ("tanf_state_charge_change_b", "tanf_charge_change"),
-    ("tanf_counted_twice_change_b", "tanf_in_state_benefits_change"),
+    ("tanf_in_state_benefits_change_b", "tanf_in_state_benefits_change"),
     # Taxes the totals count that no chart band holds.
     ("taxes_outside_charts_change_b", "taxes_outside_charts_change"),
     *((f"{variable}_change_b", f"{variable}_change") for variable in OUTSIDE_CHART_TAXES),
@@ -151,8 +152,9 @@ def _state_delta_rows(scenario_states, baseline_states):
     """Return per-state delta dicts keyed by two-letter state code, in $B.
 
     ``state_net_change_b`` is state tax less refundable state credits, the
-    benefits in ``household_state_benefits``, the state's TANF that those
-    benefits don't already hold, and the state's share of health spending.
+    benefits in ``household_state_benefits``, the state's TANF beyond the copy
+    those benefits hold (so the line holds its TANF once, as ``tanf`` pays
+    it), and the state's share of health spending.
     ``state_net_excluding_health_tanf_change_b`` leaves out the last two, as
     the site's state measure did before it counted them. Refuses state
     components built without a ``health_frame``.
