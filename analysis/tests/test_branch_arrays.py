@@ -9,8 +9,8 @@ the pinned core 3.30.3):
   reads included, changes a value the branch reads.
 - Snapshot: a branch reads its parent's values as they were when the branch
   was made, whatever the parent stores, deletes or writes afterwards.
-- Differential: every read equals, in dtype and bytes, the read the same steps
-  give when each branch copies every array up front.
+- Differential: every read equals, in dtype, shape and bytes, the read the same
+  steps give when each branch copies every array up front.
 - No copy without a read: an array neither simulation has read since the
   branch was made shares memory between them, and nothing can write through
   either simulation's copy.
@@ -25,12 +25,21 @@ from before the branch, or a second variable or month that core stored the
 same array under. The first two reach a branch; the third changes only what the
 parent reads.
 
+The differential also fails for two of the parent's reads with no write at
+all, both intended and pinned below. Core's fast cache serves them, and the
+parent here reads through ``Simulation._calculate``: a formula's 0-dim result
+then comes back with shape (1,) rather than (), and a variable that the
+parent's own system neutralized after the parent cached it reads as its
+default rather than the cached values.
+
 Every test here but the first needs policyengine-core 3.30.3, and the last
 needs policyengine-us; CI installs neither, so they skip there.
 """
 
 import contextlib
+import copy
 import importlib.metadata
+import pickle
 
 import numpy as np
 import pytest
@@ -69,12 +78,12 @@ def _storage(sim, variable):
 
 
 def _contents(array):
-    """An array's dtype and values: bytes, or the objects in an object array,
-    whose bytes are pointers."""
+    """An array's dtype, shape and values: bytes, or the objects in an object
+    array, whose bytes are pointers."""
     array = np.asarray(array)
     if array.dtype.hasobject:
-        return array.dtype.str, tuple(array.tolist())
-    return array.dtype.str, array.tobytes()
+        return array.dtype.str, array.shape, tuple(array.tolist())
+    return array.dtype.str, array.shape, array.tobytes()
 
 
 def test_a_branch_shares_each_array_until_it_reads_it():
@@ -291,9 +300,18 @@ def _write_into_a_0_dim_result_after_branching(write_through):
     )
     target += 1
     return (
-        np.array(sim.calculate("salary_total", "2022-01")).reshape(-1),
-        np.array(branch.calculate("salary_total", "2022-01")).reshape(-1),
+        np.array(sim.calculate("salary_total", "2022-01")),
+        np.array(branch.calculate("salary_total", "2022-01")),
     )
+
+
+def _assert_0_dim_shapes(core, port):
+    # Intended: core's fast cache hands the parent the 0-dim array the formula
+    # returned, and here the parent reads the (1,) view its storage holds. Each
+    # branch reads its storage, under core and here.
+    assert core[0].shape == ()
+    assert port[0].shape == (1,)
+    assert core[1].shape == port[1].shape == (1,)
 
 
 @pytest.mark.parametrize("freeze_sources", [True, False])
@@ -302,12 +320,14 @@ def test_a_0_dim_result_the_parent_reads_again_after_branching_stays_its_own(
 ):
     # The parent's fresh read after branching must miss the fast cache, which
     # holds the 0-dim array the stored view shares memory with.
-    for parent, branch in (
-        _write_into_a_0_dim_result_after_branching("fresh read"),
-        _ported(freeze_sources, _write_into_a_0_dim_result_after_branching, "fresh read"),
-    ):
-        np.testing.assert_array_equal(parent, [3001.0])
+    core = _write_into_a_0_dim_result_after_branching("fresh read")
+    port = _ported(
+        freeze_sources, _write_into_a_0_dim_result_after_branching, "fresh read"
+    )
+    for parent, branch in (core, port):
+        np.testing.assert_array_equal(parent.reshape(-1), [3001.0])
         np.testing.assert_array_equal(branch, [3000.0])
+    _assert_0_dim_shapes(core, port)
 
 
 @pytest.mark.parametrize("freeze_sources", [True, False])
@@ -317,9 +337,40 @@ def test_a_write_through_the_0_dim_array_a_formula_returned_reaches_the_branch(
     # Intended, like a write through a view: the storage holds a view of that
     # 0-dim array, and freezing marks only the view read-only.
     core = _write_into_a_0_dim_result_after_branching("first result")
-    port = _ported(freeze_sources, _write_into_a_0_dim_result_after_branching, "first result")
-    np.testing.assert_array_equal(core, [[3001.0], [3000.0]])
-    np.testing.assert_array_equal(port, [[3001.0], [3001.0]])
+    port = _ported(
+        freeze_sources, _write_into_a_0_dim_result_after_branching, "first result"
+    )
+    assert [read.reshape(-1).tolist() for read in core] == [[3001.0], [3000.0]]
+    assert [read.reshape(-1).tolist() for read in port] == [[3001.0], [3001.0]]
+    _assert_0_dim_shapes(core, port)
+
+
+def _neutralize_after_caching():
+    """``income_tax`` before the parent's own system neutralizes it, then the
+    parent's and a new branch's reads of it."""
+    sim = _template_with()  # its own system, so the change stays in this test
+    before = sim.calculate("income_tax", "2022-01").tolist()
+    sim.tax_benefit_system.neutralize_variable("income_tax")
+    branch = sim.get_branch("raise")
+    return (
+        before,
+        sim.calculate("income_tax", "2022-01").tolist(),
+        branch.calculate("income_tax", "2022-01").tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_variable_neutralized_after_the_parent_cached_it_reads_as_its_default(
+    freeze_sources,
+):
+    # Intended: core's fast cache serves the parent the values it cached,
+    # though its own _calculate, which the branch reads through, returns the
+    # default for a neutralized variable. Here the parent reads through
+    # _calculate too. policyengine-us neutralizes variables only in branches
+    # it makes with clone_system=True.
+    tax, zero = [600.0, 375.0], [0.0, 0.0]
+    assert _neutralize_after_caching() == (tax, tax, zero)
+    assert _ported(freeze_sources, _neutralize_after_caching) == (tax, zero, zero)
 
 
 def _ported(freeze_sources, steps, *args):
@@ -354,6 +405,37 @@ def test_put_and_delete_drop_the_marks_they_replace():
         assert storage._shared == set()
         assert storage.get("2022-02") is None
         np.testing.assert_array_equal(storage.get("2022-01"), [0.0, 0.0])
+
+
+def _set_input_again_after_a_sub_branch():
+    """A branch sets ``income_tax``, makes its own branch, then sets it again:
+    whether the branch's first read returns the array it passed the second
+    time, the branch's read after a write into that array, and the
+    sub-branch's read."""
+    sim = _template()
+    branch = sim.get_branch("B")
+    branch.set_input("income_tax", "2022-01", np.array([1.0, 2.0], dtype=np.float32))
+    sub_branch = branch.get_branch("Y")
+    again = np.array([3.0, 4.0], dtype=np.float32)
+    branch.set_input("income_tax", "2022-01", again)
+    first = branch.calculate("income_tax", "2022-01")
+    again[0] = 99.0
+    return (
+        first is again,
+        branch.calculate("income_tax", "2022-01").tolist(),
+        sub_branch.calculate("income_tax", "2022-01").tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_branch_setting_an_input_again_after_its_own_branch_reads_as_core_s(
+    freeze_sources,
+):
+    # Core's set_input keys a branch's input under the branch's own name, so
+    # put has to drop the mark of the key that name builds, not the default's.
+    core = _set_input_again_after_a_sub_branch()
+    assert core == (True, [99.0, 4.0], [1.0, 2.0])
+    assert _ported(freeze_sources, _set_input_again_after_a_sub_branch) == core
 
 
 def test_a_branch_of_a_branch_reads_its_parent_s_snapshot():
@@ -435,6 +517,32 @@ def test_a_branch_reads_an_enum_array_as_its_parent_holds_it():
         np.testing.assert_array_equal(read.decode_to_str(), status.decode_to_str())
 
 
+def _write_into_an_enum_after_branching():
+    """The parent's and the branch's reads of ``housing_occupancy_status``
+    after the parent writes into a fresh read of it after branching."""
+    sim = _template()
+    sim.calculate("housing_occupancy_status", "2022-01")
+    branch = sim.get_branch("raise")
+    fresh = sim.calculate("housing_occupancy_status", "2022-01")
+    fresh[0] = 2
+    return (
+        sim.calculate("housing_occupancy_status", "2022-01").decode_to_str().tolist(),
+        branch.calculate("housing_occupancy_status", "2022-01").decode_to_str().tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_parent_write_into_an_enum_after_branching_stays_out_of_the_branch(
+    freeze_sources,
+):
+    # An EnumArray is an ndarray subclass, and the fast-cache drop has to catch
+    # it too. Otherwise the parent's fresh read returns the source the branch's
+    # view shares, which freezing makes read-only.
+    expected = (["free_lodger"], ["tenant"])
+    assert _write_into_an_enum_after_branching() == expected
+    assert _ported(freeze_sources, _write_into_an_enum_after_branching) == expected
+
+
 def _nickname_variable():
     """A string variable with no ``max_length``, which core stores as an object
     array, as it does policyengine-us's string variables."""
@@ -474,7 +582,7 @@ def _write_into_a_nickname_after_branching(check_sharing=False):
 def test_an_object_array_reads_as_core_s_after_a_parent_write(freeze_sources):
     core = _write_into_a_nickname_after_branching()
     port = _ported(freeze_sources, _write_into_a_nickname_after_branching, True)
-    assert core == (("|O", ("Cy", "Bo")), ("|O", ("Ada", "Bo")))
+    assert core == (("|O", (2,), ("Cy", "Bo")), ("|O", (2,), ("Ada", "Bo")))
     assert port == core
 
 
@@ -571,6 +679,21 @@ def test_the_with_block_puts_core_back():
     assert current() == before
 
 
+@pytest.mark.parametrize("outer, inner", [(True, False), (False, True)])
+def test_a_nested_block_puts_back_the_outer_block_s_freezing(outer, inner):
+    sim = _template()
+    with branch_arrays.shared_branch_arrays(freeze_sources=outer):
+        with branch_arrays.shared_branch_arrays(freeze_sources=inner):
+            assert branch_arrays.metadata()["sources_frozen"] is inner
+        assert branch_arrays.installed()
+        assert branch_arrays.metadata()["sources_frozen"] is outer
+        sim.calculate("income_tax", "2022-01")
+        sim.get_branch("raise")
+        source = _storage(sim, "income_tax")._arrays["default:2022-01"]
+        assert source.flags.writeable == (not outer)
+    assert not branch_arrays.installed()
+
+
 def _branch_in_a_block_then_write_after_it(block):
     """What a parent and its branch read after ``block`` closes, once each has
     written in place into what it read. The branch comes from inside the
@@ -600,6 +723,61 @@ def test_a_simulation_made_inside_the_block_reads_core_s_values_after_it(
     )
     assert not branch_arrays.installed()
     assert port == core
+
+
+def _set_input_after_the_block(block):
+    """After ``block`` closes, the parent sets ``income_tax`` over a key it
+    still shares: whether its first read returns the array it passed, and its
+    read after a write into that array."""
+    sim = _template()
+    with block:
+        sim.calculate("income_tax", "2022-01")
+        sim.get_branch("raise")
+    new = np.array([10.0, 20.0], dtype=np.float32)
+    sim.set_input("income_tax", "2022-01", new)
+    first = sim.calculate("income_tax", "2022-01")
+    new[0] = 99.0
+    return first is new, sim.calculate("income_tax", "2022-01").tolist()
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_an_input_set_after_the_block_over_a_shared_key_reads_as_core_s(
+    freeze_sources,
+):
+    # After the block, put has to keep dropping the mark of the key it
+    # replaces, or the next read copies the input and misses the write.
+    core = _set_input_after_the_block(contextlib.nullcontext())
+    port = _set_input_after_the_block(
+        branch_arrays.shared_branch_arrays(freeze_sources=freeze_sources)
+    )
+    assert core == (True, [99.0, 20.0])
+    assert port == core
+
+
+@pytest.mark.parametrize(
+    "round_trip",
+    [lambda storage: pickle.loads(pickle.dumps(storage)), copy.deepcopy],
+    ids=["pickle", "deepcopy"],
+)
+def test_a_storage_that_still_shares_after_the_block_survives_a_round_trip(
+    round_trip,
+):
+    sim = _template()
+    with branch_arrays.shared_branch_arrays(freeze_sources=True):
+        tax = np.array(sim.calculate("income_tax", "2022-01"))
+        branch = sim.get_branch("raise")
+    key = "default:2022-01"
+    for storage in (_storage(sim, "income_tax"), _storage(branch, "income_tax")):
+        assert key in storage._shared
+        back = round_trip(storage)
+        read = back.get("2022-01")
+        assert read.flags.writeable
+        assert not np.shares_memory(read, storage._arrays[key])
+        np.testing.assert_array_equal(read, tax)
+        # The copy's methods act on the copy, not on the storage it came from.
+        assert back._arrays[key] is read
+        assert key not in back._shared
+        assert key in storage._shared
 
 
 # Differential property test: the same steps on a tree of simulations, once

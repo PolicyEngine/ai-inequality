@@ -35,8 +35,9 @@ branch also marks every array it shares read-only, so a formula that writes
 through a stored array, by a reference it took before the branch, raises
 ``ValueError`` instead of changing a result.
 
-A run can still read values that copying every array up front wouldn't give,
-but only through an in-place write after a branch, in one of two ways:
+With ``freeze_sources``, writes can still make a run read values that copying
+every array up front wouldn't give, but only in-place writes after a branch,
+in one of two ways:
 
 - through another array over a shared array's memory, held from before the
   branch: a view of the shared array, or the array it views, such as the 0-dim
@@ -48,9 +49,22 @@ but only through an in-place write after a branch, in one of two ways:
   write lands in the one array every holder sees; here the other holder keeps
   the old values.
 
-Neither happens in the sweep. policyengine-us#9739's scan finds five formulas
-in policyengine-us 1.764.6 that write in place into arrays they read from
-variables, and none writes into a shared array that anything else holds:
+Without ``freeze_sources``, a write through a stored array, by a reference
+from before the branch, also reaches a branch that hasn't read the array.
+
+Two of the parent's reads differ from core's with no write at all. Core's
+``Simulation.calculate`` returns a value it has already computed from the fast
+cache, and making a branch drops the parent's entries for the arrays the
+branch shares, so the parent reads those through ``Simulation._calculate``
+instead. A formula's 0-dim result then reads as the ``(1,)`` view the storage
+holds, where core returns the 0-dim array. And if the parent's own system
+neutralizes a variable after the parent caches it, the parent reads the
+variable's default, where core returns the cached values, because
+``_calculate`` checks neutralization before it reads the storage.
+
+None of this happens in the sweep. policyengine-us#9739's scan finds five
+formulas in policyengine-us 1.764.6 that write in place into arrays they read
+from variables, and none writes into a shared array that anything else holds:
 
 - ``basic_income_phase_in`` writes only when
   ``include_ss_benefits_as_earnings`` is set, and it isn't;
@@ -67,9 +81,12 @@ variables, and none writes into a shared array that anything else holds:
 No formula in 1.764.6 writes through a view of a variable's array, and the
 sweep's own code writes only into the accumulators and dicts it builds. Every
 population in the sweep holds thousands of members, so no stored array views
-a formula's 0-dim result. ``analysis.check_branch_arrays`` checks the whole
-sweep: it runs ``run_shift_sweep`` both ways on a subset of the microdata and
-compares every array in every branch, byte for byte.
+a formula's 0-dim result. policyengine-us 1.764.6 neutralizes variables only
+in the systems of branches it makes with ``clone_system=True``, so no parent's
+system changes under its cache, and the sweep freezes its sources.
+``analysis.check_branch_arrays`` checks the whole sweep: it runs
+``run_shift_sweep`` both ways on a subset of the microdata and compares every
+array in every branch, byte for byte.
 
 ``Simulation.clone()`` called directly, as ``Simulation.derivative`` does, still
 copies every array straight away. After ``uninstall``, a storage that still
@@ -81,8 +98,8 @@ holds it once.
 from __future__ import annotations
 
 import contextlib
+import functools
 import importlib.metadata
-import types
 import weakref
 from contextvars import ContextVar
 
@@ -325,11 +342,16 @@ def _keep_copying() -> None:
     ``uninstall`` would bring back the memory peak the port removes, so each
     storage goes on copying an array when it first reads it. Once a storage
     shares nothing, these methods do exactly what core's do.
+
+    Each method is a ``functools.partial`` of a module-level function, which
+    ``pickle`` and ``copy.deepcopy`` rebuild around the copied storage. A
+    bound method would pickle as a lookup of its function's name on the
+    storage, which has no such attribute.
     """
     for storage in list(_marked):
         if storage.__dict__.get("_shared"):
             for name, method in _STORAGE_METHODS:
-                storage.__dict__[name] = types.MethodType(method, storage)
+                storage.__dict__[name] = functools.partial(method, storage)
     _marked.clear()
 
 

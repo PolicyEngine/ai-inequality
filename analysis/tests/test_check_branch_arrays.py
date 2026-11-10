@@ -1,11 +1,12 @@
 """analysis.check_branch_arrays: a digest changes with any change in an array's
 type, dtype, shape or bytes; ``canonical`` keeps every bit of every number and
 survives a JSON round trip; a subset keeps everyone in each drawn household;
-and ``compare`` reports every way two runs differ, including a run that tests
-nothing.
+``compare`` reports every way two runs differ, including a run that tests
+nothing; and the tree walkers reach every branch and count every mark.
 
 These need numpy, pandas and Hypothesis, which CI installs. The HDF round trip
-also needs PyTables, which CI doesn't install, so it skips there.
+also needs PyTables, and the tree walkers' test needs policyengine-core 3.30.3;
+CI installs neither, so those two skip there.
 """
 
 import copy
@@ -365,3 +366,44 @@ def test_summary_counts_arrays_simulations_and_what_stayed_shared():
         "5 still shared at the end of the sharing run"
     )
     assert lines[2:] == ["copying run: 1 s", "sharing run: 1 s"]
+
+
+def test_the_tree_walkers_reach_every_branch_and_count_every_mark():
+    template = pytest.importorskip("policyengine_core.country_template")
+    from policyengine_core.country_template.situation_examples import couple
+
+    from analysis import branch_arrays
+
+    sim = template.Simulation(situation=couple)
+    for period in ("2022-01", "2022-02"):
+        sim.set_input("salary", period, np.array([4000.0, 2500.0], dtype=np.float32))
+    with branch_arrays.shared_branch_arrays(freeze_sources=True):
+        sim.calculate("income_tax", "2022-01")
+        b = sim.get_branch("b")
+        b.calculate("disposable_income", "2022-02")
+        c = b.get_branch("c")
+        c.calculate("income_tax", "2022-01")
+        tree = {"root": sim, "root/b": b, "root/b/c": c}
+        storages = {
+            path: [
+                (name, holder._memory_storage)
+                for population in simulation.populations.values()
+                for name, holder in population._holders.items()
+            ]
+            for path, simulation in tree.items()
+        }
+        marks = sum(
+            len(storage.__dict__.get("_shared", ()))
+            for held in storages.values()
+            for _, storage in held
+        )
+        held = check.every_array(sim)
+        assert {key.split("|")[0] for key in held} == set(tree)
+        assert held == {
+            f"{path}|{name}|{key}": check.array_digest(array)
+            for path, pairs in storages.items()
+            for name, storage in pairs
+            for key, array in storage._arrays.items()
+        }
+        # The walk reads no array through a storage's get, so it drops no mark.
+        assert check.still_shared(sim) == marks > 0
