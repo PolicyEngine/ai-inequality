@@ -33,8 +33,9 @@ its file there. Set GITHUB_TOKEN to raise GitHub's rate limit.
 It stops, naming the files involved, on anything it can't account for: a
 parameter file that YAML can't parse or that the system didn't load, an uprated
 value it can't place in a file, a row whose series its file doesn't declare, a
-variable defined outside policyengine_us/variables, or an installed file that
-differs from the pinned commit.
+variable defined outside policyengine_us/variables, a dataset column that the
+default microsimulation grows by another series than its row shows, or an
+installed file that differs from the pinned commit.
 """
 
 from __future__ import annotations
@@ -137,6 +138,9 @@ FORMULA_STEPS = {
 # How the table shows a value a formula step grows. The viewer parses this to
 # link the step's module, so change the two together.
 FORMULA_SEPARATOR = " via "
+# Microsimulation grows its default dataset's columns by the series this module
+# overrides them with, and by each column's own uprating otherwise.
+DATASET_MODULE = "data/economic_assumptions.py"
 
 
 class TableError(RuntimeError):
@@ -805,6 +809,89 @@ def variable_rows(system, variables_dir: Path, links, report: dict) -> list[dict
     return rows
 
 
+def compare_dataset_growth(overrides, moves, variable_series, resolve):
+    """Pair each dataset override with the variable row whose values it grows.
+
+    ``overrides`` maps a dataset column to the series that grows it, ``moves``
+    maps a column to the variable that ends up holding its values, and
+    ``variable_series`` maps each variable row to its series. Returns the
+    columns whose series matches their row's, the columns whose series differs,
+    and the columns that no row holds.
+    """
+    agree, differ, unlisted = [], [], []
+    for column in sorted(overrides):
+        series = resolve(overrides[column])
+        holder = moves.get(column, column)
+        listed = variable_series.get(holder)
+        if listed is None:
+            unlisted.append((column, series))
+        elif listed == series:
+            agree.append((column, holder, series))
+        else:
+            differ.append((column, holder, series, listed))
+    return agree, differ, unlisted
+
+
+def dataset_growth(system, rows, report: dict) -> None:
+    """Check that the default microsimulation grows each row's values by the
+    series the row shows.
+
+    Microsimulation extends its default dataset to later years before it runs.
+    It grows each stored column by the series DATASET_MODULE's overrides give
+    that column, or by the column's own uprating, then stores an aggregate's
+    values on the pre-response input it adds a response to and each Social
+    Security component's on its reported twin.
+    """
+    try:
+        from policyengine_us.data import economic_assumptions
+        from policyengine_us.tools import per_capita_uprating
+        from policyengine_us.tools.social_security_inputs import (
+            SOCIAL_SECURITY_COMPONENTS,
+        )
+        from policyengine_us.variables.gov.simulation.behavioral_response_measurements import (
+            PRE_RESPONSE_INPUTS,
+        )
+    except ImportError as error:
+        raise TableError(
+            f"policyengine-us moved what the dataset growth check reads: {error}"
+        ) from error
+    from policyengine_us.system import Microsimulation
+
+    if "extend_single_year_dataset" not in inspect.getsource(Microsimulation.__init__):
+        raise TableError(
+            "Microsimulation no longer extends its dataset with "
+            f"extend_single_year_dataset from {DATASET_MODULE}"
+        )
+
+    def resolve(series: str) -> str:
+        if per_capita_uprating.is_national_total_path(series):
+            return per_capita_uprating.per_capita_path(series)
+        return series
+
+    moves = dict(PRE_RESPONSE_INPUTS)
+    moves.update({name: f"{name}_reported" for name in SOCIAL_SECURITY_COMPONENTS})
+    agree, differ, unlisted = compare_dataset_growth(
+        economic_assumptions.MICRODATA_UPRATING_OVERRIDES,
+        moves,
+        {row["path"]: row["uprating"] for row in rows if row["type"] == "variable"},
+        resolve,
+    )
+    fail(
+        f"Dataset columns that {DATASET_MODULE} grows by another series than "
+        "their row shows",
+        (
+            f"{column} -> {holder}: {series}, row shows {listed}"
+            for column, holder, series, listed in differ
+        ),
+    )
+    missing = [
+        series for _, series in unlisted if find_node(system.parameters, series) is None
+    ]
+    fail(f"Series {DATASET_MODULE} names that the built system lacks", missing)
+    report["dataset_overrides_agreeing"] = len(agree)
+    report["dataset_only_columns"] = unlisted
+
+
 def build_table(snapshot: dict) -> tuple[str, dict]:
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
@@ -871,6 +958,7 @@ def build_table(snapshot: dict) -> tuple[str, dict]:
         system, package_dir / "parameters", links, formula, index, report
     )
     rows += variable_rows(system, package_dir / "variables", links, report)
+    dataset_growth(system, rows, report)
     report["rows"] = rows
     report["core_version"] = importlib.metadata.version("policyengine-core")
     return render_table(rows), report
@@ -917,6 +1005,13 @@ def print_report(snapshot: dict, report: dict) -> None:
         print("Series with no category name (add them to NAMED_SERIES):")
         for category in others:
             print(f"  {category}")
+    print(
+        f"  {report['dataset_overrides_agreeing']} dataset columns grow by their "
+        f"row's series; {len(report['dataset_only_columns'])} grow only in "
+        f"{DATASET_MODULE} and get no row:"
+    )
+    for column, series in report["dataset_only_columns"]:
+        print(f"    {column}: {series}")
     if report["declared_without_effect"]:
         print("Files that declare uprating the built system never applies:")
         for relative in report["declared_without_effect"]:

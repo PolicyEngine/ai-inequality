@@ -12,7 +12,9 @@ so these tests run in CI without it. They check, over generated inputs:
   category or raising on a loop, and a named category names the series it
   stopped on;
 - a leaf read as policyengine-core reads it agrees with itself, and two
-  readings differ only where some instant's value differs.
+  readings differ only where some instant's value differs;
+- each dataset override lands once, as agreeing with, differing from, or
+  missing from the row that ends up holding its column's values.
 
 They also check the committed table: canonical order, one row per file or
 variable, a named category on every row, and formula rows that match the
@@ -359,6 +361,55 @@ def test_render_table_round_trips_in_canonical_order(rows):
     parsed = list(reader)
     assert parsed == sorted(rows, key=table.sort_key)
     assert table.render_table(parsed) == text
+
+
+# ---------------------------------------------------------------------------
+# compare_dataset_growth
+# ---------------------------------------------------------------------------
+
+
+def _per_capita(series):
+    return series + "_per_capita" if series.startswith("total.") else series
+
+
+def test_compare_dataset_growth_follows_moves_and_per_capita_series():
+    overrides = {
+        "wages": "total.wages",
+        "rent": "cpi",
+        "weight": "population",
+        "bonus": "total.agi",
+    }
+    moves = {"wages": "wages_before_response"}
+    rows = {"wages_before_response": "total.wages_per_capita", "weight": "cpi"}
+    agree, differ, unlisted = table.compare_dataset_growth(
+        overrides, moves, rows, _per_capita
+    )
+    assert agree == [("wages", "wages_before_response", "total.wages_per_capita")]
+    assert differ == [("weight", "weight", "population", "cpi")]
+    assert unlisted == [("bonus", "total.agi_per_capita"), ("rent", "cpi")]
+
+
+COLUMNS = st.sampled_from(["a", "b", "c", "d", "e"])
+SERIES = st.sampled_from(["total.x", "total.y", "cpi", "population"])
+
+
+@given(
+    overrides=st.dictionaries(COLUMNS, SERIES),
+    moves=st.dictionaries(COLUMNS, COLUMNS),
+    rows=st.dictionaries(COLUMNS, SERIES.map(_per_capita)),
+)
+def test_compare_dataset_growth_sorts_each_override_once(overrides, moves, rows):
+    agree, differ, unlisted = table.compare_dataset_growth(
+        overrides, moves, rows, _per_capita
+    )
+    columns = [entry[0] for entry in agree + differ + unlisted]
+    assert sorted(columns) == sorted(overrides)
+    for column, holder, series in agree:
+        assert rows[holder] == series == _per_capita(overrides[column])
+    for column, holder, series, listed in differ:
+        assert listed == rows[holder] != series == _per_capita(overrides[column])
+    for column, series in unlisted:
+        assert moves.get(column, column) not in rows
 
 
 # ---------------------------------------------------------------------------
