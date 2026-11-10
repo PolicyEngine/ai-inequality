@@ -24,7 +24,9 @@ three parts that add up to the change:
 
 ``decompose_state`` splits one state's chart total the same way, with the TANF
 charged to its state beyond that copy (``tanf_state_charge_change_b``) in place
-of the copy.
+of the copy. ``distribution_changes`` and ``decile_changes`` set the rerun's
+Gini coefficients, top income shares, SPM poverty rate and decile impacts beside
+the earlier run's.
 """
 
 from __future__ import annotations
@@ -352,8 +354,74 @@ def metadata_differences(new, old):
     return out
 
 
+#: Distribution measures on each sweep row, and how report() prints them.
+DISTRIBUTION_FIELDS = (
+    ("net_gini", "Net Gini", "gini"),
+    ("market_gini", "Market Gini", "gini"),
+    ("net_top_10_share", "Net top 10%", "share"),
+    ("net_top_1_share", "Net top 1%", "share"),
+    ("spm_poverty_rate", "SPM poverty", "share"),
+)
+
+
+def distribution_changes(new, old):
+    """Each shift's distribution measures in both runs, where both carry them."""
+    old_rows = {row["shift_pct"]: row for row in old["scenarios"]}
+    out = []
+    for row in new["scenarios"]:
+        before = old_rows.get(row["shift_pct"]) or {}
+        for field, _, _ in DISTRIBUTION_FIELDS:
+            if row.get(field) is None or before.get(field) is None:
+                continue
+            out.append(
+                {
+                    "shift_pct": row["shift_pct"],
+                    "field": field,
+                    "earlier": before[field],
+                    "rerun": row[field],
+                    "change": row[field] - before[field],
+                }
+            )
+    return out
+
+
+def _deciles_at(payload, shift_pct):
+    impacts = ((payload.get("metadata") or {}).get("baseline_facts") or {}).get(
+        "decile_impacts"
+    ) or {}
+    for scenario in impacts.get("scenarios") or []:
+        if scenario.get("shift_pct") == shift_pct:
+            return {d["decile"]: d for d in scenario.get("deciles") or []}
+    return {}
+
+
+def decile_changes(new, old, shift_pct=10):
+    """Each decile's change in mean net income at ``shift_pct`` in both runs.
+
+    ``pct_change`` is in percent, as ``analysis/compute_decile_impacts.py``
+    writes it; the baseline means show how far decile membership moved.
+    """
+    earlier, rerun = _deciles_at(old, shift_pct), _deciles_at(new, shift_pct)
+    return [
+        {
+            "decile": decile,
+            "earlier_pct_change": earlier[decile]["pct_change"],
+            "rerun_pct_change": rerun[decile]["pct_change"],
+            "earlier_baseline_mean_net": earlier[decile]["baseline_mean_net"],
+            "rerun_baseline_mean_net": rerun[decile]["baseline_mean_net"],
+        }
+        for decile in sorted(set(earlier) & set(rerun))
+    ]
+
+
 def _b(value):
     return f"{value:+,.1f}"
+
+
+def _measure(value, change, kind):
+    if kind == "gini":
+        return f"{value:.4f} ({change:+.4f})"
+    return f"{100 * value:.2f}% ({100 * change:+.2f} pt)"
 
 
 def _short(value, width=70):
@@ -417,6 +485,61 @@ def report(new, old, state="CA"):
                 f"| {_b(part['same_definition'])} | {_b(part['tanf'])} "
                 f"| {_b(part['health'])} | {_b(part['total'])} |"
             )
+    changes = distribution_changes(new, old)
+    if changes:
+        kinds = {field: (label, kind) for field, label, kind in DISTRIBUTION_FIELDS}
+        fields = [
+            field
+            for field, _, _ in DISTRIBUTION_FIELDS
+            if any(c["field"] == field for c in changes)
+        ]
+        lines += [
+            "",
+            "Distribution measures: the rerun, and its change from the earlier run:",
+            "",
+            "| Shift | " + " | ".join(kinds[field][0] for field in fields) + " |",
+            "|" + "---:|" * (len(fields) + 1),
+        ]
+        by_shift = {}
+        for c in changes:
+            by_shift.setdefault(c["shift_pct"], {})[c["field"]] = c
+        for shift, row in by_shift.items():
+            cells = [
+                _measure(row[f]["rerun"], row[f]["change"], kinds[f][1])
+                if f in row
+                else ""
+                for f in fields
+            ]
+            lines.append(f"| {shift}% | " + " | ".join(cells) + " |")
+    deciles = decile_changes(new, old, 10)
+    if deciles:
+        lines += [
+            "",
+            (
+                "Decile impacts at a 10% shift: change in mean net income (%), and "
+                "each decile's baseline mean net income:"
+            ),
+            "",
+            "| Decile | Earlier run | Rerun | Earlier baseline | Rerun baseline |",
+            "|" + "---:|" * 5,
+        ]
+        for d in deciles:
+            lines.append(
+                f"| {d['decile']} | {d['earlier_pct_change']:+.2f}% "
+                f"| {d['rerun_pct_change']:+.2f}% "
+                f"| {d['earlier_baseline_mean_net']:,.0f} | {d['rerun_baseline_mean_net']:,.0f} |"
+            )
+        lines += [
+            "",
+            (
+                "Since d0fec52, baseline_deciles breaks ties in baseline market income "
+                "by row order, where the earlier code left their order to NumPy's "
+                "default sort, and puts a household whose cumulative weight lands "
+                "exactly on a decile edge in the lower decile. An edge that falls "
+                "inside a tie, such as the households with no market income, can "
+                "split it differently from the earlier run."
+            ),
+        ]
     differences = metadata_differences(new, old)
     if differences:
         lines += ["", "Run metadata that differs (earlier → rerun):", ""]
