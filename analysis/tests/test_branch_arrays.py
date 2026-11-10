@@ -16,17 +16,20 @@ the pinned core 3.30.3):
   either simulation's copy.
 
 Isolation and the differential fail only after an in-place write, in three
-cases, each intended and pinned below: a write through a reference from before
-the branch, which raises instead with frozen sources; a write through a view
-made before the branch; and a write into the parent's copy of an array that
-something else still holds, such as a reference from before the branch or a
-second variable core stored the same array under. The first two reach a
-branch; the third changes only what the parent reads.
+cases, each intended and pinned below: a write through a stored array by a
+reference from before the branch, which raises instead with frozen sources; a
+write through another array over the same memory held from before the branch,
+such as a view or the 0-dim array a formula returned; and a write into the
+parent's copy of an array that something else still holds, such as a reference
+from before the branch, or a second variable or month that core stored the
+same array under. The first two reach a branch; the third changes only what the
+parent reads.
 
 Every test here but the first needs policyengine-core 3.30.3, and the last
 needs policyengine-us; CI installs neither, so they skip there.
 """
 
+import contextlib
 import importlib.metadata
 
 import numpy as np
@@ -247,6 +250,83 @@ def test_the_parent_s_first_read_after_branching_splits_an_array_core_shares(
     np.testing.assert_array_equal(port["alias"], port["expected"])
 
 
+def _zero_dim_variable():
+    """A variable whose formula returns a 0-dim array. In a one-person
+    simulation, core keeps that array in the fast cache and stores a reshaped
+    view of it (Holder._to_array), so the two hold different objects over the
+    same memory."""
+    pytest.importorskip("policyengine_core")
+    from policyengine_core.country_template.entities import Person
+    from policyengine_core.periods import MONTH
+    from policyengine_core.variables import Variable
+
+    class salary_total(Variable):
+        value_type = float
+        entity = Person
+        definition_period = MONTH
+        label = "Every person's salary, summed into a 0-dim array"
+
+        def formula(person, period, parameters):
+            return np.array(person("salary", period).sum(), dtype=np.float32)
+
+    return salary_total
+
+
+def _write_into_a_0_dim_result_after_branching(write_through):
+    """Parent and branch reads of ``salary_total`` after the parent adds 1
+    after branching, through a fresh read (``"fresh read"``) or through the
+    0-dim array the first calculation returned (``"first result"``)."""
+    template = pytest.importorskip("policyengine_core.country_template")
+    from policyengine_core.country_template.situation_examples import single
+
+    system = template.CountryTaxBenefitSystem()
+    system.add_variables(_zero_dim_variable())
+    sim = template.Simulation(tax_benefit_system=system, situation=single)
+    sim.set_input("salary", "2022-01", np.array([3000.0], dtype=np.float32))
+    first = sim.calculate("salary_total", "2022-01")
+    assert first.ndim == 0
+    branch = sim.get_branch("raise")
+    target = first if write_through == "first result" else sim.calculate(
+        "salary_total", "2022-01"
+    )
+    target += 1
+    return (
+        np.array(sim.calculate("salary_total", "2022-01")).reshape(-1),
+        np.array(branch.calculate("salary_total", "2022-01")).reshape(-1),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_0_dim_result_the_parent_reads_again_after_branching_stays_its_own(
+    freeze_sources,
+):
+    # The parent's fresh read after branching must miss the fast cache, which
+    # holds the 0-dim array the stored view shares memory with.
+    for parent, branch in (
+        _write_into_a_0_dim_result_after_branching("fresh read"),
+        _ported(freeze_sources, _write_into_a_0_dim_result_after_branching, "fresh read"),
+    ):
+        np.testing.assert_array_equal(parent, [3001.0])
+        np.testing.assert_array_equal(branch, [3000.0])
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_write_through_the_0_dim_array_a_formula_returned_reaches_the_branch(
+    freeze_sources,
+):
+    # Intended, like a write through a view: the storage holds a view of that
+    # 0-dim array, and freezing marks only the view read-only.
+    core = _write_into_a_0_dim_result_after_branching("first result")
+    port = _ported(freeze_sources, _write_into_a_0_dim_result_after_branching, "first result")
+    np.testing.assert_array_equal(core, [[3001.0], [3000.0]])
+    np.testing.assert_array_equal(port, [[3001.0], [3001.0]])
+
+
+def _ported(freeze_sources, steps, *args):
+    with branch_arrays.shared_branch_arrays(freeze_sources=freeze_sources):
+        return steps(*args)
+
+
 def test_what_the_parent_stores_after_branching_stays_out_of_the_branch():
     sim = _template()
     with branch_arrays.shared_branch_arrays(freeze_sources=True):
@@ -307,6 +387,120 @@ def test_a_direct_clone_still_copies_every_array():
         assert _storage(sim, "income_tax")._arrays[key].flags.writeable
 
 
+def test_a_branch_copies_a_masked_array_straight_away():
+    # A view of a masked array shares its mask, which a read-only flag on the
+    # data leaves writeable, so the branch gets its own copy.
+    sim = _template()
+    with branch_arrays.shared_branch_arrays(freeze_sources=True):
+        storage = _storage(sim, "income_tax")
+        storage.put(
+            np.ma.masked_array(
+                np.array([1.0, 2.0], dtype=np.float32), mask=[False, True]
+            ),
+            "2022-01",
+        )
+        key = "default:2022-01"
+        source = storage._arrays[key]
+        branch_storage = _storage(sim.get_branch("raise"), "income_tax")
+        held = branch_storage._arrays[key]
+        assert isinstance(held, np.ma.MaskedArray)
+        assert not np.shares_memory(held.data, source.data)
+        assert not np.shares_memory(held.mask, source.mask)
+        np.testing.assert_array_equal(held.mask, [False, True])
+        assert source.flags.writeable
+        assert "_shared" not in storage.__dict__
+        assert "_shared" not in branch_storage.__dict__
+
+
+def test_a_branch_reads_an_enum_array_as_its_parent_holds_it():
+    sim = _template()
+    with branch_arrays.shared_branch_arrays(freeze_sources=True):
+        status = sim.calculate("housing_occupancy_status", "2022-01")
+        branch = sim.get_branch("raise")
+
+        def stored(simulation):
+            holder = simulation.populations["household"].get_holder(
+                "housing_occupancy_status"
+            )
+            return holder._memory_storage._arrays["default:2022-01"]
+
+        held = stored(branch)
+        assert np.shares_memory(held, stored(sim))
+        read = branch.calculate("housing_occupancy_status", "2022-01")
+        assert read.flags.writeable
+        assert not np.shares_memory(read, stored(sim))
+        for array in (held, read):
+            assert type(array) is type(status)
+            assert array.possible_values is status.possible_values
+        np.testing.assert_array_equal(read.decode_to_str(), status.decode_to_str())
+
+
+def test_a_branch_with_its_own_system_shares_arrays_too():
+    sim = _template()
+    with branch_arrays.shared_branch_arrays(freeze_sources=True):
+        tax = np.array(sim.calculate("income_tax", "2022-01"))
+        branch = sim.get_branch("reform", clone_system=True)
+        assert branch.tax_benefit_system is not sim.tax_benefit_system
+        key = "default:2022-01"
+        assert np.shares_memory(
+            _storage(branch, "income_tax")._arrays[key],
+            _storage(sim, "income_tax")._arrays[key],
+        )
+        assert key in _storage(branch, "income_tax")._shared
+        np.testing.assert_array_equal(branch.calculate("income_tax", "2022-01"), tax)
+
+
+def test_a_direct_holder_read_copies_a_shared_array():
+    sim = _template()
+    with branch_arrays.shared_branch_arrays(freeze_sources=True):
+        tax = np.array(sim.calculate("income_tax", "2022-01"))
+        branch = sim.get_branch("raise")
+        key = "default:2022-01"
+        source = _storage(sim, "income_tax")._arrays[key]
+        read = branch.persons.get_holder("income_tax").get_array("2022-01")
+        assert read.flags.writeable
+        assert not np.shares_memory(read, source)
+        assert key not in _storage(branch, "income_tax")._shared
+        np.testing.assert_array_equal(read, tax)
+
+
+def _write_into_one_month_of_a_yearly_salary():
+    """Parent and branch reads after the parent writes into January's salary
+    after branching. Core's ``set_input_divide_by_period`` stores the one array
+    it builds from a yearly salary under every month."""
+    sim = _template()
+    sim.set_input("salary", "2023", np.array([12_000.0, 24_000.0], dtype=np.float32))
+    stored = _storage(sim, "salary")._arrays
+    assert all(
+        stored[f"default:2023-{month:02d}"] is stored["default:2023-01"]
+        for month in range(2, 13)
+    )
+    branch = sim.get_branch("raise")
+    january = sim.calculate("salary", "2023-01")
+    january += 1
+    return (
+        sim.calculate("salary", "2023-01").tolist(),
+        sim.calculate("salary", "2023-02").tolist(),
+        branch.calculate("salary", "2023-02").tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_write_into_one_month_of_a_yearly_input_stays_in_that_month(
+    freeze_sources,
+):
+    # Intended, like the second variable above: under core the write lands in
+    # the one array all twelve months hold, and here the parent's first read
+    # of January after branching copies January's alone.
+    january, february = [1001.0, 2001.0], [1000.0, 2000.0]
+    assert _write_into_one_month_of_a_yearly_salary() == (january, january, february)
+    assert _ported(freeze_sources, _write_into_one_month_of_a_yearly_salary) == (
+        january,
+        february,
+        february,
+    )
+
+
 def test_the_with_block_puts_core_back():
     pytest.importorskip("policyengine_core")
 
@@ -332,6 +526,37 @@ def test_the_with_block_puts_core_back():
         }
     assert not branch_arrays.installed()
     assert current() == before
+
+
+def _branch_in_a_block_then_write_after_it(block):
+    """What a parent and its branch read after ``block`` closes, once each has
+    written in place into what it read. The branch comes from inside the
+    block."""
+    sim = _template()
+    with block:
+        sim.calculate("income_tax", "2022-01")
+        branch = sim.get_branch("raise")
+    parent = sim.calculate("income_tax", "2022-01")
+    parent += 6
+    child = branch.calculate("income_tax", "2022-01")
+    child -= 3
+    return (
+        sim.calculate("income_tax", "2022-01").tolist(),
+        branch.calculate("income_tax", "2022-01").tolist(),
+        branch.calculate("income_tax", "2022-02").tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_simulation_made_inside_the_block_reads_core_s_values_after_it(
+    freeze_sources,
+):
+    core = _branch_in_a_block_then_write_after_it(contextlib.nullcontext())
+    port = _branch_in_a_block_then_write_after_it(
+        branch_arrays.shared_branch_arrays(freeze_sources=freeze_sources)
+    )
+    assert not branch_arrays.installed()
+    assert port == core
 
 
 # Differential property test: the same steps on a tree of simulations, once
@@ -429,8 +654,12 @@ def test_shared_branches_read_what_full_copies_hold(freeze_sources):
 
 
 # policyengine-us households whose taxes open the itemizing, not_itemizing,
-# no_salt and state credit branches, and a Georgia itemizer, whose
-# ga_deductions writes in place into the cached federal itemized deductions.
+# no_salt and state credit branches; a Georgia itemizer with an adjustment, so
+# ga_deductions' in-place write into the cached federal itemized deductions
+# changes bytes; and a Utah parent with a newborn, whom ut_personal_exemption
+# adds into ut_total_dependents in place. Without the adjustment and the
+# newborn, policyengine-core#556 alone gives these households the same bytes
+# as full copies.
 US_YEAR = 2026
 Y = str(US_YEAR)  # situation periods are strings
 US_SITUATION = {
@@ -461,24 +690,32 @@ US_SITUATION = {
             "charitable_cash_donations": {Y: 6_000},
         },
         "ga_spouse": {"age": {Y: 56}, "employment_income": {Y: 70_000}},
+        "ut_head": {"age": {Y: 34}, "employment_income": {Y: 58_000}},
+        "ut_baby": {"age": {Y: 0}},
     },
     "tax_units": {
         "ny": {"members": ["ny_head", "ny_spouse", "ny_child", "ny_baby"]},
         "va": {"members": ["va_head", "va_child"]},
         "de": {"members": ["de_head", "de_child"]},
-        "ga": {"members": ["ga_head", "ga_spouse"]},
+        "ga": {
+            "members": ["ga_head", "ga_spouse"],
+            "ga_itemized_deductions_adjustment": {Y: 2_000},
+        },
+        "ut": {"members": ["ut_head", "ut_baby"]},
     },
     "spm_units": {
         "ny": {"members": ["ny_head", "ny_spouse", "ny_child", "ny_baby"]},
         "va": {"members": ["va_head", "va_child"]},
         "de": {"members": ["de_head", "de_child"]},
         "ga": {"members": ["ga_head", "ga_spouse"]},
+        "ut": {"members": ["ut_head", "ut_baby"]},
     },
     "families": {
         "ny": {"members": ["ny_head", "ny_spouse", "ny_child", "ny_baby"]},
         "va": {"members": ["va_head", "va_child"]},
         "de": {"members": ["de_head", "de_child"]},
         "ga": {"members": ["ga_head", "ga_spouse"]},
+        "ut": {"members": ["ut_head", "ut_baby"]},
     },
     "marital_units": {
         "ny": {"members": ["ny_head", "ny_spouse"]},
@@ -489,6 +726,8 @@ US_SITUATION = {
         "de": {"members": ["de_head"]},
         "de_child": {"members": ["de_child"]},
         "ga": {"members": ["ga_head", "ga_spouse"]},
+        "ut": {"members": ["ut_head"]},
+        "ut_baby": {"members": ["ut_baby"]},
     },
     "households": {
         "ny": {
@@ -498,6 +737,7 @@ US_SITUATION = {
         "va": {"members": ["va_head", "va_child"], "state_code": {Y: "VA"}},
         "de": {"members": ["de_head", "de_child"], "state_code": {Y: "DE"}},
         "ga": {"members": ["ga_head", "ga_spouse"], "state_code": {Y: "GA"}},
+        "ut": {"members": ["ut_head", "ut_baby"], "state_code": {Y: "UT"}},
     },
 }
 US_VARIABLES = (
@@ -536,10 +776,11 @@ def _us_run():
     return values, _every_array(sim), shared
 
 
-def test_policyengine_us_branches_read_what_full_copies_hold():
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_policyengine_us_branches_read_what_full_copies_hold(freeze_sources):
     pytest.importorskip("policyengine_us")
     copied_values, copied_held, _ = _us_run()
-    with branch_arrays.shared_branch_arrays(freeze_sources=True):
+    with branch_arrays.shared_branch_arrays(freeze_sources=freeze_sources):
         shared_values, shared_held, still_shared = _us_run()
     paths = {key[0] for key in copied_held}
     assert {"root/itemizing", "root/not_itemizing"} <= paths
