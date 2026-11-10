@@ -1,8 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import sweepData from "../data/shiftSweepData.json";
-import ShiftSweep from "./ShiftSweep";
+import ShiftSweep, { stateLineNoteHealthTanf } from "./ShiftSweep";
 
 // The site's sweep file as a run before d2671 wrote it: no health coverage or
 // TANF fields, so the page keeps the bands and copy it published with.
@@ -23,11 +23,18 @@ function withoutHealthTanf(data) {
 // of these numbers come from a simulation.
 const MOCK_HEALTH_TANF_PAYLOAD = {
   ...sweepData,
+  metadata: {
+    ...sweepData.metadata,
+    health_tanf_programs: {
+      state: ["co_omnisalud", "or_healthier_oregon_cost"],
+    },
+  },
   scenarios: sweepData.scenarios.map((scenario) => ({
     ...scenario,
     revenue_change_b: -scenario.shift_pct,
     total_rev_change_b: -scenario.shift_pct,
     federal_health_change_b: scenario.shift_pct / 10,
+    state_health_change_b: scenario.shift_pct / 20,
     tanf_change_b: scenario.shift_pct / 100,
     state_deltas: Object.fromEntries(
       Object.entries(scenario.state_deltas ?? {}).map(([code, delta]) => [
@@ -144,7 +151,12 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     /the health band includes what the federal government spends on aca premium tax credits/i,
   );
   expect(document.body).toHaveTextContent(
-    /fixed tanf block grant, so the states pay for any change in tanf benefits, and their charts count it/i,
+    /federal law fixes each state's tanf block grant, so we charge every change in tanf benefits to the states/i,
+  );
+  // The description names the taxes outside the charts, since a state's view
+  // shows no list of them.
+  expect(document.body).toHaveTextContent(
+    /apart from three groups of taxes\. workers' state payroll taxes such as california's sdi, the additional medicare tax, and most city and county taxes on income and occupations count only in the total/i,
   );
   expect(document.body).toHaveTextContent(/the additional medicare tax/i);
   expect(document.body).not.toHaveTextContent(
@@ -157,10 +169,17 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   expect(document.body).not.toHaveTextContent(
     /it leaves out medicaid, chip and tanf/i,
   );
-  // Revenue falls at every step of the mock, so the summary has no rebound.
+  // Revenue falls at every step of the mock, so the summary has no rebound,
+  // and its second sentence gives health spending rather than tax drivers.
   expect(document.body).toHaveTextContent(
-    /reaches \$-50B at a 50% shift and falls to \$-100B at a 100% shift/i,
+    /reaches \$-50B at a 50% shift and falls to \$-100B at a 100% shift\. At a 100% shift, the federal government spends \$10B more on health coverage and the states \$5\.0B more\./i,
   );
+  expect(document.body).not.toHaveTextContent(/capital-gains tax and niit/i);
+  // The state ranking charges each state the federal share it moves.
+  expect(document.body).toHaveTextContent(
+    /which we charge to the state\. federal funds still match those enrollees' emergency care, so that charge overstates the state's cost/i,
+  );
+  expect(document.body).not.toHaveTextContent(/the whole cost/i);
 
   fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
     target: { value: "CA" },
@@ -169,7 +188,112 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     screen.getByRole("heading", { name: /ca state revenue decomposition/i }),
   ).toBeInTheDocument();
   expect(document.body).toHaveTextContent(
-    /the state pays for any change in tanf benefits, and the tanf band counts it/i,
+    /medicare savings programs\. for enrollees whose immigration status bars federal matching, we charge the state the federal share as well/i,
+  );
+  expect(document.body).toHaveTextContent(
+    /we charge the state every change in its tanf benefits, and the tanf band holds them/i,
+  );
+
+  fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
+    target: { value: "CO" },
+  });
+  expect(document.body).toHaveTextContent(
+    /medicare savings programs, and on omnisalud, which it runs on its own\./i,
+  );
+});
+
+test("a state's health note names only the programs that state runs", () => {
+  const programs = ["co_omnisalud", "or_healthier_oregon_cost"];
+  expect(stateLineNoteHealthTanf("OR", programs)).toMatch(
+    /Medicare Savings Programs, and on Healthier Oregon, which it runs on its own\./,
+  );
+  expect(stateLineNoteHealthTanf("TX", programs)).toMatch(
+    /Medicare Savings Programs\. For enrollees/,
+  );
+  expect(stateLineNoteHealthTanf("TX")).not.toMatch(/OmniSalud|Oregon/);
+  // A program without a display name still gets a mention.
+  expect(stateLineNoteHealthTanf("CA", ["ca_state_premium_subsidy"])).toMatch(
+    /, and on health programs it runs on its own\./,
+  );
+});
+
+// Baseline totals turn share mode on (src/data/ukShiftSweepData.json carries
+// them); these are made up.
+const MOCK_BASELINE_TOTALS = {
+  national: { fed_income_tax: 2.4e12, employer_payroll_tax: 1.3e12 },
+  per_state: {
+    CA: {
+      household_state_tax_before_refundable_credits: 1.5e11,
+      household_refundable_state_tax_credits: 5e9,
+      household_state_benefits: 1e10,
+    },
+  },
+};
+
+function withTotals(data) {
+  return {
+    ...data,
+    metadata: {
+      ...data.metadata,
+      baseline_facts: {
+        ...(data.metadata?.baseline_facts ?? {}),
+        totals: MOCK_BASELINE_TOTALS,
+      },
+    },
+  };
+}
+
+test("share mode shows only for runs that count no health coverage or TANF", () => {
+  renderSweep(withTotals(withoutHealthTanf(sweepData)));
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(screen.getByRole("radiogroup", { name: /units/i })).toBeInTheDocument();
+  cleanup();
+
+  renderSweep(withTotals(MOCK_HEALTH_TANF_PAYLOAD));
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(
+    screen.queryByRole("radiogroup", { name: /units/i }),
+  ).not.toBeInTheDocument();
+});
+
+function withRevenue(data, revenueAt) {
+  return {
+    ...data,
+    scenarios: data.scenarios.map((scenario) => ({
+      ...scenario,
+      revenue_change_b: revenueAt(scenario.shift_pct),
+      total_rev_change_b: revenueAt(scenario.shift_pct),
+    })),
+  };
+}
+
+test("the revenue summary handles a sweep that never falls or ends early", () => {
+  renderSweep(
+    withRevenue(withoutHealthTanf(sweepData), (pct) => pct),
+  );
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    /never falls below zero and reaches \$\+100B at a 100% shift/i,
+  );
+  expect(document.body).not.toHaveTextContent(/bottoms out at \$\+0B/i);
+  cleanup();
+
+  const toNinety = withRevenue(withoutHealthTanf(sweepData), (pct) => -pct);
+  toNinety.scenarios = toNinety.scenarios.filter(
+    (scenario) => scenario.shift_pct <= 90,
+  );
+  renderSweep(toNinety);
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    /reaches \$-50B at a 50% shift and falls to \$-90B at a 90% shift/i,
   );
 });
 
