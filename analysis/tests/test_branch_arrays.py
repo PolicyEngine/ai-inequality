@@ -28,14 +28,15 @@ cases, each intended and pinned below:
 
 The first two reach a branch; the third changes only what the parent reads.
 
-The differential also fails for three of the parent's reads with no write at
-all, each intended and pinned below. Core's fast cache serves them, and the
-parent here reads through ``Simulation._calculate``. A formula's 0-dim result
-then comes back with shape (1,) rather than (). A variable that the parent's
+After a branch, the parent reads each array the branch shares through
+``Simulation._calculate``, where core serves it from the fast cache. The
+differential also fails wherever the two paths disagree with no write at all.
+We know three such reads, each intended and pinned below. A formula's 0-dim
+result comes back with shape (1,) rather than (). A variable that the parent's
 own system neutralized after the parent cached it reads as its default rather
-than the cached values. And where a delete leaves core's fast cache serving a
-deleted month, as a delete of its year or one through its holder does, the
-parent computes the month again.
+than the cached values. And after a delete of the month's year, or one through
+its holder, core's fast cache serves the deleted month, while the parent
+computes the month again and stores it.
 
 Every test here but the first needs policyengine-core 3.30.3, and the last
 needs policyengine-us; CI installs neither, so they skip there.
@@ -378,19 +379,20 @@ def test_a_variable_neutralized_after_the_parent_cached_it_reads_as_its_default(
     assert _ported(freeze_sources, _neutralize_after_caching) == (tax, zero, zero)
 
 
-def _delete_after_branching(delete):
+def _delete_after_branching(delete, new_salary):
     """January's ``income_tax``, then the parent's and a branch's reads of it
-    after the parent doubles January's salaries and runs ``delete``."""
+    after the parent runs ``delete``, and the periods the parent stores for it
+    after its read. With ``new_salary``, the parent doubles January's salaries
+    before the delete."""
     sim = _template()
     before = sim.calculate("income_tax", "2022-01").tolist()
     branch = sim.get_branch("raise")
-    sim.set_input("salary", "2022-01", np.array([8000.0, 5000.0], dtype=np.float32))
+    if new_salary:
+        sim.set_input("salary", "2022-01", np.array([8000.0, 5000.0], dtype=np.float32))
     delete(sim)
-    return (
-        before,
-        sim.calculate("income_tax", "2022-01").tolist(),
-        branch.calculate("income_tax", "2022-01").tolist(),
-    )
+    parent = sim.calculate("income_tax", "2022-01").tolist()
+    stored = sorted(str(period) for period in sim.get_holder("income_tax").get_known_periods())
+    return (before, parent, branch.calculate("income_tax", "2022-01").tolist(), stored)
 
 
 # Core's Simulation.delete_arrays with a period drops only that period's
@@ -407,36 +409,38 @@ OLD_TAX, NEW_TAX = [600.0, 375.0], [1200.0, 750.0]
 
 
 @pytest.mark.parametrize("freeze_sources", [True, False])
+@pytest.mark.parametrize("new_salary", [True, False])
 @pytest.mark.parametrize("delete", sorted(FAST_CACHE_KEPT))
 def test_a_month_deleted_past_core_s_fast_cache_is_computed_again(
-    freeze_sources, delete
+    freeze_sources, new_salary, delete
 ):
-    # Intended: core's fast cache serves the parent the deleted month, and
-    # here the parent reads through _calculate, finds nothing stored and
-    # computes the month again from the new salaries. The sweep deletes no
-    # arrays; policyengine-us 1.764.6 deletes through a simulation only without
-    # a period, and through a holder only while it builds a simulation.
+    # Intended: core's fast cache serves the parent the deleted month and the
+    # storage stays empty. Here the parent reads through _calculate, finds
+    # nothing stored, computes the month again, from the new salaries when the
+    # parent stored them, and stores it. The sweep deletes no arrays;
+    # policyengine-us 1.764.6 deletes through a simulation only without a
+    # period, and through a holder only while it builds a simulation.
     steps = FAST_CACHE_KEPT[delete]
-    assert _delete_after_branching(steps) == (OLD_TAX, OLD_TAX, OLD_TAX)
-    assert _ported(freeze_sources, _delete_after_branching, steps) == (
+    again = NEW_TAX if new_salary else OLD_TAX
+    assert _delete_after_branching(steps, new_salary) == (OLD_TAX, OLD_TAX, OLD_TAX, [])
+    assert _ported(freeze_sources, _delete_after_branching, steps, new_salary) == (
         OLD_TAX,
-        NEW_TAX,
+        again,
         OLD_TAX,
+        ["2022-01"],
     )
 
 
 @pytest.mark.parametrize("freeze_sources", [True, False])
+@pytest.mark.parametrize("new_salary", [True, False])
 @pytest.mark.parametrize("delete", sorted(FAST_CACHE_DROPPED))
 def test_a_delete_that_drops_core_s_fast_cache_entry_reads_as_core_s(
-    freeze_sources, delete
+    freeze_sources, new_salary, delete
 ):
     steps = FAST_CACHE_DROPPED[delete]
-    assert _delete_after_branching(steps) == (OLD_TAX, NEW_TAX, OLD_TAX)
-    assert _ported(freeze_sources, _delete_after_branching, steps) == (
-        OLD_TAX,
-        NEW_TAX,
-        OLD_TAX,
-    )
+    after = (OLD_TAX, NEW_TAX if new_salary else OLD_TAX, OLD_TAX, ["2022-01"])
+    assert _delete_after_branching(steps, new_salary) == after
+    assert _ported(freeze_sources, _delete_after_branching, steps, new_salary) == after
 
 
 def _ported(freeze_sources, steps, *args):

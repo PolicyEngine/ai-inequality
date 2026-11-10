@@ -52,10 +52,12 @@ in one of two ways:
 Without ``freeze_sources``, a write through a stored array, by a reference
 from before the branch, also reaches a branch that hasn't read the array.
 
-Three of the parent's reads differ from core's with no write at all. Core's
-``Simulation.calculate`` returns a value it has already computed from the fast
-cache. Making a branch drops the parent's entries for the arrays the branch
-shares, so the parent reads those through ``Simulation._calculate`` instead.
+Making a branch drops the parent's fast-cache entries for the arrays the
+branch shares, so after a branch the parent reads those arrays through
+``Simulation._calculate``. Core's ``Simulation.calculate`` serves them from the
+fast cache, so wherever the two paths disagree, the parent gets
+``_calculate``'s answer and core gets the cached one, with no write at all. We
+know three such cases:
 
 - A formula's 0-dim result reads as the ``(1,)`` view the storage holds, where
   core returns the 0-dim array.
@@ -63,10 +65,10 @@ shares, so the parent reads those through ``Simulation._calculate`` instead.
   it, the parent reads the variable's default, where core returns the cached
   values. ``_calculate`` checks neutralization before it reads the storage.
 - After a delete that leaves the fast cache alone, the parent computes the
-  value again, where core returns the deleted value. ``Holder.delete_arrays``
-  never touches the fast cache, and ``Simulation.delete_arrays`` with a period
-  drops only that period's entry, so deleting a year leaves its months'
-  entries in place.
+  value again and stores it, where core returns the deleted value and leaves
+  the storage empty. ``Holder.delete_arrays`` never touches the fast cache,
+  and ``Simulation.delete_arrays`` with a period drops only that period's
+  entry, so deleting a year leaves its months' entries in place.
 
 None of this happens in the sweep. policyengine-us#9739's scan finds five
 formulas in policyengine-us 1.764.6 that write in place into arrays they read
