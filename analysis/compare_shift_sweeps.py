@@ -535,17 +535,22 @@ def report(new, old, state="CA"):
                 f"| {_number(d['earlier_baseline_mean_net'], ',.0f')} "
                 f"| {_number(d['rerun_baseline_mean_net'], ',.0f')} |"
             )
-        lines += [
-            "",
-            (
-                "Since d0fec52, baseline_deciles breaks ties in baseline market income "
-                "by row order, where the earlier code left their order to NumPy's "
-                "default sort, and puts a household whose cumulative weight lands "
-                "exactly on a decile edge in the lower decile. An edge that falls "
-                "inside a tie, such as the households with no market income, can "
-                "split it differently from the earlier run."
-            ),
-        ]
+        # ai-inequality#53 gave baseline_deciles its tie and edge rules and made
+        # the sweep record health_tanf_programs, so an earlier run without that
+        # key sorted the old way.
+        if "health_tanf_programs" not in old.get("metadata", {}):
+            lines += [
+                "",
+                (
+                    "The earlier run's code left the order of ties in baseline market "
+                    "income to NumPy's default sort. `baseline_deciles` now breaks "
+                    "those ties by row order. It also puts a household whose "
+                    "cumulative weight lands exactly on a decile edge in the lower "
+                    "decile, where the earlier code put it in the upper one. An edge "
+                    "that falls inside a tie, such as the households with no market "
+                    "income, can split it differently from the earlier run."
+                ),
+            ]
     differences = metadata_differences(new, old)
     if differences:
         lines += ["", "Run metadata that differs (earlier → rerun):", ""]

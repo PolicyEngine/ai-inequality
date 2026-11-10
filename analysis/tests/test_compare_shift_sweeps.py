@@ -338,7 +338,12 @@ def test_distribution_and_decile_changes_cover_what_both_runs_carry():
         in text
     )
     assert "Decile impacts at a 10% shift" in text
-    assert "breaks ties in baseline market income by row order" in text
+    assert "`baseline_deciles` now breaks those ties by row order" in text
+    # Two runs that both record health_tanf_programs sort ties and edges the
+    # same way, so the report leaves the note out.
+    text = cmp.report(synthetic_sweep(9), synthetic_sweep(10))
+    assert "Decile impacts at a 10% shift" in text
+    assert "NumPy's default sort" not in text
     # compute_decile_impacts writes no pct_change for a decile without a
     # positive baseline; the report says so rather than failing.
     new, old = synthetic_sweep(9), earlier_sweep(10)
