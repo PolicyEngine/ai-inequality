@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from "react";
 import UpratingViewer from "./UpratingViewer";
-import { formatShare, summarizeUprating } from "../utils/upratingTable";
+import {
+  counted,
+  formatShare,
+  summarizeUprating,
+} from "../utils/upratingTable";
 import { useUpratingTable } from "../utils/useUpratingTable";
-
-const counted = (count, noun) => `${count} ${noun}${count === 1 ? "" : "s"}`;
 
 function StochasticForecasting() {
   const [expandedCard, setExpandedCard] = useState(null);
@@ -94,10 +96,10 @@ function StochasticForecasting() {
           <strong>{shown(uprating.parameters)} parameters</strong> and{" "}
           <strong>{shown(uprating.variables)} input variables</strong> over time
           with economic indexes, from CPI-U and chained CPI-U to wages,
-          population and CBO&apos;s income projections. Each index could grow
-          faster or slower than forecast, and the indexes tend to move together,
-          so our estimates of policy impacts under AI-driven economic scenarios
-          depend on their joint distribution.
+          population and CBO's income projections. Each index could grow faster
+          or slower than forecast, and the indexes tend to move together, so our
+          estimates of policy impacts under AI-driven economic scenarios depend
+          on their joint distribution.
         </p>
       </div>
 

@@ -7,6 +7,7 @@ import {
 } from "../utils/policyengineUsSource";
 import {
   cardForCategory,
+  counted,
   formulaSourceUrl,
   formulaSteps,
 } from "../utils/upratingTable";
@@ -246,8 +247,9 @@ function UpratingViewer() {
         <p
           style={{ textAlign: "center", color: "#718096", fontSize: "0.95rem" }}
         >
-          Showing {totalCounts.total} items ({totalCounts.parameters}{" "}
-          parameters, {totalCounts.variables} variables)
+          Showing {counted(totalCounts.total, "item")} (
+          {counted(totalCounts.parameters, "parameter")},{" "}
+          {counted(totalCounts.variables, "variable")})
           {searchTerm && ` matching "${searchTerm}"`}
         </p>
       </div>

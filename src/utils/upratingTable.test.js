@@ -8,6 +8,7 @@ import {
   OTHER_CARD,
   UPRATING_CARDS,
   cardForCategory,
+  counted,
   formatShare,
   formulaSourceUrl,
   formulaSteps,
@@ -236,5 +237,13 @@ describe("formatShare", () => {
     expect(formatShare(0.004)).toBe("<1%");
     expect(formatShare(0)).toBe("0%");
     expect(formatShare(1)).toBe("100%");
+  });
+});
+
+describe("counted", () => {
+  it("names one item in the singular and any other count in the plural", () => {
+    expect(counted(1, "parameter")).toBe("1 parameter");
+    expect(counted(0, "variable")).toBe("0 variables");
+    expect(counted(932, "item")).toBe("932 items");
   });
 });

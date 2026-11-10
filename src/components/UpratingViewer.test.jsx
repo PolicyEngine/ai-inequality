@@ -50,6 +50,25 @@ test("names the release its links open", async () => {
   );
 });
 
+test("counts what a search finds, in the singular for one", async () => {
+  render(<UpratingViewer />);
+  await screen.findByText(/grows over time/);
+  const parameters = rows.filter((row) => row.type === "parameter").length;
+  const variables = rows.filter((row) => row.type === "variable").length;
+  expect(screen.getByText(/^Showing/)).toHaveTextContent(
+    `Showing ${rows.length} items (${parameters} parameters, ${variables} variables)`,
+  );
+
+  const path = "gov.irs.payroll.social_security.cap";
+  expect(rows.filter((row) => row.path === path)).toHaveLength(1);
+  fireEvent.change(screen.getByPlaceholderText(/search/i), {
+    target: { value: path },
+  });
+  expect(screen.getByText(/^Showing/)).toHaveTextContent(
+    `Showing 1 item (1 parameter, 0 variables) matching "${path}"`,
+  );
+});
+
 test("links every item it shows to its own file at the pinned commit", async () => {
   render(<UpratingViewer />);
   await screen.findByText(/grows over time/);

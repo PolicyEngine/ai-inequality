@@ -277,3 +277,8 @@ export function formatShare(share) {
   const percent = Math.round(share * 100);
   return percent === 0 && share > 0 ? "<1%" : `${percent}%`;
 }
+
+// "1 parameter", "0 parameters" or "2 parameters".
+export function counted(count, noun) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
