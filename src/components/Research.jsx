@@ -165,7 +165,7 @@ function Research() {
       links: [
         {
           text: "PolicyEngine US Model",
-          url: "https://policyengine.org/us/model",
+          url: "https://policyengine.github.io/policyengine-us/",
         },
         {
           text: "Tax Policy Center: Microsimulation Introduction",

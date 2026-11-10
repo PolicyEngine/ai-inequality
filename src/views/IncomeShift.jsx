@@ -92,7 +92,8 @@ function IncomeShift() {
   const sweepData = country.sweepData;
   const metadata = sweepData.metadata ?? {};
   const baselineFacts = metadata.baseline_facts ?? {};
-  const docsUrl = metadata.model_url ?? "https://www.policyengine.org/us/model";
+  const docsUrl =
+    metadata.model_url ?? "https://policyengine.github.io/policyengine-us/";
   const modelLabel = policyEngineLabel(metadata);
   const currencySymbol = metadata.currency_symbol ?? "$";
   const laborTerm = metadata.labor_label ?? "labor";

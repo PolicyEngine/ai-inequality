@@ -40,9 +40,10 @@ const PAGES_SHOWING_RETIRED_NAMES = [
   /^https?:\/\/(?:www\.)?github\.com\/PolicyEngine\/(?:microcosm|microcosm-dynamics|policyengine-us)(?:\/tree\/[^/?#]+|\/blob\/[^/?#]+\/README\.md)?\/?(?:[?#]|$)/i,
   // The landing site's home page names both.
   /^https?:\/\/(?:www\.)?microcosm\.institute(?:[/?#]|$)/i,
-  // The Python page's example loads the earlier dataset, and the model docs'
-  // pipeline diagram names it.
-  /^https?:\/\/(?:www\.)?policyengine\.org\/us\/(?:python|model\/data\/pipeline)\/?(?:[?#]|$)/i,
+  // The Python page's example loads the earlier dataset. The model page's
+  // comparison with peer models names it, whether a click or ?compare= opens
+  // the comparison, and its data pipeline diagram names it too.
+  /^https?:\/\/(?:www\.)?policyengine\.org\/us\/(?:python|model(?:\/data\/pipeline)?)\/?(?:[?#]|$)/i,
   // The research listing shows a card for a post that names the earlier
   // dataset.
   /^https?:\/\/(?:www\.)?policyengine\.org\/us\/research\/?(?:[?#]|$)/i,
@@ -52,6 +53,7 @@ const PAGES_SHOWING_RETIRED_NAMES = [
 // page here as on policyengine.org, that open a page listed above. Remove one
 // once its page stops showing a retired name.
 const SHELL_LINKS_TO_RETIRED_PAGES = [
+  "https://policyengine.org/us/model",
   "https://policyengine.org/us/python",
   "https://policyengine.org/us/research",
 ];

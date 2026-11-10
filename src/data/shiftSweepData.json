@@ -3,7 +3,7 @@
   "metadata": {
     "year": 2026,
     "description": "Positive employment and self-employment income are reduced by the selected share, and the same weighted total is redistributed to positive capital income in proportion to existing holdings. This is a static current-law microsimulation; it is not a behavioral forecast.",
-    "model_url": "https://www.policyengine.org/us/model",
+    "model_url": "https://policyengine.github.io/policyengine-us/",
     "policyengine_package": "policyengine",
     "policyengine_version": "5.0.1",
     "country_model_package": "policyengine-us",

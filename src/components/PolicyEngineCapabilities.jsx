@@ -100,7 +100,7 @@ function PolicyEngineCapabilities() {
                 Read our research →
               </a>
               <a
-                href="https://policyengine.org/us/model"
+                href="https://policyengine.github.io/policyengine-us/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="capability-link"
