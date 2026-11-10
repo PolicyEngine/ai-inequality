@@ -9,6 +9,7 @@ import {
   formatReleaseMonth,
   policyengineUsSourceUrl,
 } from "../utils/policyengineUsSource";
+import { FORMULA_MODULE, formulaSteps } from "../utils/upratingTable";
 import UpratingViewer from "./UpratingViewer";
 
 const csv = readFileSync("public/data/uprating_analysis.csv", "utf8");
@@ -31,7 +32,7 @@ const sourceLinks = (container = document.body) =>
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => ({ text: async () => csv })),
+    vi.fn(async () => ({ ok: true, status: 200, text: async () => csv })),
   );
 });
 
@@ -45,7 +46,7 @@ test("names the release its links open", async () => {
   const parameters = rows.filter((row) => row.type === "parameter").length;
   const variables = rows.filter((row) => row.type === "variable").length;
   expect(intro).toHaveTextContent(
-    `Explore ${parameters} parameters and ${variables} variables that PolicyEngine-US ${POLICYENGINE_US_SNAPSHOT.version} (${formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time`,
+    `Explore the ${parameters} parameters and ${variables} variables that PolicyEngine-US ${POLICYENGINE_US_SNAPSHOT.version} (${formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time`,
   );
 });
 
@@ -103,4 +104,24 @@ test("links a variable to its Python file, not the parameters folder", async () 
   expect(sourceLinks().map((link) => link.getAttribute("href"))).toEqual([
     `${blobPrefix}policyengine_us/variables/household/demographic/weights/household_weight.py`,
   ]);
+});
+
+test("links each formula-grown parameter to its formula too", async () => {
+  const formulaRows = rows.filter((row) => formulaSteps(row).length);
+  expect(formulaRows.length).toBeGreaterThan(0);
+
+  render(<UpratingViewer />);
+  await screen.findByText(/grows over time/);
+  const [row] = formulaRows;
+  fireEvent.change(screen.getByPlaceholderText(/search/i), {
+    target: { value: row.path },
+  });
+  fireEvent.click(document.querySelector(".grid > .card"));
+
+  const formulaLinks = screen.getAllByRole("link", { name: /view formula/i });
+  expect(formulaLinks.length).toBeGreaterThan(0);
+  for (const link of formulaLinks) {
+    expect(link.getAttribute("href")).toBe(`${blobPrefix}${FORMULA_MODULE}`);
+  }
+  expect(listedFiles.has(FORMULA_MODULE)).toBe(true);
 });
