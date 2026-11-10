@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { PolicyEngineShell } from "@policyengine/ui-kit/layout";
 import { fireEvent, render } from "@testing-library/react";
+import { parse } from "espree";
 import { MemoryRouter } from "react-router-dom";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -239,6 +240,30 @@ function fetchedFile([, literal, name], constants) {
   if (literal) return literal;
   const values = constants.get(name) ?? new Set();
   return values.size === 1 ? [...values][0] : null;
+}
+
+// Code with its comments blanked out, so the fetch check reads none. espree,
+// the parser ESLint runs on this code, finds them, so a URL inside a string
+// stays whole. espree reads no TypeScript, so a file it can't parse keeps its
+// comments, and a request word in one of them still counts.
+function withoutComments(source) {
+  let comments;
+  try {
+    ({ comments } = parse(source, {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      ecmaFeatures: { jsx: true },
+      comment: true,
+      range: true,
+    }));
+  } catch {
+    return source;
+  }
+  return comments.reduce(
+    (code, { range: [start, end] }) =>
+      code.slice(0, start) + " ".repeat(end - start) + code.slice(end),
+    source,
+  );
 }
 
 // A frozen id can reach a page only through code that names the data key
@@ -759,6 +784,20 @@ describe("retired dataset names", () => {
     ]).toEqual(["/data/x.csv", "/data/table.csv", null, null]);
   });
 
+  it("counts a request word in code, strings and copy but not in comments", () => {
+    const requests = (source) =>
+      (withoutComments(source).match(REQUESTS) ?? []).length;
+    expect([
+      requests("// the fetch.\nconst a = 1;"),
+      requests("const a = 1; /* fetch it */"),
+      requests("const Page = () => <p>{/* fetch */}Text</p>;"),
+      requests('const url = "https://x.test/a"; fetch(url);'),
+      requests('window["fetch"]("/data/x.csv");'),
+      requests("const Page = () => <p>We fetch the table.</p>;"),
+      requests("const a: number = 1; // the fetch."),
+    ]).toEqual([0, 0, 0, 1, 1, 1, 1]);
+  });
+
   it.each(PAGES)(
     "%s shows none in any state and links no page that does",
     async (entry, View) => {
@@ -851,15 +890,18 @@ describe("retired dataset names", () => {
   // A page shows only what the bundle holds or what it fetches, and the tests
   // above read both.
   it("fetches only files that public/ serves", () => {
+    const codeByPath = siteCode.map((path) => [
+      path,
+      withoutComments(read(path)),
+    ]);
     const constants = new Map();
-    for (const path of siteCode) {
-      for (const [, name, value] of read(path).matchAll(STRING_CONSTANT)) {
+    for (const [, code] of codeByPath) {
+      for (const [, name, value] of code.matchAll(STRING_CONSTANT)) {
         constants.set(name, (constants.get(name) ?? new Set()).add(value));
       }
     }
     expect(
-      siteCode.flatMap((path) => {
-        const code = read(path);
+      codeByPath.flatMap(([path, code]) => {
         const requests = (code.match(REQUESTS) ?? []).length;
         const served = [...code.matchAll(SERVED_FETCH)].filter((match) => {
           const file = fetchedFile(match, constants);
