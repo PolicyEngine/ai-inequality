@@ -17,9 +17,9 @@ what the model applies rather than what a scan of its files suggests:
   policyengine-core uprates a leaf whose metadata names a series once metadata
   has passed down the tree, so a file-level ``uprating`` key reaches a
   breakdown's values only where the file asks for that.
-- policyengine-us extends its index series, such as CPI-U, on their own trend
-  past their last projection. They grow other values and get no row, except
-  the ones that variables' formulas read directly.
+- policyengine-us extends its index series, such as CPI-U, past their last
+  projection. They grow other values and get no row, except the ones that
+  variables' formulas read directly.
 - A variable gets a row when its ``uprating`` is set once the system is built.
   That includes the series policyengine-us assigns to inputs that name none,
   and the per-person versions it swaps in for national totals.
@@ -137,16 +137,16 @@ DERIVED_FROM = "derived_from"
 # entry makes itself, outside any step, count as a step under the entry's name.
 EXTENSIONS_MODULE = "parameters/uprating_extensions.py"
 EXTENSIONS_ENTRY = "set_all_uprating_parameters"
-# Steps that carry an index series past its last projection on the series' own
-# trend. The table lists the values that grow by a series, not the series
-# itself, so an extended series gets no row unless a variable's formula reads
-# it directly. The run stops on an extended series that no value grows by and
-# that neither list below names.
+# Steps that carry an index series past its last projection. The table lists
+# the values that grow by a series, not the series itself, so an extended
+# series gets no row unless a variable's formula reads it directly. The run
+# stops on an extended series that no value grows by and that neither list
+# below names.
 INDEX_STEPS = frozenset({"extend_parameter_values", EXTENSIONS_ENTRY})
 # Extended series that variables' formulas read directly, each with files under
-# policyengine_us/variables that read it. Each gets a row, which shows it grown
-# from its own values by the step that extends it. The run checks that each
-# listed file still names its series.
+# policyengine_us/variables that read it. Each gets a row whose uprating names
+# the series and the step that extends it. The run checks that each listed file
+# still names its series.
 DIRECT_INDEX_SERIES = {
     "calibration.gov.hhs.medicare.per_capita_cost": (
         "gov/hhs/medicare/costs/medicare_cost.py",
@@ -1350,16 +1350,16 @@ def print_report(snapshot: dict, report: dict) -> None:
         f"{by_type['variable']} variables"
     )
     print(
-        f"  {len(report['index_series'])} index series grow on their own trend "
-        "and grow other values; they get no row"
+        f"  {len(report['index_series'])} extended index series grow other "
+        "values and get no row"
     )
     for series, readers in report["direct_index_series"].items():
-        print(f"  {series} grows on its own trend and gets a row; read by:")
+        print(f"  {series}, an extended index series, gets a row; read by:")
         for reader in readers:
             print(f"    variables/{reader}")
     print(
-        f"  {len(report['unread_index_series'])} index series grow on their own "
-        "trend, grow no value and no variable names them:"
+        f"  {len(report['unread_index_series'])} extended index series grow no "
+        "value and no variable names them:"
     )
     for series in report["unread_index_series"]:
         print(f"    {series}")
