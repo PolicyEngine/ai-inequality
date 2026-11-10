@@ -418,6 +418,11 @@ def _b(value):
     return f"{value:+,.1f}"
 
 
+def _number(value, spec, suffix=""):
+    """``value`` in ``spec``, or "n/a" where compute_decile_impacts wrote none."""
+    return "n/a" if value is None else f"{value:{spec}}{suffix}"
+
+
 def _measure(value, change, kind):
     if kind == "gini":
         return f"{value:.4f} ({change:+.4f})"
@@ -525,9 +530,10 @@ def report(new, old, state="CA"):
         ]
         for d in deciles:
             lines.append(
-                f"| {d['decile']} | {d['earlier_pct_change']:+.2f}% "
-                f"| {d['rerun_pct_change']:+.2f}% "
-                f"| {d['earlier_baseline_mean_net']:,.0f} | {d['rerun_baseline_mean_net']:,.0f} |"
+                f"| {d['decile']} | {_number(d['earlier_pct_change'], '+.2f', '%')} "
+                f"| {_number(d['rerun_pct_change'], '+.2f', '%')} "
+                f"| {_number(d['earlier_baseline_mean_net'], ',.0f')} "
+                f"| {_number(d['rerun_baseline_mean_net'], ',.0f')} |"
             )
         lines += [
             "",

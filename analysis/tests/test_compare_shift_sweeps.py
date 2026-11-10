@@ -339,6 +339,16 @@ def test_distribution_and_decile_changes_cover_what_both_runs_carry():
     )
     assert "Decile impacts at a 10% shift" in text
     assert "breaks ties in baseline market income by row order" in text
+    # compute_decile_impacts writes no pct_change for a decile without a
+    # positive baseline; the report says so rather than failing.
+    new, old = synthetic_sweep(9), earlier_sweep(10)
+    scenario = new["metadata"]["baseline_facts"]["decile_impacts"]["scenarios"][1]
+    assert scenario["shift_pct"] == 10
+    scenario["deciles"][0]["pct_change"] = None
+    [row] = [
+        line for line in cmp.report(new, old).splitlines() if line.startswith("| 1 | ")
+    ]
+    assert row.split(" | ")[2] == "n/a"
 
 
 def test_metadata_differences_name_what_changed():
