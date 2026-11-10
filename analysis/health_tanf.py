@@ -336,7 +336,9 @@ def state_only_coverage(sim, year):
     The federal test leaves out the election in 42 USC 1396b(v)(4)(A). Under
     it, a state can cover lawfully residing children under 21 and pregnant
     women with federal matching, even during the five-year bar.
-    policyengine-us 1.764.6 models no such election. Microcosm's build p
+    policyengine-us 1.764.6 models no such election; 2.25.0 models it in
+    Medicaid and CHIP (PolicyEngine/policyengine-us#9737), so a run on 2.25.0
+    or later needs the federal test to apply it too. Microcosm's build p
     assigns no one Temporary Protected Status and leaves
     ``years_since_us_entry`` at its default of 5, so everyone this moves has
     undocumented or DACA status. The Marketplace rule, 45 CFR 155.20, counts

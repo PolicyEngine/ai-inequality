@@ -440,9 +440,24 @@ function yTicksForConfig(config, chartData) {
   return niceTicks(low, high, 6);
 }
 
+// The size prose prints for an amount in billions: whole billions from $10B
+// up, tenths below. It rounds before it picks, so $9.96B prints "$10B".
+function proseSize(value) {
+  const size = Math.abs(value);
+  const tenths = Math.round(size * 10) / 10;
+  return tenths >= 10 ? Math.round(size) : tenths;
+}
+
+// The amount prose states, with its sign: the words that compare amounts
+// ("rises", "its low point") compare what a reader sees, so an amount that
+// prints as $0.0B counts as no change.
+function proseValue(value) {
+  return Math.sign(value) * proseSize(value) || 0;
+}
+
 // Billions for prose: "$1,322B", or "$5.3B" under $10B.
 function proseBillions(value, currencySymbol = "$") {
-  const size = Math.abs(value);
+  const size = proseSize(value);
   const digits = size >= 10 ? 0 : 1;
   return `${currencySymbol}${size.toLocaleString("en-US", {
     minimumFractionDigits: digits,
@@ -451,24 +466,82 @@ function proseBillions(value, currencySymbol = "$") {
 }
 
 // "at a 50% shift", or "at an 80% shift": "an" before 8, 11, 18 and 80 to 89,
-// which a reader says with a vowel sound first.
+// decimals included, which a reader says with a vowel sound first.
 function atShift(shift) {
-  const article = /^(8|11|18|8\d)$/.test(String(shift)) ? "an" : "a";
+  const article = /^(8|11|18|8\d)(\.\d+)?$/.test(String(shift)) ? "an" : "a";
   return `at ${article} ${shift}% shift`;
 }
 
 // "falls by $970B at a 50% shift and by $2,011B at a 100% shift": each point's
-// change from baseline, in order, without repeating a verb.
+// change from baseline, in order, without repeating a verb. A point that
+// prints as $0.0B stays at the baseline, or returns to it after a change.
 function revenueChanges(points, currencySymbol) {
   let previous = null;
   return points
     .map(({ value, shift }) => {
-      const verb = value >= 0 ? "rises" : "falls";
+      const shown = proseValue(value);
+      if (shown === 0) {
+        const lead =
+          previous === "stays"
+            ? ""
+            : `${previous === null ? "stays at" : "returns to"} its baseline `;
+        previous = "stays";
+        return `${lead}${atShift(shift)}`;
+      }
+      const verb = shown > 0 ? "rises" : "falls";
       const lead = verb === previous ? "" : `${verb} `;
       previous = verb;
       return `${lead}by ${proseBillions(value, currencySymbol)} ${atShift(shift)}`;
     })
     .join(" and ");
+}
+
+// The revenue callout's first sentence, worded from the amounts as it prints
+// them: "We estimate net government revenue falls by $970B at a 50% shift and
+// by $2,011B at a 100% shift." Every form names the sweep's last shift last.
+export function revenuePath(chartData, label, currencySymbol = "$") {
+  const rows = chartData.map((row) => ({
+    shift: row.shift,
+    value: proseValue(row.revenue ?? 0),
+  }));
+  if (rows.length === 0) return "";
+  // The label names the change ("Net government revenue change"); the path
+  // names what changes.
+  const measure = label.replace(/ change$/i, "");
+  const subject = measure.charAt(0).toLowerCase() + measure.slice(1);
+  const end = rows[rows.length - 1];
+  // The last row at the lowest amount, so a flat bottom runs to its end and
+  // the path never claims a recovery the amounts don't show.
+  const low = rows.reduce((found, row) =>
+    row.value <= found.value ? row : found,
+  );
+  // The 50% point, when the sweep has one short of its last shift.
+  const midway = rows.find((row) => row.shift === 50 && row !== end) ?? null;
+  const changes = (...points) =>
+    revenueChanges(points.filter(Boolean), currencySymbol);
+  if (low.value >= 0) {
+    if (rows.every((row) => row.value === 0)) {
+      return `We estimate ${subject} stays at its baseline ${atShift(end.shift).replace(/^at /, "through ")}.`;
+    }
+    return end.value > 0
+      ? `We estimate ${subject} never falls below its baseline and ${changes(end)}.`
+      : `We estimate ${subject} never falls below its baseline and returns to it ${atShift(end.shift)}.`;
+  }
+  if (low === end) {
+    return `We estimate ${subject} ${changes(midway, end)}.`;
+  }
+  const toLow = low.shift > 50 && midway ? changes(midway, low) : changes(low);
+  const atEnd = atShift(end.shift);
+  const atEndStart = `${atEnd.charAt(0).toUpperCase()}${atEnd.slice(1)}`;
+  let afterLow;
+  if (end.value < 0) {
+    afterLow = `${atEndStart}, the fall narrows to ${proseBillions(end.value, currencySymbol)}.`;
+  } else if (end.value === 0) {
+    afterLow = `${atEndStart}, it returns to its baseline.`;
+  } else {
+    afterLow = `${atEndStart}, it exceeds its baseline by ${proseBillions(end.value, currencySymbol)}.`;
+  }
+  return `We estimate ${subject} ${toLow}, its low point. ${afterLow}`;
 }
 
 // The sentence after the revenue path for a run that counts health coverage
@@ -478,8 +551,11 @@ function healthSpendingNote(endPoint, currencySymbol) {
   const scenario = endPoint?._scenario ?? {};
   const federal = scenario.federal_health_change_b ?? 0;
   const states = scenario.state_health_change_b ?? 0;
-  const amount = (value) =>
-    `${proseBillions(value, currencySymbol)} ${value >= 0 ? "more" : "less"}`;
+  const amount = (value) => {
+    const shown = proseValue(value);
+    if (shown === 0) return "the same";
+    return `${proseBillions(value, currencySymbol)} ${shown > 0 ? "more" : "less"}`;
+  };
   return `At that shift, the federal government spends ${amount(federal)} on health coverage and the states ${amount(states)}.`;
 }
 
@@ -493,7 +569,6 @@ function summaryForMetric(
 ) {
   const basePoint = chartData[0];
   const endPoint = chartData[chartData.length - 1];
-  const shift50 = chartData.find((scenario) => scenario.shift === 50);
   const startValue = basePoint?.[config.dataKey];
   const endValue = endPoint?.[config.dataKey];
   const laborTerm = metadata.labor_label ?? "labor";
@@ -533,36 +608,8 @@ function summaryForMetric(
     );
   }
 
-  const trough = chartData.reduce(
-    (min, row) => (row.revenue < min.revenue ? row : min),
-    chartData[0],
-  );
   const currencySymbol = metadata.currency_symbol ?? "$";
-  // The label names the change ("Net government revenue change"); the path
-  // names what changes.
-  const measure = config.label.replace(/ change$/i, "");
-  const subject = measure.charAt(0).toLowerCase() + measure.slice(1);
-  const point = (row) => ({ value: row?.revenue ?? 0, shift: row?.shift });
-  const changes = (...points) =>
-    revenueChanges(points.filter(Boolean), currencySymbol);
-  // The 50% point, when the sweep has one short of its last shift.
-  const midway = shift50 && shift50 !== endPoint ? point(shift50) : null;
-  const endRevenue = endPoint?.revenue ?? 0;
-  const atEnd = atShift(endPoint?.shift);
-  const afterLowPoint =
-    endRevenue < 0
-      ? `${atEnd.charAt(0).toUpperCase()}${atEnd.slice(1)}, the fall narrows to ${proseBillions(endRevenue, currencySymbol)}.`
-      : `${atEnd.charAt(0).toUpperCase()}${atEnd.slice(1)}, it exceeds its baseline by ${proseBillions(endRevenue, currencySymbol)}.`;
-  let path;
-  if (trough === basePoint) {
-    path = `We estimate ${subject} never falls below its baseline and ${changes(point(endPoint))}.`;
-  } else if (trough === endPoint) {
-    path = `We estimate ${subject} ${changes(midway, point(endPoint))}.`;
-  } else if (trough.shift > 50 && midway) {
-    path = `We estimate ${subject} ${changes(midway, point(trough))}, its low point. ${afterLowPoint}`;
-  } else {
-    path = `We estimate ${subject} ${changes(point(trough))}, its low point. ${afterLowPoint}`;
-  }
+  const path = revenuePath(chartData, config.label, currencySymbol);
   const note =
     metadata.revenue_summary_note ??
     (withHealthTanf

@@ -170,6 +170,10 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     /the federal and state charts add up to the total, apart from three groups of taxes\. we count workers' state payroll taxes such as california's sdi, the additional medicare tax, and local taxes on income and occupations only in the total\. we put new york city's and maryland's local income taxes in those states' charts instead\./i,
   );
   expect(document.body).toHaveTextContent(/the additional medicare tax/i);
+  // The federal note leaves that list to the description above the chart.
+  expect(document.body).not.toHaveTextContent(
+    /we count three groups of taxes only in the net government revenue total/i,
+  );
   expect(document.body).not.toHaveTextContent(
     /the benefits band includes tanf/i,
   );
@@ -210,6 +214,23 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   });
   expect(document.body).toHaveTextContent(
     /medicare savings programs, and on its own omnisalud program\./i,
+  );
+});
+
+test("the health sentence says when a government's health spending doesn't change", () => {
+  const run = {
+    ...MOCK_HEALTH_TANF_PAYLOAD,
+    scenarios: MOCK_HEALTH_TANF_PAYLOAD.scenarios.map((scenario) => ({
+      ...scenario,
+      federal_health_change_b: 0,
+    })),
+  };
+  renderSweep(run);
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    /at that shift, the federal government spends the same on health coverage and the states \$5\.0B more\./i,
   );
 });
 
