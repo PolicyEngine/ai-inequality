@@ -281,6 +281,30 @@ test("the health sentence says when a government's health spending doesn't chang
   );
 });
 
+test("after a low point, the health clause joins the sentence on the last shift", () => {
+  // MOCK_HEALTH_TANF_PAYLOAD with revenue that falls to $70B at 70% and
+  // narrows to $40B at 100%.
+  const run = {
+    ...MOCK_HEALTH_TANF_PAYLOAD,
+    scenarios: MOCK_HEALTH_TANF_PAYLOAD.scenarios.map((scenario) => {
+      const revenue = -Math.min(scenario.shift_pct, 140 - scenario.shift_pct);
+      return {
+        ...scenario,
+        revenue_change_b: revenue,
+        total_rev_change_b: revenue,
+      };
+    }),
+  };
+  renderSweep(run);
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    "We estimate net government revenue falls by $50B at a 50% shift and by $70B at a 70% shift, its low point. At a 100% shift, the fall narrows to $40B, and the federal government spends $10B more on health coverage and the states $5.0B more.",
+  );
+  expect(document.body).not.toHaveTextContent(/at that shift/i);
+});
+
 // Every state health program the sweep's metadata can list, across
 // policyengine-us releases. analysis/tests/test_health_tanf.py checks the
 // fixture against analysis/health_tanf.py's STATE_HEALTH.

@@ -499,7 +499,15 @@ function revenueChanges(points, currencySymbol) {
 // The revenue callout's first sentence, worded from the amounts as it prints
 // them: "We estimate net government revenue falls by $970B at a 50% shift and
 // by $2,011B at a 100% shift." Every form names the sweep's last shift last.
-export function revenuePath(chartData, label, currencySymbol = "$") {
+// An end clause states something else at that shift. It joins the sentence
+// that opens on the last shift after a low point, and otherwise follows "At
+// that shift," so no two sentences open on the same shift.
+export function revenuePath(
+  chartData,
+  label,
+  currencySymbol = "$",
+  endClause = "",
+) {
   const rows = chartData.map((row) => ({
     shift: row.shift,
     value: proseValue(row.revenue ?? 0),
@@ -519,35 +527,43 @@ export function revenuePath(chartData, label, currencySymbol = "$") {
   const midway = rows.find((row) => row.shift === 50 && row !== end) ?? null;
   const changes = (...points) =>
     revenueChanges(points.filter(Boolean), currencySymbol);
+  const close = (sentence) =>
+    endClause ? `${sentence} At that shift, ${endClause}.` : sentence;
   if (low.value >= 0) {
     if (rows.every((row) => row.value === 0)) {
-      return `We estimate ${subject} stays at its baseline ${atShift(end.shift).replace(/^at /, "through ")}.`;
+      return close(
+        `We estimate ${subject} stays at its baseline ${atShift(end.shift).replace(/^at /, "through ")}.`,
+      );
     }
-    return end.value > 0
-      ? `We estimate ${subject} never falls below its baseline and ${changes(end)}.`
-      : `We estimate ${subject} never falls below its baseline and returns to it ${atShift(end.shift)}.`;
+    return close(
+      end.value > 0
+        ? `We estimate ${subject} never falls below its baseline and ${changes(end)}.`
+        : `We estimate ${subject} never falls below its baseline and returns to it ${atShift(end.shift)}.`,
+    );
   }
   if (low === end) {
-    return `We estimate ${subject} ${changes(midway, end)}.`;
+    return close(`We estimate ${subject} ${changes(midway, end)}.`);
   }
   const toLow = low.shift > 50 && midway ? changes(midway, low) : changes(low);
   const atEnd = atShift(end.shift);
   const atEndStart = `${atEnd.charAt(0).toUpperCase()}${atEnd.slice(1)}`;
   let afterLow;
   if (end.value < 0) {
-    afterLow = `${atEndStart}, the fall narrows to ${proseBillions(end.value, currencySymbol)}.`;
+    afterLow = `${atEndStart}, the fall narrows to ${proseBillions(end.value, currencySymbol)}`;
   } else if (end.value === 0) {
-    afterLow = `${atEndStart}, it returns to its baseline.`;
+    afterLow = `${atEndStart}, it returns to its baseline`;
   } else {
-    afterLow = `${atEndStart}, it exceeds its baseline by ${proseBillions(end.value, currencySymbol)}.`;
+    afterLow = `${atEndStart}, it exceeds its baseline by ${proseBillions(end.value, currencySymbol)}`;
   }
-  return `We estimate ${subject} ${toLow}, its low point. ${afterLow}`;
+  const joined = endClause ? `, and ${endClause}` : "";
+  return `We estimate ${subject} ${toLow}, its low point. ${afterLow}${joined}.`;
 }
 
-// The sentence after the revenue path for a run that counts health coverage
-// and TANF: how much more each level of government spends on health coverage
-// at the sweep's last shift, which every form of the path names last.
-function healthSpendingNote(endPoint, currencySymbol) {
+// The revenue path's end clause for a run that counts health coverage and
+// TANF. It says how much more each level of government spends on health
+// coverage at the sweep's last shift, and every form of the path names that
+// shift last.
+function healthSpendingClause(endPoint, currencySymbol) {
   const scenario = endPoint?._scenario ?? {};
   const federal = scenario.federal_health_change_b ?? 0;
   const states = scenario.state_health_change_b ?? 0;
@@ -556,7 +572,7 @@ function healthSpendingNote(endPoint, currencySymbol) {
     if (shown === 0) return "the same";
     return `${proseBillions(value, currencySymbol)} ${shown > 0 ? "more" : "less"}`;
   };
-  return `At that shift, the federal government spends ${amount(federal)} on health coverage and the states ${amount(states)}.`;
+  return `the federal government spends ${amount(federal)} on health coverage and the states ${amount(states)}`;
 }
 
 function summaryForMetric(
@@ -609,12 +625,18 @@ function summaryForMetric(
   }
 
   const currencySymbol = metadata.currency_symbol ?? "$";
+  if (metadata.revenue_summary_note == null && withHealthTanf) {
+    return revenuePath(
+      chartData,
+      config.label,
+      currencySymbol,
+      healthSpendingClause(endPoint, currencySymbol),
+    );
+  }
   const path = revenuePath(chartData, config.label, currencySymbol);
   const note =
     metadata.revenue_summary_note ??
-    (withHealthTanf
-      ? healthSpendingNote(endPoint, currencySymbol)
-      : "Capital-gains tax and NIIT accelerate at the top of the sweep, while EITC and refundable CTC collapse once labor income approaches zero.");
+    "Capital-gains tax and NIIT accelerate at the top of the sweep, while EITC and refundable CTC collapse once labor income approaches zero.";
   return (
     <>
       {path} {note}

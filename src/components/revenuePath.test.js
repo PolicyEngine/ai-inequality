@@ -202,11 +202,35 @@ function checkPath(rows) {
   return text;
 }
 
+const CLAUSE =
+  "the federal government spends $10B more on health coverage and the states $5.0B more";
+
+// An end clause leaves the path's own words alone: it joins the sentence that
+// opens on the last shift after a low point, or follows "At that shift,". No
+// two sentences open on a shift.
+function checkClause(rows) {
+  const plain = revenuePath(rows, LABEL);
+  const joined = revenuePath(rows, LABEL, "$", CLAUSE);
+  const context = JSON.stringify(rows);
+  if (plain.includes(", its low point. ")) {
+    expect(joined, context).toBe(`${plain.slice(0, -1)}, and ${CLAUSE}.`);
+  } else {
+    expect(joined, context).toBe(`${plain} At that shift, ${CLAUSE}.`);
+  }
+  const openers = joined.match(
+    /(?:^|\. )At (?:an? [\d.]+% shift|that shift),/g,
+  );
+  expect(openers?.length ?? 0, context).toBe(1);
+  return joined;
+}
+
 test("every revenue path states only what its printed amounts show", () => {
   const rand = seeded(20261110);
   const forms = new Set();
   for (let i = 0; i < 20000; i += 1) {
-    const text = checkPath(randomSweep(rand));
+    const rows = randomSweep(rand);
+    const text = checkPath(rows);
+    checkClause(rows);
     forms.add(
       text.includes("its low point")
         ? "low point"
@@ -224,7 +248,8 @@ test("every revenue path states only what its printed amounts show", () => {
     "low point",
     "never falls",
   ]);
-});
+  // 20,000 sweeps, each worded twice, take seconds on a loaded machine.
+}, 30_000);
 
 test("the revenue path words the edge cases from what it prints", () => {
   const cases = [
@@ -306,8 +331,64 @@ test("the revenue path words the edge cases from what it prints", () => {
       ],
       "We estimate net government revenue stays at its baseline at a 50% shift and falls by $7.0B at a 100% shift.",
     ],
+    // A low point at exactly 50%, which the path names once.
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 50, revenue: -80 },
+        { shift: 100, revenue: -30 },
+      ],
+      "We estimate net government revenue falls by $80B at a 50% shift, its low point. At a 100% shift, the fall narrows to $30B.",
+    ],
+    // Two equal minima: the path names the later one.
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 50, revenue: -50 },
+        { shift: 70, revenue: -80 },
+        { shift: 90, revenue: -80 },
+        { shift: 100, revenue: -60 },
+      ],
+      "We estimate net government revenue falls by $50B at a 50% shift and by $80B at a 90% shift, its low point. At a 100% shift, the fall narrows to $60B.",
+    ],
+    // 11% and 18% take "an".
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 11, revenue: -4 },
+        { shift: 18, revenue: -3 },
+      ],
+      "We estimate net government revenue falls by $4.0B at an 11% shift, its low point. At an 18% shift, the fall narrows to $3.0B.",
+    ],
   ];
   for (const [rows, sentence] of cases) {
     expect(checkPath(rows)).toBe(sentence);
+  }
+});
+
+test("an end clause joins the sentence on the last shift or follows it", () => {
+  const cases = [
+    // After a low point, the clause joins the sentence on the last shift.
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 50, revenue: -80 },
+        { shift: 100, revenue: -40 },
+      ],
+      `We estimate net government revenue falls by $80B at a 50% shift, its low point. At a 100% shift, the fall narrows to $40B, and ${CLAUSE}.`,
+    ],
+    // A path that ends at its low point names the last shift once, so the
+    // clause follows "At that shift,".
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 50, revenue: -50 },
+        { shift: 100, revenue: -100 },
+      ],
+      `We estimate net government revenue falls by $50B at a 50% shift and by $100B at a 100% shift. At that shift, ${CLAUSE}.`,
+    ],
+  ];
+  for (const [rows, sentence] of cases) {
+    expect(checkClause(rows)).toBe(sentence);
   }
 });
