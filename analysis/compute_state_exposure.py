@@ -17,25 +17,25 @@ income taxes and Montgomery County's earned income credit. California's
 include San Francisco's Working Families Tax Credit.
 
 `household_state_benefits` also lists three programs that policyengine-us
-1.764.6 computes only in Los Angeles County: the Los Angeles Department of
-Water and Power's EZ Save program, and two foster care payments, the infant
-supplement and the expectant parent payment, that its own parameters credit to
-the California Department of Social Services. Build p carries no electricity
-bills (`pre_subsidy_electricity_expense`) and no foster care placements
-(`is_in_foster_care`), so all three pay nothing, and the scope note leaves them
-out.
+1.764.6 computes only in Los Angeles County. One is the Los Angeles Department
+of Water and Power's EZ-SAVE program. The other two, the infant supplement and
+the expectant parent payment, are foster care payments that its own parameters
+credit to the California Department of Social Services. Build p carries no
+electricity bills (`pre_subsidy_electricity_expense`) and no foster care
+placements (`is_in_foster_care`), so all three pay nothing, and the scope note
+leaves them out.
 
 It is *not* state own-source revenue in the budgetary sense. This script
 counts no general sales, property, corporate income or severance taxes, and
 no fees. Nationally those are roughly half of state and local own-source
-revenue, and they are exactly the bases that no-income-tax states rely on.
+revenue, and they are the bases that no-income-tax states rely on.
 
-A state that scores near zero here is therefore making a statement about the
-**income-tax channel**, not about budgetary resilience: Texas and Florida
-collect through sales taxes, which this script doesn't count, so their true
-exposure to an AI boom is unmeasured rather than absent. The one informative
-zero-income-tax case is Washington, whose capital-gains excise is modelled and
-so does register.
+A score near zero here reflects the **income-tax channel**, not budgetary
+resilience. Texas and Florida collect through sales taxes, and this script
+counts none of them, so it misses their exposure to an AI boom through those
+taxes. The one informative zero-income-tax case is Washington: policyengine-us
+1.764.6 counts its capital gains excise as state income tax, so the ranking
+picks it up.
 
 Usage:
     python -m analysis.compute_state_exposure
