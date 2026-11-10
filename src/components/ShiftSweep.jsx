@@ -887,7 +887,11 @@ function FederalMtrChart({ sweepData, metric }) {
   );
 }
 
-function DecileImpactChart({ sweepData, unit = "dollars" }) {
+function DecileImpactChart({
+  sweepData,
+  unit = "dollars",
+  currencySymbol = "$",
+}) {
   const [selectedShift, setSelectedShift] = useState(50);
   const decileImpacts =
     sweepData?.metadata?.baseline_facts?.decile_impacts ?? null;
@@ -898,22 +902,32 @@ function DecileImpactChart({ sweepData, unit = "dollars" }) {
         .filter((pct) => pct > 0),
     [decileImpacts],
   );
-  const rows = useMemo(() => {
-    if (!decileImpacts) return [];
-    const scenario =
+  const scenario = useMemo(() => {
+    if (!decileImpacts) return null;
+    return (
       decileImpacts.scenarios.find((s) => s.shift_pct === selectedShift) ??
-      decileImpacts.scenarios[decileImpacts.scenarios.length - 1];
-    if (!scenario) return [];
-    return scenario.deciles
-      .filter((d) => Number.isFinite(d.pct_change))
-      .map((d) => ({
-        decile: `D${d.decile}`,
-        pct: d.pct_change,
-        dollars_b: (d.delta_mean_net * d.weight) / 1e9,
-        delta_mean: d.delta_mean_net,
-        baseline_mean: d.baseline_mean_net,
-      }));
+      decileImpacts.scenarios[decileImpacts.scenarios.length - 1] ??
+      null
+    );
   }, [decileImpacts, selectedShift]);
+  const rows = useMemo(
+    () =>
+      (scenario?.deciles ?? [])
+        .filter((d) => Number.isFinite(d.pct_change))
+        .map((d) => ({
+          decile: `D${d.decile}`,
+          pct: d.pct_change,
+          dollars_b: (d.delta_mean_net * d.weight) / 1e9,
+          delta_mean: d.delta_mean_net,
+          baseline_mean: d.baseline_mean_net,
+        })),
+    [scenario],
+  );
+  // compute_decile_impacts gives no percentage change for a decile whose
+  // baseline mean net income is zero or less, and the chart drops it.
+  const omitted = (scenario?.deciles ?? [])
+    .filter((d) => !Number.isFinite(d.pct_change))
+    .map((d) => `D${d.decile}`);
 
   if (!decileImpacts || rows.length === 0) {
     return null;
@@ -958,11 +972,13 @@ function DecileImpactChart({ sweepData, unit = "dollars" }) {
         </div>
       </div>
       <p className="shift-sweep-description">
-        Households are bucketed into deciles by weighted baseline market income;
-        decile membership is held fixed across scenarios.
+        We sort households into deciles by weighted baseline market income and
+        keep each household in its baseline decile in every scenario.
         {unit === "share"
-          ? " Bars show the change in each decile's mean household net income as % of its baseline mean. D1 is omitted because its baseline mean is negative (losses dominate)."
-          : " Bars show the aggregate dollar change in each decile's total net income ($B)."}
+          ? " Bars show the change in each decile's mean household net income, as a percentage of its baseline mean."
+          : ` Bars show the total change in each decile's net income (${currencySymbol}B).`}
+        {omitted.length > 0 &&
+          ` We leave out ${omitted.slice(0, -1).join(", ")}${omitted.length > 1 ? " and " : ""}${omitted[omitted.length - 1]}, whose baseline mean net ${omitted.length > 1 ? "incomes are" : "income is"} zero or negative.`}
       </p>
       <ResponsiveContainer width="100%" height={360}>
         <BarChart
@@ -986,14 +1002,14 @@ function DecileImpactChart({ sweepData, unit = "dollars" }) {
             tickFormatter={(v) =>
               unit === "share"
                 ? `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`
-                : `$${v >= 0 ? "+" : ""}${v.toFixed(0)}B`
+                : billionFmt(v, { currencySymbol })
             }
             tick={{ fontSize: 12 }}
             label={{
               value:
                 unit === "share"
                   ? "Change in mean household net income (%)"
-                  : "Change in decile-total net income ($B)",
+                  : `Change in decile-total net income (${currencySymbol}B)`,
               angle: -90,
               position: "insideLeft",
               offset: -10,
@@ -1006,7 +1022,7 @@ function DecileImpactChart({ sweepData, unit = "dollars" }) {
             formatter={(value, name) => [
               unit === "share"
                 ? `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`
-                : `$${value >= 0 ? "+" : ""}${value.toFixed(1)}B`,
+                : billionFmt(value, { precision: 1, currencySymbol }),
               name,
             ]}
             labelFormatter={(label) => label}
@@ -1627,7 +1643,13 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
             />
           )}
 
-        {isRevenue && <DecileImpactChart sweepData={sweepData} unit={unit} />}
+        {isRevenue && (
+          <DecileImpactChart
+            sweepData={sweepData}
+            unit={unit}
+            currencySymbol={currencySymbol}
+          />
+        )}
 
         {isRevenue && hasStateDeltas && (
           <StateExposureChart
