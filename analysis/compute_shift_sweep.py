@@ -17,6 +17,7 @@ Medicaid enrollees at the baseline's cost per enrollee
 (``health_tanf.price_medicaid_at_baseline``).
 """
 
+import contextlib
 import gc
 import json
 import os
@@ -24,7 +25,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 import numpy as np
 
-from . import health_tanf
+from . import branch_arrays, health_tanf
 from .constants import CAPITAL_INCOME_VARS, YEAR
 from .fiscal import (
     OUTSIDE_CHART_TAXES,
@@ -454,6 +455,7 @@ def _metadata(baseline):
         "baseline_facts": _baseline_facts(baseline),
         # total_rev_change_b and each state's state_net_change_b net these.
         "health_tanf_programs": health_tanf.programs_metadata(baseline, YEAR),
+        "branch_arrays": branch_arrays.metadata(),
     }
 
 
@@ -463,6 +465,7 @@ def run_shift_sweep(
     verbose=False,
     microdata_output_dir=MICRODATA_OUTPUT_DIR,
     include_mtrs=False,
+    share_branch_arrays=True,
 ):
     """Run the labor→capital shift sweep and return website/export-ready rows.
 
@@ -471,7 +474,27 @@ def run_shift_sweep(
     becomes expensive when sweeping the full 0–100% grid. Each shifted branch
     takes the baseline's Medicaid denominator before it calculates anything,
     so its Medicaid enrollees cost what they cost in the baseline.
+
+    With ``share_branch_arrays``, the branches policyengine-us makes inside its
+    formulas share the simulation's cached arrays until they read them, and an
+    in-place write into a shared array raises (``analysis.branch_arrays``).
+    Without it, every branch copies the whole cache, and the baseline stage
+    passes a 39 GB footprint on the full microdata.
     """
+    sharing = (
+        branch_arrays.shared_branch_arrays(freeze_sources=True)
+        if share_branch_arrays
+        else contextlib.nullcontext()
+    )
+    with sharing:
+        return _shift_sweep(
+            shift_levels, microsim_factory, verbose, microdata_output_dir, include_mtrs
+        )
+
+
+def _shift_sweep(
+    shift_levels, microsim_factory, verbose, microdata_output_dir, include_mtrs
+):
     if shift_levels is None:
         shift_levels = SHIFT_LEVELS
 

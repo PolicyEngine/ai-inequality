@@ -327,6 +327,8 @@ def test_shift_sweep_uses_fresh_simulation_for_each_shift_level(monkeypatch):
         shift_levels=[0.0, 0.1, 0.2],
         microsim_factory=factory,
         microdata_output_dir=None,
+        # The fakes have no policyengine-core to patch.
+        share_branch_arrays=False,
     )
 
     assert len(created) == 3
@@ -343,6 +345,7 @@ def test_shift_sweep_uses_fresh_simulation_for_each_shift_level(monkeypatch):
     assert result["metadata"]["model_url"] == sweep.MODEL_URL
     assert result["metadata"]["policyengine_version"]
     assert result["metadata"]["policyengine_us_version"]
+    assert result["metadata"]["branch_arrays"] == {"shared_until_first_read": False}
     # The record names the programs the health lines count.
     assert result["metadata"]["health_tanf_programs"] == {"state": ["co_omnisalud"]}
     assert result["scenarios"][0]["total_rev_change_b"] == pytest.approx(0.0)

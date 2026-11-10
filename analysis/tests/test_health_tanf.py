@@ -929,6 +929,8 @@ def test_two_level_sweep_rows_add_up():
     )
     baseline, half = result["scenarios"]
     assert baseline["total_rev_change_b"] == 0.0
+    assert result["metadata"]["branch_arrays"]["shared_until_first_read"]
+    assert result["metadata"]["branch_arrays"]["sources_frozen"]
     states = half["state_deltas"]
     federal_chart = (
         half["fed_income_tax_before_refundable_credits_change_b"]
