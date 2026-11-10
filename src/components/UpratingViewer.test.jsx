@@ -23,6 +23,9 @@ const listedFiles = new Set(
     .filter((line) => line && !line.startsWith("#")),
 );
 const blobPrefix = `https://github.com/PolicyEngine/policyengine-us/blob/${POLICYENGINE_US_SNAPSHOT.commit}/`;
+const formulaLines = JSON.parse(
+  readFileSync("src/data/upratingFormulaLines.json", "utf8"),
+).lines;
 // An open card lists this many of its items; search reaches the rest.
 const SHOWN_PER_CARD = 50;
 
@@ -46,7 +49,7 @@ test("names the release its links open", async () => {
   const parameters = rows.filter((row) => row.type === "parameter").length;
   const variables = rows.filter((row) => row.type === "variable").length;
   expect(intro).toHaveTextContent(
-    `Explore the ${parameters} parameters and ${variables} input variables that PolicyEngine-US ${POLICYENGINE_US_SNAPSHOT.version} (${formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time`,
+    `Explore the ${parameters} parameter files and ${variables} input variables that PolicyEngine-US ${POLICYENGINE_US_SNAPSHOT.version} (${formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time with economic indexes.`,
   );
 });
 
@@ -56,7 +59,7 @@ test("counts what a search finds, in the singular for one", async () => {
   const parameters = rows.filter((row) => row.type === "parameter").length;
   const variables = rows.filter((row) => row.type === "variable").length;
   expect(screen.getByText(/^Showing/)).toHaveTextContent(
-    `Showing ${rows.length} items (${parameters} parameters, ${variables} variables)`,
+    `Showing ${rows.length} items (${parameters} parameter files, ${variables} variables)`,
   );
 
   const path = "gov.irs.payroll.social_security.cap";
@@ -65,7 +68,7 @@ test("counts what a search finds, in the singular for one", async () => {
     target: { value: path },
   });
   expect(screen.getByText(/^Showing/)).toHaveTextContent(
-    `Showing 1 item (1 parameter, 0 variables) matching "${path}"`,
+    `Showing 1 item (1 parameter file, 0 variables) matching "${path}"`,
   );
 });
 
@@ -125,22 +128,48 @@ test("links a variable to its Python file, not the parameters folder", async () 
   ]);
 });
 
-test("links each formula-grown parameter to its formula too", async () => {
+test("links each formula-grown parameter to the lines that grow it", async () => {
   const formulaRows = rows.filter((row) => formulaSteps(row).length);
   expect(formulaRows.length).toBeGreaterThan(0);
+  expect(listedFiles.has(FORMULA_MODULE)).toBe(true);
 
   render(<UpratingViewer />);
   await screen.findByText(/grows over time/);
-  const [row] = formulaRows;
-  fireEvent.change(screen.getByPlaceholderText(/search/i), {
-    target: { value: row.path },
-  });
-  fireEvent.click(document.querySelector(".grid > .card"));
-
-  const formulaLinks = screen.getAllByRole("link", { name: /view formula/i });
-  expect(formulaLinks.length).toBeGreaterThan(0);
-  for (const link of formulaLinks) {
-    expect(link.getAttribute("href")).toBe(`${blobPrefix}${FORMULA_MODULE}`);
+  const search = screen.getByPlaceholderText(/search/i);
+  const problems = [];
+  for (const row of formulaRows) {
+    fireEvent.change(search, { target: { value: row.path } });
+    const card = [...document.querySelectorAll(".grid > .card")].find(
+      (element) =>
+        element.querySelector("h3 > span").textContent ===
+        row.uprating_category,
+    );
+    if (!card) {
+      problems.push(`${row.path}: no ${row.uprating_category} card`);
+      continue;
+    }
+    if (!card.classList.contains("expanded")) fireEvent.click(card);
+    // Each link sits in its item's block, beside the item's name.
+    const hrefs = within(card)
+      .queryAllByRole("link", { name: /view formula/i })
+      .filter(
+        (link) =>
+          link.parentElement.querySelector("strong").textContent === row.path,
+      )
+      .map((link) => link.getAttribute("href"));
+    const expected = `${blobPrefix}${FORMULA_MODULE}#${formulaLines[row.path]}`;
+    if (!formulaLines[row.path] || hrefs.join() !== expected) {
+      problems.push(`${row.path}: ${hrefs.join(", ") || "no formula link"}`);
+    }
   }
-  expect(listedFiles.has(FORMULA_MODULE)).toBe(true);
+  expect(problems).toEqual([]);
+});
+
+test("shows a table its parent hands it, without a fetch of its own", () => {
+  render(<UpratingViewer table={{ rows, loading: false, error: null }} />);
+  expect(screen.getByText(/grows over time/)).toBeTruthy();
+  expect(screen.getByText(/^Showing/)).toHaveTextContent(
+    `Showing ${rows.length} items`,
+  );
+  expect(fetch).not.toHaveBeenCalled();
 });

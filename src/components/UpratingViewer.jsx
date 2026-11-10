@@ -9,7 +9,6 @@ import {
   cardForCategory,
   counted,
   formulaSourceUrl,
-  formulaSteps,
 } from "../utils/upratingTable";
 import { useUpratingTable } from "../utils/useUpratingTable";
 
@@ -17,8 +16,11 @@ const INCOME_CARD = "income-by-source";
 const isIncomeCategory = (category) =>
   cardForCategory(category).id === INCOME_CARD;
 
-function UpratingViewer() {
-  const { rows, loading, error } = useUpratingTable();
+// A parent that already loaded the table hands it over as `table`, so the
+// page fetches it once; on its own, the viewer loads it.
+function UpratingViewer({ table }) {
+  const loaded = useUpratingTable({ enabled: !table });
+  const { rows, loading, error } = table ?? loaded;
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [expandedCategory, setExpandedCategory] = useState(null);
@@ -28,7 +30,7 @@ function UpratingViewer() {
       rows.map((row) => ({
         ...row,
         sourceUrl: policyengineUsSourceUrl(row),
-        formulaUrl: formulaSteps(row).length ? formulaSourceUrl() : null,
+        formulaUrl: formulaSourceUrl(row),
       })),
     [rows],
   );
@@ -125,7 +127,7 @@ function UpratingViewer() {
   if (loading) {
     return (
       <div className="section" style={{ textAlign: "center", padding: "3rem" }}>
-        <p>Loading uprating parameters...</p>
+        <p>Loading the uprating table…</p>
       </div>
     );
   }
@@ -149,12 +151,11 @@ function UpratingViewer() {
           fontSize: "1.1rem",
         }}
       >
-        Explore the <strong>{datasetCounts.parameters} parameters</strong> and{" "}
-        <strong>{datasetCounts.variables} input variables</strong> that
+        Explore the <strong>{datasetCounts.parameters} parameter files</strong>{" "}
+        and <strong>{datasetCounts.variables} input variables</strong> that
         PolicyEngine-US {POLICYENGINE_US_SNAPSHOT.version} (
         {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time
-        with economic indexes. Each source link opens the file as it stood in
-        that release.
+        with economic indexes.
       </p>
       <div
         style={{
@@ -182,10 +183,10 @@ function UpratingViewer() {
             style={{ flexShrink: 0, marginTop: "2px" }}
           />
           <span>
-            We mark in yellow the categories PolicyEngine-US grows with
-            CBO&apos;s projections of income by source. AI could change how fast
-            those incomes grow by compressing wages or shifting income toward
-            capital.
+            PolicyEngine-US grows wages, capital gains, Social Security benefits
+            and most other incomes in its microdata with CBO's projections. AI
+            could speed or slow the growth of those incomes, or shift income
+            from wages to capital.
           </span>
         </p>
       </div>
@@ -248,7 +249,7 @@ function UpratingViewer() {
           style={{ textAlign: "center", color: "#718096", fontSize: "0.95rem" }}
         >
           Showing {counted(totalCounts.total, "item")} (
-          {counted(totalCounts.parameters, "parameter")},{" "}
+          {counted(totalCounts.parameters, "parameter file")},{" "}
           {counted(totalCounts.variables, "variable")})
           {searchTerm && ` matching "${searchTerm}"`}
         </p>
@@ -430,7 +431,7 @@ function UpratingViewer() {
             marginTop: "2rem",
           }}
         >
-          No parameters match your search criteria.
+          No parameter file or variable matches your search.
         </p>
       )}
 
@@ -450,7 +451,8 @@ function UpratingViewer() {
           PolicyEngine-US grows dollar inputs that name no index with CBO&apos;s
           projection of adjusted gross income per person. It grows an input that
           names a national total, such as the IRS&apos;s total of wages, with
-          that total per person.
+          that total per person. It holds three federal student loan balances
+          flat.
         </p>
       </div>
     </div>

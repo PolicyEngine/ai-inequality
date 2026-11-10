@@ -10,7 +10,8 @@ import { useUpratingTable } from "../utils/useUpratingTable";
 function StochasticForecasting() {
   const [expandedCard, setExpandedCard] = useState(null);
   const [showUpratingViewer, setShowUpratingViewer] = useState(false);
-  const { rows, loading, error } = useUpratingTable();
+  const table = useUpratingTable();
+  const { rows, loading, error } = table;
   const uprating = useMemo(() => summarizeUprating(rows), [rows]);
   const shown = (count) => (loading || error ? "…" : count);
 
@@ -93,19 +94,19 @@ function StochasticForecasting() {
       <div style={{ marginBottom: "2rem" }}>
         <p style={{ fontSize: "1.1rem", lineHeight: "1.6" }}>
           PolicyEngine-US grows{" "}
-          <strong>{shown(uprating.parameters)} parameters</strong> and{" "}
+          <strong>{shown(uprating.parameters)} parameter files</strong> and{" "}
           <strong>{shown(uprating.variables)} input variables</strong> over time
-          with economic indexes, from CPI-U and chained CPI-U to wages,
-          population and CBO's income projections. Each index could grow faster
-          or slower than forecast, and the indexes tend to move together, so our
-          estimates of policy impacts under AI-driven economic scenarios depend
-          on their joint distribution.
+          with economic indexes such as CPI-U, chained CPI-U, wages, population
+          and the income projections of the Congressional Budget Office (CBO).
+          Each index could grow faster or slower than forecast, and the indexes
+          tend to move together, so our estimates of policy impacts under
+          AI-driven economic scenarios depend on their joint distribution.
         </p>
       </div>
 
       <h3>Uprating in PolicyEngine-US</h3>
       <p style={{ textAlign: "center", marginBottom: "2rem" }}>
-        Parameters and variables by the index that grows them
+        Parameter files and variables by the index that grows them
       </p>
       {error && (
         <p style={{ textAlign: "center", color: "#e53e3e" }}>
@@ -152,7 +153,7 @@ function StochasticForecasting() {
               {isExpanded && (
                 <div style={{ marginTop: "1rem" }}>
                   <p>
-                    {counted(card.parameters, "parameter")} and{" "}
+                    {counted(card.parameters, "parameter file")} and{" "}
                     {counted(card.variables, "variable")}
                   </p>
                   {card.examples.length > 0 && (
@@ -193,7 +194,7 @@ function StochasticForecasting() {
         </button>
         {showUpratingViewer && (
           <div style={{ marginTop: "2rem" }}>
-            <UpratingViewer />
+            <UpratingViewer table={table} />
           </div>
         )}
       </div>

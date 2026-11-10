@@ -1,5 +1,6 @@
 import Papa from "papaparse";
 
+import formulaLines from "../data/upratingFormulaLines.json";
 import { POLICYENGINE_US_SNAPSHOT } from "./policyengineUsSource";
 
 // scripts/generate_uprating_table.py writes this table from the pinned
@@ -22,8 +23,8 @@ export function parseUpratingTable(text) {
 
 // The generator joins a file's uprating specs with SPEC_SEPARATOR and writes
 // a value that a formula in PolicyEngine-US grows as "<index> via <function>",
-// naming a function in FORMULA_MODULE. Its FORMULA_SEPARATOR and
-// EXTENSIONS_MODULE must match these.
+// naming a function in FORMULA_MODULE. Its SPEC_SEPARATOR, FORMULA_SEPARATOR
+// and EXTENSIONS_MODULE must match these.
 export const FORMULA_MODULE =
   "policyengine_us/parameters/uprating_extensions.py";
 const SPEC_SEPARATOR = "; ";
@@ -38,9 +39,18 @@ export function formulaSteps(row) {
     .map(([, series, step]) => ({ series, step }));
 }
 
-export function formulaSourceUrl() {
+// The generator also writes, for each formula row, the lines of FORMULA_MODULE
+// whose call grows it, as a GitHub line anchor such as "L120-L131".
+export const FORMULA_LINES = formulaLines;
+
+// A formula row's link to the lines that grow it, at the pinned commit, or
+// null for a row no formula grows.
+export function formulaSourceUrl(row) {
+  if (!formulaSteps(row).length) return null;
   const { repository, commit } = POLICYENGINE_US_SNAPSHOT;
-  return `https://github.com/${repository}/blob/${commit}/${FORMULA_MODULE}`;
+  const lines = FORMULA_LINES.lines[row.path];
+  const anchor = lines ? `#${lines}` : "";
+  return `https://github.com/${repository}/blob/${commit}/${FORMULA_MODULE}${anchor}`;
 }
 
 const among =
@@ -101,12 +111,12 @@ export const UPRATING_CARDS = [
       "Federal poverty guidelines (CPI-U)",
     ),
     description:
-      "PolicyEngine-US grows the federal poverty guidelines, SNAP, WIC and school meal amounts, Medicaid's long-term care limits and several state and city tax amounts with CPI-U. In its microdata, it grows household expenses, assets and debts with the same index.",
+      "PolicyEngine-US grows the federal poverty guidelines, SNAP, WIC and school meal amounts, Medicaid's long-term care limits and several state and city tax amounts with CPI-U. It grows many household expenses, assets and debts, such as rent, utilities, mortgage interest, auto loans and bank balances, with the same index.",
     examples: [
       { label: "Federal poverty guidelines", path: "gov.hhs.fpg" },
       {
-        label: "Medicaid home equity limit",
-        path: "gov.hhs.medicaid.eligibility.long_term_care.home_equity.limit",
+        label: "Medicaid minimum home equity limit",
+        path: "gov.hhs.medicaid.eligibility.long_term_care.home_equity.minimum_limit",
       },
       {
         label: "SNAP standard deduction",
@@ -146,7 +156,7 @@ export const UPRATING_CARDS = [
       "National average wage index",
     ),
     description:
-      "PolicyEngine-US grows SSI payments, state supplements and veterans benefits with the cost-of-living adjustment that the Social Security Administration sets each year from CPI-W. It grows the payroll tax cap, the bend points in Social Security's benefit formula and other wage-indexed amounts with the national average wage index.",
+      "Each year the Commissioner of Social Security raises Social Security benefits and SSI payments by the rise in consumer prices, as the Social Security Act requires. PolicyEngine-US measures that rise with CPI-W and grows SSI payments, state supplements and veterans benefits with it. For later years, it projects the rise with CBO's forecast of CPI-U. It grows the payroll tax cap, the bend points in Social Security's benefit formula and other wage-indexed amounts with the national average wage index.",
     examples: [
       {
         label: "Maximum federal SSI payment",
@@ -172,10 +182,14 @@ export const UPRATING_CARDS = [
       "CPI-U medical care",
     ),
     description:
-      "PolicyEngine-US grows medical expenses and insurance premiums with CMS's health spending projections, and ACA benchmark premiums with the national average benchmark premium. It grows long-term care insurance premiums, and the cap on deducting them, with CPI-U for medical care.",
+      "PolicyEngine-US grows medical expenses and insurance premiums with health spending projections from the Centers for Medicare & Medicaid Services (CMS), and ACA benchmark premiums with the national average benchmark premium. It extends CMS's projection of Medicare spending per enrollee past 2034. It grows long-term care insurance premiums, and the cap on deducting them, with CPI-U for medical care.",
     examples: [
       { label: "Health insurance premiums", path: "health_insurance_premiums" },
       { label: "Emergency room visit expenses", path: "er_visit_expense" },
+      {
+        label: "Medicare spending per enrollee",
+        path: "calibration.gov.hhs.medicare.per_capita_cost",
+      },
       {
         label: "ACA benchmark premiums by rating area",
         path: "gov.aca.state_rating_area_cost",

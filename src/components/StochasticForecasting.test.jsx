@@ -37,15 +37,15 @@ const cards = () => [
 test("counts the parameters and variables the table lists", async () => {
   render(<StochasticForecasting />);
   const intro = await screen.findByText(/over time with economic indexes/);
-  await within(intro).findByText(`${parameters} parameters`);
+  await within(intro).findByText(`${parameters} parameter files`);
   expect(intro).toHaveTextContent(
-    `PolicyEngine-US grows ${parameters} parameters and ${variables} input variables over time`,
+    `PolicyEngine-US grows ${parameters} parameter files and ${variables} input variables over time`,
   );
 });
 
 test("shows each card's count and share of the table", async () => {
   render(<StochasticForecasting />);
-  await screen.findByText(`${parameters} parameters`);
+  await screen.findByText(`${parameters} parameter files`);
 
   const expected = new Map();
   for (const row of rows) {
@@ -69,7 +69,7 @@ test("shows each card's count and share of the table", async () => {
 
 test("opens a card on its parameter and variable counts and examples", async () => {
   render(<StochasticForecasting />);
-  await screen.findByText(`${parameters} parameters`);
+  await screen.findByText(`${parameters} parameter files`);
 
   const byPath = new Map(rows.map((row) => [row.path, row]));
   for (const card of cards()) {
@@ -79,7 +79,7 @@ test("opens a card on its parameter and variable counts and examples", async () 
     const cardParameters = inCard.filter((row) => row.type === "parameter");
     const plural = (count, noun) => `${count} ${noun}${count === 1 ? "" : "s"}`;
     expect(card).toHaveTextContent(
-      `${plural(cardParameters.length, "parameter")} and ${plural(inCard.length - cardParameters.length, "variable")}`,
+      `${plural(cardParameters.length, "parameter file")} and ${plural(inCard.length - cardParameters.length, "variable")}`,
     );
     const source = UPRATING_CARDS.find((entry) => entry.id === id);
     const items = [...card.querySelectorAll("li")].map((li) => li.textContent);
@@ -88,6 +88,15 @@ test("opens a card on its parameter and variable counts and examples", async () 
       expect(cardOf(byPath.get(example.path).uprating_category)).toBe(id);
     }
   }
+});
+
+test("loads the table once, with the explorer open too", async () => {
+  render(<StochasticForecasting />);
+  await screen.findByText(`${parameters} parameter files`);
+  fireEvent.click(screen.getByRole("button", { name: /uprating explorer/i }));
+  expect(await screen.findByText(/grows over time/)).toBeTruthy();
+  expect(document.querySelectorAll("#uprating-viewer")).toHaveLength(1);
+  expect(fetch).toHaveBeenCalledTimes(1);
 });
 
 test("says so when the table fails to load", async () => {

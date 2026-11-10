@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { POLICYENGINE_US_SNAPSHOT } from "./policyengineUsSource";
 import {
+  FORMULA_LINES,
   FORMULA_MODULE,
   OTHER_CARD,
   UPRATING_CARDS,
@@ -24,6 +26,10 @@ const listedFiles = new Set(
     .split("\n")
     .filter((line) => line && !line.startsWith("#")),
 );
+// Read here apart from the module's import of it.
+const formulaLines = JSON.parse(
+  readFileSync("src/data/upratingFormulaLines.json", "utf8"),
+);
 
 // Counts the cards should show, tallied here without summarizeUprating.
 function independentCounts(table) {
@@ -36,15 +42,6 @@ function independentCounts(table) {
     counts.set(id, (counts.get(id) ?? 0) + 1);
   }
   return counts;
-}
-
-// A small seeded generator, so the property checks below repeat exactly.
-function random(seed) {
-  let state = seed >>> 0;
-  return () => {
-    state = (state * 1664525 + 1013904223) >>> 0;
-    return state / 2 ** 32;
-  };
 }
 
 const CATEGORY_POOL = [
@@ -61,15 +58,22 @@ const CATEGORY_POOL = [
   "Another unclaimed category",
 ];
 
-function randomTable(seed) {
-  const next = random(seed);
-  const length = Math.floor(next() * 40);
-  return Array.from({ length }, (_, index) => ({
-    type: next() < 0.5 ? "parameter" : "variable",
-    uprating_category: CATEGORY_POOL[Math.floor(next() * CATEGORY_POOL.length)],
-    path: `row_${index}`,
-  }));
-}
+// Tables of up to 40 rows, with categories the cards claim, categories they
+// don't, and arbitrary text.
+const tables = fc
+  .array(
+    fc.record({
+      type: fc.constantFrom("parameter", "variable"),
+      uprating_category: fc.oneof(
+        fc.constantFrom(...CATEGORY_POOL),
+        fc.string({ maxLength: 12 }),
+      ),
+    }),
+    { maxLength: 40 },
+  )
+  .map((entries) =>
+    entries.map((entry, index) => ({ ...entry, path: `row_${index}` })),
+  );
 
 describe("the uprating table", () => {
   it("parses the committed CSV", () => {
@@ -112,11 +116,38 @@ describe("formula rows", () => {
     expect(formulaSteps(undefined)).toEqual([]);
   });
 
-  it("link to the formulas' module at the pinned commit", () => {
-    expect(formulaSourceUrl()).toBe(
-      `https://github.com/PolicyEngine/policyengine-us/blob/${POLICYENGINE_US_SNAPSHOT.commit}/${FORMULA_MODULE}`,
-    );
+  it("link to the lines that grow them, at the pinned commit", () => {
+    expect(FORMULA_LINES).toEqual(formulaLines);
+    expect(formulaLines.commit).toBe(POLICYENGINE_US_SNAPSHOT.commit);
+    expect(formulaLines.module).toBe(FORMULA_MODULE);
     expect(listedFiles.has(FORMULA_MODULE)).toBe(true);
+
+    const formulaRows = rows.filter((row) => formulaSteps(row).length);
+    expect(formulaRows.length).toBeGreaterThan(0);
+    // One anchor for each formula row, and none for a path the table lacks.
+    expect(Object.keys(formulaLines.lines).sort()).toEqual(
+      formulaRows.map((row) => row.path).sort(),
+    );
+    for (const row of formulaRows) {
+      const lines = formulaLines.lines[row.path];
+      expect(lines).toMatch(/^L\d+-L\d+$/);
+      const [start, end] = lines.slice(1).split("-L").map(Number);
+      expect(start).toBeGreaterThan(0);
+      expect(end).toBeGreaterThanOrEqual(start);
+      expect(formulaSourceUrl(row)).toBe(
+        `https://github.com/PolicyEngine/policyengine-us/blob/${POLICYENGINE_US_SNAPSHOT.commit}/${FORMULA_MODULE}#${lines}`,
+      );
+    }
+  });
+
+  it("give no formula link to a row no formula grows", () => {
+    expect(
+      formulaSourceUrl({
+        path: "gov.irs.income.bracket",
+        uprating: "gov.irs.uprating",
+      }),
+    ).toBeNull();
+    expect(formulaSourceUrl(undefined)).toBeNull();
   });
 
   it("appear only for parameters", () => {
@@ -191,43 +222,47 @@ describe("the uprating cards", () => {
   });
 
   it("hold their invariants on generated tables", () => {
-    for (let seed = 1; seed <= 300; seed += 1) {
-      const table = randomTable(seed);
-      const result = summarizeUprating(table);
-      const cards = result.cards;
-      expect(result.total).toBe(table.length);
-      expect(cards.reduce((total, card) => total + card.count, 0)).toBe(
-        table.length,
-      );
-      expect(cards.every((card) => card.count > 0)).toBe(true);
-      expect(
-        Object.fromEntries(cards.map((card) => [card.id, card.count])),
-      ).toEqual(Object.fromEntries(independentCounts(table)));
-      // OTHER_CARD comes last and lists exactly the unclaimed categories.
-      const other = cards.find((card) => card.id === OTHER_CARD.id);
-      if (other) expect(cards.at(-1)).toBe(other);
-      const unclaimed = new Set(
-        table
-          .map((row) => row.uprating_category)
-          .filter(
-            (category) =>
-              !UPRATING_CARDS.some((card) => card.includes(category)),
-          ),
-      );
-      expect(new Set(other?.categories.map((c) => c.name) ?? [])).toEqual(
-        unclaimed,
-      );
-      const ranked = cards.filter((card) => card.id !== OTHER_CARD.id);
-      const counts = ranked.map((card) => card.count);
-      expect(counts).toEqual([...counts].sort((a, b) => b - a));
-      for (const card of cards) {
-        const inCategories = card.categories.reduce(
-          (total, category) => total + category.count,
-          0,
+    fc.assert(
+      fc.property(tables, (table) => {
+        const result = summarizeUprating(table);
+        const cards = result.cards;
+        expect(result.total).toBe(table.length);
+        expect(cards.reduce((total, card) => total + card.count, 0)).toBe(
+          table.length,
         );
-        expect(inCategories).toBe(card.count);
-      }
-    }
+        expect(cards.every((card) => card.count > 0)).toBe(true);
+        expect(
+          Object.fromEntries(cards.map((card) => [card.id, card.count])),
+        ).toEqual(Object.fromEntries(independentCounts(table)));
+        // OTHER_CARD comes last and lists exactly the unclaimed categories.
+        const other = cards.find((card) => card.id === OTHER_CARD.id);
+        if (other) expect(cards.at(-1)).toBe(other);
+        const unclaimed = new Set(
+          table
+            .map((row) => row.uprating_category)
+            .filter(
+              (category) =>
+                !UPRATING_CARDS.some((card) => card.includes(category)),
+            ),
+        );
+        expect(new Set(other?.categories.map((c) => c.name) ?? [])).toEqual(
+          unclaimed,
+        );
+        const ranked = cards.filter((card) => card.id !== OTHER_CARD.id);
+        const counts = ranked.map((card) => card.count);
+        expect(counts).toEqual([...counts].sort((a, b) => b - a));
+        for (const card of cards) {
+          const inCategories = card.categories.reduce(
+            (total, category) => total + category.count,
+            0,
+          );
+          expect(inCategories).toBe(card.count);
+        }
+        const shares = cards.reduce((total, card) => total + card.share, 0);
+        expect(shares).toBeCloseTo(table.length ? 1 : 0, 12);
+      }),
+      { numRuns: 300 },
+    );
   });
 });
 
