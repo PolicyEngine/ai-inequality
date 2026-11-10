@@ -37,6 +37,12 @@ const VARIANTS = [
   { key: "expansive", label: "Wages spread" },
 ];
 const VARIANT_KEYS = VARIANTS.map((v) => v.key);
+// How each variant moves wages, as the state tax note says it.
+const VARIANT_PHRASES = {
+  compressive: "wages compressing",
+  proportional: "proportional wage changes",
+  expansive: "wages spreading",
+};
 
 // Palette reuses values already in the repo: pe-blue-dark for the
 // shares-fixed counterfactual, pe-teal-600 for the forecast tilt, semantic
@@ -484,9 +490,12 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
           Net government revenue = federal, state and local taxes − refundable
           credits such as the EITC and refundable CTC − benefits such as SNAP,
           SSI, TANF, WIC and school meals. We leave out health coverage such as
-          Medicaid, CHIP and ACA premium tax credits. Under {scenarioName} /
-          proportional, state income tax accounts for{" "}
-          {fmtBillions(selected.stateTaxChange)} of the change.
+          Medicaid, CHIP and ACA premium tax credits. Under{" "}
+          {scenarioName.toLowerCase()} adoption with{" "}
+          {VARIANT_PHRASES[variantKey]}, we estimate state income and use taxes
+          before refundable credits{" "}
+          {selected.stateTaxChange >= 0 ? "rise" : "fall"} by $
+          {Math.abs(selected.stateTaxChange).toFixed(0)}B.
         </p>
 
         {crossover != null && (

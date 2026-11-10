@@ -67,7 +67,7 @@ const NATIONAL_BUCKETS_UK = [
 // than taking the all-government total less the states, so some taxes that
 // the total counts sit in no chart's bands.
 const FEDERAL_LINE_NOTE_US =
-  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band includes TANF. We count three groups of taxes only in the net government revenue total: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations. New York City's and Maryland's local income taxes count in those states' charts instead.";
+  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band includes TANF. We count three groups of taxes only in the net government revenue total: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations. We put New York City's and Maryland's local income taxes in those states' charts instead.";
 
 function federalBuckets(countryId) {
   return countryId === "uk" ? NATIONAL_BUCKETS_UK : FEDERAL_BUCKETS_US;
@@ -394,7 +394,7 @@ function summaryForMetric(measureKey, conceptKey, config, chartData, metadata) {
         {endValue.toFixed(3)} at a 100% shift.{" "}
         {conceptKey === "net"
           ? "Current law dampens the shock, but it does not come close to offsetting it."
-          : `Before taxes and transfers, the rise comes from moving ${laborTerm} income to people in proportion to the capital income they already receive.`}
+          : `We move ${laborTerm} income to people in proportion to the capital income they already receive.`}
       </>
     );
   }
@@ -942,16 +942,16 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
         The chart ranks every state by its net change in state revenue at the
         selected shift level, largest first. Net = state income and use tax
         before refundable credits − refundable state credits − state-paid
-        benefits. PolicyEngine counts state SSI supplements, child care
-        subsidies and other programs, such as New Jersey&apos;s property tax
-        relief, as state-paid. We leave Medicaid, CHIP and TANF out of these
-        figures, apart from Massachusetts&apos;s TAFDC. New York&apos;s and
-        Maryland&apos;s figures include New York City&apos;s income tax and
-        refundable credits, Maryland&apos;s county income taxes and Montgomery
-        County&apos;s earned income credit. California&apos;s include San
-        Francisco&apos;s Working Families Tax Credit and Los Angeles
-        County&apos;s EZ Save program, infant supplement and expectant parent
-        payment. Teal gains, orange loses.
+        benefits. We count state SSI supplements, child care subsidies and other
+        programs, such as New Jersey&apos;s property tax relief, as state-paid.
+        We leave Medicaid, CHIP and TANF out of these figures, apart from
+        Massachusetts&apos;s TAFDC. New York&apos;s and Maryland&apos;s figures
+        include New York City&apos;s income tax and refundable credits,
+        Maryland&apos;s county income taxes and Montgomery County&apos;s earned
+        income credit. California&apos;s include San Francisco&apos;s Working
+        Families Tax Credit, the Los Angeles Department of Water and
+        Power&apos;s EZ Save program, and Los Angeles County&apos;s infant
+        supplement and expectant parent payment. Teal gains, orange loses.
         {unit === "share"
           ? " In share mode, each state's change is expressed as % of its own baseline net state revenue — states without income tax (FL, TX, etc.) are dropped."
           : ""}
