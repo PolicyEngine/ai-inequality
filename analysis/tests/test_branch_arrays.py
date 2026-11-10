@@ -435,6 +435,49 @@ def test_a_branch_reads_an_enum_array_as_its_parent_holds_it():
         np.testing.assert_array_equal(read.decode_to_str(), status.decode_to_str())
 
 
+def _nickname_variable():
+    """A string variable with no ``max_length``, which core stores as an object
+    array, as it does policyengine-us's string variables."""
+    pytest.importorskip("policyengine_core")
+    from policyengine_core.country_template.entities import Person
+    from policyengine_core.periods import MONTH
+    from policyengine_core.variables import Variable
+
+    class nickname(Variable):
+        value_type = str
+        entity = Person
+        definition_period = MONTH
+        label = "Nickname"
+
+    return nickname
+
+
+def _write_into_a_nickname_after_branching(check_sharing=False):
+    sim = _template_with(_nickname_variable())
+    sim.set_input("nickname", "2022-01", np.array(["Ada", "Bo"], dtype=object))
+    branch = sim.get_branch("rename")
+    if check_sharing:
+        key = "default:2022-01"
+        held = _storage(branch, "nickname")._arrays[key]
+        assert held.dtype == object
+        assert np.shares_memory(held, _storage(sim, "nickname")._arrays[key])
+        assert not held.flags.writeable
+    fresh = sim.calculate("nickname", "2022-01")
+    fresh[0] = "Cy"
+    return (
+        _contents(sim.calculate("nickname", "2022-01")),
+        _contents(branch.calculate("nickname", "2022-01")),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_an_object_array_reads_as_core_s_after_a_parent_write(freeze_sources):
+    core = _write_into_a_nickname_after_branching()
+    port = _ported(freeze_sources, _write_into_a_nickname_after_branching, True)
+    assert core == (("|O", ("Cy", "Bo")), ("|O", ("Ada", "Bo")))
+    assert port == core
+
+
 def test_a_branch_with_its_own_system_shares_arrays_too():
     sim = _template()
     with branch_arrays.shared_branch_arrays(freeze_sources=True):
@@ -578,6 +621,7 @@ def _steps():
                 st.sampled_from(PERIODS),
             ),
             st.tuples(st.just("delete"), sim_index, st.sampled_from(COMPUTED)),
+            st.tuples(st.just("purge"), sim_index),
             st.tuples(
                 st.just("write"),
                 sim_index,
@@ -609,6 +653,11 @@ def _run(steps):
             elif kind == "delete":
                 sim.delete_arrays(step[2])
                 outcome = ("delete",)
+            elif kind == "purge":
+                # What apply_reform runs: drop every calculated array in the
+                # simulation and its branches, and put back the inputs.
+                sim._invalidate_all_caches()
+                outcome = ("purge",)
             else:
                 value = sim.calculate(step[2], step[3])
                 value += 1
@@ -651,6 +700,25 @@ def test_shared_branches_read_what_full_copies_hold(freeze_sources):
         assert shared_held == copied_held
 
     check()
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_purge_after_branching_reads_what_full_copies_hold(freeze_sources):
+    _template()  # skip without policyengine-core
+    steps = [
+        ("calculate", 0, "disposable_income", "2022-01"),
+        ("branch", 0, 0),
+        ("purge", 0),
+        ("write", 0, "salary", "2022-01"),
+        ("write", 0, "income_tax", "2022-01"),
+        ("calculate", 1, "income_tax", "2022-01"),
+        ("purge", 1),
+        ("calculate", 1, "disposable_income", "2022-01"),
+        ("calculate", 0, "disposable_income", "2022-01"),
+    ]
+    copied = _run(steps)
+    assert copied[2] is None
+    assert _ported(freeze_sources, _run, steps) == copied
 
 
 # policyengine-us households whose taxes open the itemizing, not_itemizing,
