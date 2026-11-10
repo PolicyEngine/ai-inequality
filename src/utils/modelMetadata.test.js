@@ -9,7 +9,8 @@ describe("predatesHeadStartCorrection", () => {
     // and the on-page note stays off.
     expect(usShiftSweepData.metadata.country_model_version).toBe("1.764.6");
     expect(
-      usShiftSweepData.metadata.policyengine_bundle.net_income_excluded_benefits,
+      usShiftSweepData.metadata.policyengine_bundle
+        .net_income_excluded_benefits,
     ).toEqual(["early_head_start", "head_start"]);
     expect(predatesHeadStartCorrection(usShiftSweepData.metadata)).toBe(false);
   });

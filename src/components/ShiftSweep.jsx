@@ -106,7 +106,10 @@ const OWN_HEALTH_PROGRAM_NAMES = {
 // The state a state health program belongs to: each variable starts with its
 // state's code, after the "assigned_" that some later releases put in front.
 export function healthProgramState(variable) {
-  return variable.replace(/^assigned_/, "").split("_", 1)[0].toUpperCase();
+  return variable
+    .replace(/^assigned_/, "")
+    .split("_", 1)[0]
+    .toUpperCase();
 }
 
 export function stateLineNoteHealthTanf(stateCode, statePrograms = []) {
@@ -500,9 +503,9 @@ function summaryForMetric(
     return (
       <>
         {config.label} {direction} from {config.valueFormatter(startValue)} at
-        baseline to {config.valueFormatter(endValue)} at a 100% shift. We
-        move {laborTerm} income to people in proportion to the capital income
-        they already receive.
+        baseline to {config.valueFormatter(endValue)} at a 100% shift. We move{" "}
+        {laborTerm} income to people in proportion to the capital income they
+        already receive.
       </>
     );
   }
@@ -1180,7 +1183,10 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
   const modelLabel = policyEngineLabel(metadata);
   const laborTerm = metadata.labor_label ?? "labor";
   const laborTitle = metadata.labor_title ?? "Labor";
-  const withHealthTanf = useMemo(() => countsHealthTanf(sweepData), [sweepData]);
+  const withHealthTanf = useMemo(
+    () => countsHealthTanf(sweepData),
+    [sweepData],
+  );
   const measures = useMemo(
     () => measuresForMetadata(metadata, withHealthTanf),
     [metadata, withHealthTanf],
@@ -1545,9 +1551,7 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
             />
           )}
 
-        {isRevenue && (
-          <DecileImpactChart sweepData={sweepData} unit={unit} />
-        )}
+        {isRevenue && <DecileImpactChart sweepData={sweepData} unit={unit} />}
 
         {isRevenue && hasStateDeltas && (
           <StateExposureChart

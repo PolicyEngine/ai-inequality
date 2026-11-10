@@ -277,7 +277,9 @@ test("share mode shows only for runs that count no health coverage or TANF", () 
   fireEvent.click(
     screen.getByRole("radio", { name: /net government revenue change/i }),
   );
-  expect(screen.getByRole("radiogroup", { name: /units/i })).toBeInTheDocument();
+  expect(
+    screen.getByRole("radiogroup", { name: /units/i }),
+  ).toBeInTheDocument();
   cleanup();
 
   renderSweep(withTotals(MOCK_HEALTH_TANF_PAYLOAD));
@@ -301,9 +303,7 @@ function withRevenue(data, revenueAt) {
 }
 
 test("the revenue summary handles a sweep that never falls or ends early", () => {
-  renderSweep(
-    withRevenue(withoutHealthTanf(sweepData), (pct) => pct),
-  );
+  renderSweep(withRevenue(withoutHealthTanf(sweepData), (pct) => pct));
   fireEvent.click(
     screen.getByRole("radio", { name: /net government revenue change/i }),
   );
@@ -332,9 +332,7 @@ test("the old copy survives on a run without health coverage and TANF", () => {
   fireEvent.click(
     screen.getByRole("radio", { name: /net government revenue change/i }),
   );
-  expect(document.body).toHaveTextContent(
-    /the benefits band includes tanf\./i,
-  );
+  expect(document.body).toHaveTextContent(/the benefits band includes tanf\./i);
   expect(document.body).toHaveTextContent(
     /we leave medicaid, chip and tanf out of these figures, apart from massachusetts's tafdc\./i,
   );
