@@ -16,21 +16,26 @@ the pinned core 3.30.3):
   either simulation's copy.
 
 Isolation and the differential fail only after an in-place write, in three
-cases, each intended and pinned below: a write through a stored array by a
-reference from before the branch, which raises instead with frozen sources; a
-write through another array over the same memory held from before the branch,
-such as a view or the 0-dim array a formula returned; and a write into the
-parent's copy of an array that something else still holds, such as a reference
-from before the branch, or a second variable or month that core stored the
-same array under. The first two reach a branch; the third changes only what the
-parent reads.
+cases, each intended and pinned below:
 
-The differential also fails for two of the parent's reads with no write at
-all, both intended and pinned below. Core's fast cache serves them, and the
-parent here reads through ``Simulation._calculate``: a formula's 0-dim result
-then comes back with shape (1,) rather than (), and a variable that the
-parent's own system neutralized after the parent cached it reads as its
-default rather than the cached values.
+- a write through a stored array by a reference from before the branch (with
+  frozen sources, it raises instead);
+- a write through another array over the same memory held from before the
+  branch, such as a view or the 0-dim array a formula returned;
+- a write into the parent's copy of an array that something else still holds:
+  a reference from before the branch, or another variable or month core stored
+  the same array under.
+
+The first two reach a branch; the third changes only what the parent reads.
+
+The differential also fails for three of the parent's reads with no write at
+all, each intended and pinned below. Core's fast cache serves them, and the
+parent here reads through ``Simulation._calculate``. A formula's 0-dim result
+then comes back with shape (1,) rather than (). A variable that the parent's
+own system neutralized after the parent cached it reads as its default rather
+than the cached values. And where a delete leaves core's fast cache serving a
+deleted month, as a delete of its year or one through its holder does, the
+parent computes the month again.
 
 Every test here but the first needs policyengine-core 3.30.3, and the last
 needs policyengine-us; CI installs neither, so they skip there.
@@ -371,6 +376,67 @@ def test_a_variable_neutralized_after_the_parent_cached_it_reads_as_its_default(
     tax, zero = [600.0, 375.0], [0.0, 0.0]
     assert _neutralize_after_caching() == (tax, tax, zero)
     assert _ported(freeze_sources, _neutralize_after_caching) == (tax, zero, zero)
+
+
+def _delete_after_branching(delete):
+    """January's ``income_tax``, then the parent's and a branch's reads of it
+    after the parent doubles January's salaries and runs ``delete``."""
+    sim = _template()
+    before = sim.calculate("income_tax", "2022-01").tolist()
+    branch = sim.get_branch("raise")
+    sim.set_input("salary", "2022-01", np.array([8000.0, 5000.0], dtype=np.float32))
+    delete(sim)
+    return (
+        before,
+        sim.calculate("income_tax", "2022-01").tolist(),
+        branch.calculate("income_tax", "2022-01").tolist(),
+    )
+
+
+# Core's Simulation.delete_arrays with a period drops only that period's
+# fast-cache entry, and Holder.delete_arrays drops none.
+FAST_CACHE_KEPT = {
+    "the year": lambda sim: sim.delete_arrays("income_tax", "2022"),
+    "the holder": lambda sim: sim.get_holder("income_tax").delete_arrays("2022-01"),
+}
+FAST_CACHE_DROPPED = {
+    "the month": lambda sim: sim.delete_arrays("income_tax", "2022-01"),
+    "every period": lambda sim: sim.delete_arrays("income_tax"),
+}
+OLD_TAX, NEW_TAX = [600.0, 375.0], [1200.0, 750.0]
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+@pytest.mark.parametrize("delete", sorted(FAST_CACHE_KEPT))
+def test_a_month_deleted_past_core_s_fast_cache_is_computed_again(
+    freeze_sources, delete
+):
+    # Intended: core's fast cache serves the parent the deleted month, and
+    # here the parent reads through _calculate, finds nothing stored and
+    # computes the month again from the new salaries. The sweep deletes no
+    # arrays; policyengine-us 1.764.6 deletes through a simulation only without
+    # a period, and through a holder only while it builds a simulation.
+    steps = FAST_CACHE_KEPT[delete]
+    assert _delete_after_branching(steps) == (OLD_TAX, OLD_TAX, OLD_TAX)
+    assert _ported(freeze_sources, _delete_after_branching, steps) == (
+        OLD_TAX,
+        NEW_TAX,
+        OLD_TAX,
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+@pytest.mark.parametrize("delete", sorted(FAST_CACHE_DROPPED))
+def test_a_delete_that_drops_core_s_fast_cache_entry_reads_as_core_s(
+    freeze_sources, delete
+):
+    steps = FAST_CACHE_DROPPED[delete]
+    assert _delete_after_branching(steps) == (OLD_TAX, NEW_TAX, OLD_TAX)
+    assert _ported(freeze_sources, _delete_after_branching, steps) == (
+        OLD_TAX,
+        NEW_TAX,
+        OLD_TAX,
+    )
 
 
 def _ported(freeze_sources, steps, *args):
@@ -798,7 +864,15 @@ def _steps():
                 st.sampled_from(COMPUTED + ("salary",)),
                 st.sampled_from(PERIODS),
             ),
-            st.tuples(st.just("delete"), sim_index, st.sampled_from(COMPUTED)),
+            # Every period or one month: a delete of a year, or one through a
+            # holder, can leave core's fast cache serving a deleted month, a
+            # difference pinned above.
+            st.tuples(
+                st.just("delete"),
+                sim_index,
+                st.sampled_from(COMPUTED),
+                st.sampled_from((None,) + PERIODS),
+            ),
             st.tuples(st.just("purge"), sim_index),
             st.tuples(
                 st.just("write"),
@@ -829,7 +903,7 @@ def _run(steps):
             elif kind == "calculate":
                 outcome = ("value", *_contents(sim.calculate(step[2], step[3])))
             elif kind == "delete":
-                sim.delete_arrays(step[2])
+                sim.delete_arrays(step[2], step[3])
                 outcome = ("delete",)
             elif kind == "purge":
                 # What apply_reform runs: drop every calculated array in the
