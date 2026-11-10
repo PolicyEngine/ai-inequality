@@ -415,9 +415,9 @@ function summaryForMetric(measureKey, conceptKey, config, chartData, metadata) {
     return (
       <>
         {config.label} {direction} from {config.valueFormatter(startValue)} at
-        baseline to {config.valueFormatter(endValue)} at a 100% shift. We
-        move {laborTerm} income to people in proportion to the capital income
-        they already receive.
+        baseline to {config.valueFormatter(endValue)} at a 100% shift. We move{" "}
+        {laborTerm} income to people in proportion to the capital income they
+        already receive.
       </>
     );
   }
