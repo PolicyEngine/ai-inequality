@@ -19,10 +19,12 @@ and closes the one gap #556's docstrings state.
 
 That gap: under #556, code that writes in place into one of a parent's cached
 arrays after branching changes the value a branch reads, if the branch hasn't
-read that array yet. policyengine-us 1.764.6 has such a write:
-``ga_deductions`` runs ``itemized -= ...`` on the cached
-``itemized_taxable_income_deductions`` (policyengine-us main now subtracts into
-a new array). So here the parent copies too: making a branch marks each array
+read that array yet. policyengine-us 1.764.6 has two such writes on the
+baseline's path: ``ga_deductions`` runs ``itemized -= ...`` on the cached
+``itemized_taxable_income_deductions``, and ``ut_personal_exemption`` adds
+newborns into the cached ``ut_total_dependents`` (policyengine-us#9739 made
+both build new arrays on 2 Oct 2026). So here the parent copies too: making a
+branch marks each array
 it shares in both simulations, and each copies a marked array the first time it
 reads it, so neither ever reads the other's writes. Making a branch also drops
 the parent's fast-cache entries (``Simulation._fast_cache``) for the arrays it
