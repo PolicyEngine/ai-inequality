@@ -1,48 +1,36 @@
-import React, { useState, useEffect, useMemo } from "react";
-import Papa from "papaparse";
+import React, { useState, useMemo } from "react";
 import { IconBulb } from "@tabler/icons-react";
-import { withBasePath } from "../utils/basePath";
 import {
   POLICYENGINE_US_SNAPSHOT,
   formatReleaseMonth,
   policyengineUsSourceUrl,
 } from "../utils/policyengineUsSource";
+import {
+  cardForCategory,
+  formulaSourceUrl,
+  formulaSteps,
+} from "../utils/upratingTable";
+import { useUpratingTable } from "../utils/useUpratingTable";
+
+const INCOME_CARD = "income-by-source";
+const isIncomeCategory = (category) =>
+  cardForCategory(category).id === INCOME_CARD;
 
 function UpratingViewer() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { rows, loading, error } = useUpratingTable();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [expandedCategory, setExpandedCategory] = useState(null);
 
-  useEffect(() => {
-    fetch(withBasePath("/data/uprating_analysis.csv"))
-      .then((response) => response.text())
-      .then((csvText) => {
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            setData(
-              results.data.map((row) => ({
-                ...row,
-                sourceUrl: policyengineUsSourceUrl(row),
-              })),
-            );
-            setLoading(false);
-          },
-          error: (err) => {
-            setError(err.message);
-            setLoading(false);
-          },
-        });
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
+  const data = useMemo(
+    () =>
+      rows.map((row) => ({
+        ...row,
+        sourceUrl: policyengineUsSourceUrl(row),
+        formulaUrl: formulaSteps(row).length ? formulaSourceUrl() : null,
+      })),
+    [rows],
+  );
 
   const groupedData = useMemo(() => {
     if (!data.length) return {};
@@ -64,10 +52,10 @@ function UpratingViewer() {
   }, [data]);
 
   const categories = useMemo(() => {
-    // Sort by total count (parameters + variables), putting income_by_source categories first
+    // Income-by-source categories first, then by row count.
     return Object.keys(groupedData).sort((a, b) => {
-      const aIsIncome = a.includes("income_by_source");
-      const bIsIncome = b.includes("income_by_source");
+      const aIsIncome = isIncomeCategory(a);
+      const bIsIncome = isIncomeCategory(b);
 
       if (aIsIncome && !bIsIncome) return -1;
       if (!aIsIncome && bIsIncome) return 1;
@@ -133,40 +121,6 @@ function UpratingViewer() {
     [data],
   );
 
-  const getCategoryDisplayName = (category) => {
-    // Hard-coded mapping for clean display names
-    const nameMap = {
-      "IRS (Chained CPI-U)": "IRS Chained CPI-U",
-      "CPI-U (Direct)": "CPI-U",
-      "SNAP (CPI-U Q2)": "SNAP",
-      "SSA (CPI-W)": "Social Security (CPI-W)",
-      "HHS (CPI-U)": "HHS Federal Poverty Guidelines",
-      "ACA Benchmark Premium": "ACA Benchmark Premium",
-      "Other: gov.ssa.nawi": "National Average Wage Index (SSA)",
-      "Other: gov.states.ca.cpi": "California CPI",
-      "Other: {'parameter': 'gov.states.ca.cpi'": "California CPI",
-      "Other: calibration.gov.census.populations.total": "Population (Census)",
-      "Other: calibration.gov.cbo.income_by_source.adjusted_gross_income":
-        "Adjusted Gross Income (CBO)",
-      "Other: calibration.gov.cbo.income_by_source.employment_income":
-        "Employment Income (CBO)",
-      "Other: calibration.gov.cbo.income_by_source.net_capital_gain":
-        "Net Capital Gain (CBO)",
-      "Other: calibration.gov.cbo.income_by_source.qualified_dividend_income":
-        "Qualified Dividend Income (CBO)",
-      "Other: calibration.gov.cbo.income_by_source.self_employment_income":
-        "Self Employment Income (CBO)",
-      "Other: calibration.gov.cbo.income_by_source.taxable_interest_and_ordinary_dividends":
-        "Taxable Interest And Ordinary Dividends (CBO)",
-      "Other: calibration.gov.cbo.income_by_source.taxable_pension_income":
-        "Taxable Pension Income (CBO)",
-      "Other: calibration.gov.cbo.income_by_source.taxable_social_security":
-        "Taxable Social Security (CBO)",
-    };
-
-    return nameMap[category] || category;
-  };
-
   if (loading) {
     return (
       <div className="section" style={{ textAlign: "center", padding: "3rem" }}>
@@ -194,7 +148,7 @@ function UpratingViewer() {
           fontSize: "1.1rem",
         }}
       >
-        Explore <strong>{datasetCounts.parameters} parameters</strong> and{" "}
+        Explore the <strong>{datasetCounts.parameters} parameters</strong> and{" "}
         <strong>{datasetCounts.variables} variables</strong> that
         PolicyEngine-US {POLICYENGINE_US_SNAPSHOT.version} (
         {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time in
@@ -282,7 +236,7 @@ function UpratingViewer() {
                 groupedData[category].variables.length;
               return (
                 <option key={category} value={category}>
-                  {getCategoryDisplayName(category)} ({total})
+                  {category} ({total})
                 </option>
               );
             })}
@@ -304,7 +258,7 @@ function UpratingViewer() {
           const group = filteredData[category];
           const allItems = [...group.parameters, ...group.variables];
           const isExpanded = expandedCategory === category;
-          const isIncome = category.includes("income_by_source");
+          const isIncome = isIncomeCategory(category);
 
           return (
             <div
@@ -324,7 +278,7 @@ function UpratingViewer() {
                   alignItems: "center",
                 }}
               >
-                <span>{getCategoryDisplayName(category)}</span>
+                <span>{category}</span>
                 <span
                   style={{
                     fontSize: "0.85rem",
@@ -425,16 +379,21 @@ function UpratingViewer() {
                             href={param.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{
-                              fontSize: "0.85rem",
-                              color: "#319795",
-                              textDecoration: "none",
-                              marginTop: "0.5rem",
-                              display: "inline-block",
-                            }}
+                            style={itemLinkStyle}
                             onClick={(e) => e.stopPropagation()}
                           >
                             View source →
+                          </a>
+                        )}
+                        {param.formulaUrl && (
+                          <a
+                            href={param.formulaUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ ...itemLinkStyle, marginLeft: "1rem" }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View formula →
                           </a>
                         )}
                       </div>
@@ -477,43 +436,32 @@ function UpratingViewer() {
         className="card"
         style={{ marginTop: "2rem", backgroundColor: "#f0f9ff" }}
       >
-        <h3>About these parameters</h3>
+        <h3>How PolicyEngine-US grows these values</h3>
         <p>
-          Each parameter in PolicyEngine-US that changes over time uses an
-          "uprating" method to project its value forward. The uprating method
-          determines which economic indicator drives the growth:
+          PolicyEngine-US grows most parameters by the index their metadata
+          names, starting from the latest published value. Lawmakers set
+          specific indexing rules for some amounts, such as the payroll tax cap
+          and HSA contribution limits, and PolicyEngine-US applies those rules
+          with formulas in <code>uprating_extensions.py</code>.
         </p>
-        <ul style={{ marginTop: "1rem" }}>
-          <li>
-            <strong>IRS Chained CPI-U:</strong> Most federal tax parameters
-            (brackets, deductions, credits) indexed to chained CPI-U
-          </li>
-          <li>
-            <strong>CPI-U Direct:</strong> Some state parameters and benefit
-            amounts indexed to standard CPI-U
-          </li>
-          <li>
-            <strong>SSA CPI-W:</strong> Social Security parameters indexed to
-            CPI-W (wage earners)
-          </li>
-          <li>
-            <strong>Income by Source:</strong> CBO projections for different
-            income types (wages, capital gains, dividends, etc.)
-          </li>
-          <li>
-            <strong>Other:</strong> Population growth, state-specific inflation,
-            wage indexes
-          </li>
-        </ul>
         <p style={{ marginTop: "1rem" }}>
-          These growth factors are correlated but not perfectly - modeling their
-          joint distribution is critical for accurate long-term projections
-          under AI scenarios.
+          PolicyEngine-US grows dollar inputs that name no index with CBO&apos;s
+          projection of adjusted gross income per person. It grows an input that
+          names a national total, such as total employment income, with that
+          total per person.
         </p>
       </div>
     </div>
   );
 }
+
+const itemLinkStyle = {
+  fontSize: "0.85rem",
+  color: "#319795",
+  textDecoration: "none",
+  marginTop: "0.5rem",
+  display: "inline-block",
+};
 
 UpratingViewer.displayName = "UpratingViewer";
 

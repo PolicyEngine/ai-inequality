@@ -1,67 +1,16 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import UpratingViewer from "./UpratingViewer";
+import { formatShare, summarizeUprating } from "../utils/upratingTable";
+import { useUpratingTable } from "../utils/useUpratingTable";
+
+const counted = (count, noun) => `${count} ${noun}${count === 1 ? "" : "s"}`;
 
 function StochasticForecasting() {
   const [expandedCard, setExpandedCard] = useState(null);
   const [showUpratingViewer, setShowUpratingViewer] = useState(false);
-
-  const upratingCategories = [
-    {
-      category: "IRS Chained CPI-U",
-      count: 214,
-      percentage: 67,
-      description:
-        "Tax brackets, standard deductions, credits, and phase-outs indexed to chained CPI-U",
-      examples: [
-        "Federal income tax brackets",
-        "Standard deduction amounts",
-        "EITC phase-out thresholds",
-        "Child Tax Credit parameters",
-      ],
-    },
-    {
-      category: "CPI-U Direct",
-      count: 26,
-      percentage: 8,
-      description:
-        "Direct CPI-U indexation for state tax parameters and federal benefit amounts",
-      examples: [
-        "State standard deductions (AR, LA)",
-        "WIC benefit values",
-        "School meal reimbursement rates",
-      ],
-    },
-    {
-      category: "Income growth by source",
-      count: 12,
-      percentage: 4,
-      description:
-        "CBO projections for different income types with potentially different growth rates",
-      examples: [
-        "Employment income",
-        "Self-employment income",
-        "Capital gains",
-        "Qualified dividends",
-        "Interest income",
-        "Pension income",
-        "Social Security income",
-      ],
-    },
-    {
-      category: "SSA Uprating (CPI-W)",
-      count: 10,
-      percentage: 3,
-      description: "Social Security Administration parameters indexed to CPI-W",
-      examples: ["Social Security benefit amounts", "Taxable wage base"],
-    },
-    {
-      category: "Population growth",
-      count: 10,
-      percentage: 3,
-      description: "Census Bureau population projections",
-      examples: ["Total population by demographic group"],
-    },
-  ];
+  const { rows, loading, error } = useUpratingTable();
+  const uprating = useMemo(() => summarizeUprating(rows), [rows]);
+  const shown = (count) => (loading || error ? "…" : count);
 
   const forecastingSources = [
     {
@@ -141,65 +90,83 @@ function StochasticForecasting() {
 
       <div style={{ marginBottom: "2rem" }}>
         <p style={{ fontSize: "1.1rem", lineHeight: "1.6" }}>
-          PolicyEngine-US uses <strong>318 uprating parameters</strong> to
-          project tax and benefit rules forward in time. These parameters grow
-          at different rates (CPI-U, CPI-W, wage growth, income by source) that
-          are typically uncertain and correlated. Modeling their joint
-          distribution is critical for understanding policy impacts under
-          AI-driven economic scenarios.
+          PolicyEngine-US grows{" "}
+          <strong>{shown(uprating.parameters)} parameters</strong> and{" "}
+          <strong>{shown(uprating.variables)} input variables</strong> over time
+          with economic indexes, from CPI-U and chained CPI-U to wages,
+          population and CBO&apos;s income projections. Those indexes carry
+          uncertainty and move together, so estimates of policy impacts under
+          AI-driven economic scenarios depend on their joint distribution.
         </p>
       </div>
 
       <h3>Uprating parameters in PolicyEngine-US</h3>
       <p style={{ textAlign: "center", marginBottom: "2rem" }}>
-        Distribution of uprating categories across 318 parameters
+        Parameters and variables by the index that grows them
       </p>
+      {error && (
+        <p style={{ textAlign: "center", color: "#e53e3e" }}>
+          Error loading data: {error}
+        </p>
+      )}
 
-      <div className="grid">
-        {upratingCategories.map((item, index) => (
-          <div
-            key={index}
-            className={`card ${expandedCard === `uprating-${index}` ? "expanded" : ""}`}
-            onClick={() =>
-              setExpandedCard(
-                expandedCard === `uprating-${index}`
-                  ? null
-                  : `uprating-${index}`,
-              )
-            }
-            style={{ cursor: "pointer" }}
-          >
-            <h3
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
+      <div className="grid" data-testid="uprating-cards">
+        {uprating.cards.map((card) => {
+          const cardKey = `uprating-${card.id}`;
+          const isExpanded = expandedCard === cardKey;
+          return (
+            <div
+              key={card.id}
+              data-card={card.id}
+              className={`card ${isExpanded ? "expanded" : ""}`}
+              onClick={() => setExpandedCard(isExpanded ? null : cardKey)}
+              style={{ cursor: "pointer" }}
             >
-              {item.category}
-              <span
+              <h3
                 style={{
-                  fontSize: "0.9rem",
-                  color: "#319795",
-                  fontWeight: "normal",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
                 }}
               >
-                {item.count} ({item.percentage}%)
-              </span>
-            </h3>
-            <p>{item.description}</p>
-            {expandedCard === `uprating-${index}` && (
-              <div style={{ marginTop: "1rem" }}>
-                <strong>Examples:</strong>
-                <ul style={{ marginTop: "0.5rem" }}>
-                  {item.examples.map((example, i) => (
-                    <li key={i}>{example}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        ))}
+                {card.title}
+                <span
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "#319795",
+                    fontWeight: "normal",
+                  }}
+                >
+                  {card.count} ({formatShare(card.share)})
+                </span>
+              </h3>
+              <p>
+                {card.description ||
+                  card.categories
+                    .map((category) => `${category.name} (${category.count})`)
+                    .join(", ")}
+              </p>
+              {isExpanded && (
+                <div style={{ marginTop: "1rem" }}>
+                  <p>
+                    {counted(card.parameters, "parameter")} and{" "}
+                    {counted(card.variables, "variable")}
+                  </p>
+                  {card.examples.length > 0 && (
+                    <>
+                      <strong>Examples:</strong>
+                      <ul style={{ marginTop: "0.5rem" }}>
+                        {card.examples.map((example) => (
+                          <li key={example.path}>{example.label}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div style={{ marginTop: "2rem", marginBottom: "3rem" }}>
