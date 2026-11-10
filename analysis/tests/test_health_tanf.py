@@ -27,8 +27,10 @@ a two-level sweep's rows add up.
 """
 
 import importlib
+import json
 import sys
 import types
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -960,3 +962,21 @@ def test_two_level_sweep_rows_add_up():
     assert sum(row["state_health_change_b"] for row in states.values()) == pytest.approx(
         half["state_health_change_b"], abs=1e-12
     )
+
+
+#: The 50 states and DC.
+US_STATE_CODES = frozenset(
+    "AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS "
+    "MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI "
+    "WY".split()
+)
+STATE_HEALTH_FIXTURE = Path(__file__).parent / "fixtures" / "state_health_programs.json"
+
+
+def test_the_shared_fixture_lists_every_state_health_program():
+    # src/components/ShiftSweep.test.jsx reads this fixture to check which
+    # state the page assigns each program to, so a program added to
+    # STATE_HEALTH must reach the fixture with its state.
+    programs = json.loads(STATE_HEALTH_FIXTURE.read_text())["programs"]
+    assert [program["variable"] for program in programs] == list(health_tanf.STATE_HEALTH)
+    assert {program["state"] for program in programs} <= US_STATE_CODES

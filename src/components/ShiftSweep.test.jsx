@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
+import stateHealthPrograms from "../../analysis/tests/fixtures/state_health_programs.json";
 import sweepData from "../data/shiftSweepData.json";
 import ShiftSweep, {
   healthProgramState,
@@ -148,29 +149,29 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     /we count what governments spend on medicaid, chip, the medicare savings programs, aca premium tax credits/i,
   );
   expect(document.body).not.toHaveTextContent(
-    /leaves out health coverage such as medicaid/i,
+    /leaves? out health coverage such as medicaid/i,
   );
   expect(document.body).toHaveTextContent(
     /the health band includes what the federal government spends on aca premium tax credits/i,
   );
   expect(document.body).toHaveTextContent(
-    /federal law fixes each state's tanf block grant, so we charge every change in tanf benefits to the states/i,
+    /congress sets each state's tanf block grant at a fixed amount, so we charge every change in tanf benefits to the states\./i,
   );
   // The description names the taxes outside the charts, since a state's view
   // shows no list of them.
   expect(document.body).toHaveTextContent(
-    /apart from three groups of taxes that count only in the total: workers' state payroll taxes such as california's sdi, the additional medicare tax, and city and county taxes on income and occupations, except new york city's and maryland's local income taxes, which count in those states' charts\./i,
+    /the federal and state charts add up to the total, apart from three groups of taxes\. we count workers' state payroll taxes such as california's sdi, the additional medicare tax, and local taxes on income and occupations only in the total\. new york city's and maryland's local income taxes count in those states' charts instead\./i,
   );
   expect(document.body).toHaveTextContent(/the additional medicare tax/i);
   expect(document.body).not.toHaveTextContent(
-    /the benefits band counts tanf as federal/i,
+    /the benefits band includes tanf/i,
   );
   // The state ranking nets TANF and health spending.
   expect(document.body).toHaveTextContent(
-    /tanf − the state's spending on health coverage/i,
+    /− tanf − state health coverage spending\./i,
   );
   expect(document.body).not.toHaveTextContent(
-    /it leaves out medicaid, chip and tanf/i,
+    /we leave medicaid, chip and tanf out/i,
   );
   // Revenue falls at every step of the mock, so the summary has no rebound,
   // and its second sentence gives health spending rather than tax drivers.
@@ -180,7 +181,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   expect(document.body).not.toHaveTextContent(/capital-gains tax and niit/i);
   // The state ranking charges each state the federal share it moves.
   expect(document.body).toHaveTextContent(
-    /which we charge to the state\. federal funds still match those enrollees' emergency care, so that charge overstates the state's cost/i,
+    /we also charge the state the federal share of coverage for enrollees whose immigration status bars federal matching\. the federal government still matches those enrollees' emergency care, so we overstate the state's cost\./i,
   );
   expect(document.body).not.toHaveTextContent(/the whole cost/i);
 
@@ -194,7 +195,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     /medicare savings programs\. for enrollees whose immigration status bars federal matching, we charge the state the federal share as well/i,
   );
   expect(document.body).toHaveTextContent(
-    /we charge the state every change in its tanf benefits, and the tanf band holds them/i,
+    /congress sets each state's tanf block grant at a fixed amount, so we charge the state every change in its tanf benefits\./i,
   );
 
   fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
@@ -205,26 +206,17 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   );
 });
 
-// analysis/health_tanf.py's STATE_HEALTH: every state health program the
-// sweep's metadata can list, across policyengine-us releases.
-const STATE_HEALTH = [
-  "assigned_ca_premium_subsidy",
-  "co_omnisalud",
-  "assigned_co_premium_assistance",
-  "md_premium_assistance",
-  "assigned_nm_premium_assistance",
-  "or_healthier_oregon_cost",
-  "ct_covered_connecticut",
-  "ma_connector_care",
-  "nj_njhps",
-  "vt_premium_assistance",
-  "wa_cascade_care_savings",
-];
+// Every state health program the sweep's metadata can list, across
+// policyengine-us releases. analysis/tests/test_health_tanf.py checks the
+// fixture against analysis/health_tanf.py's STATE_HEALTH.
+const STATE_HEALTH = stateHealthPrograms.programs.map(
+  ({ variable }) => variable,
+);
 
 test("each state health program maps to its state", () => {
-  expect(STATE_HEALTH.map(healthProgramState)).toEqual([
-    "CA", "CO", "CO", "MD", "NM", "OR", "CT", "MA", "NJ", "VT", "WA",
-  ]);
+  expect(STATE_HEALTH.map(healthProgramState)).toEqual(
+    stateHealthPrograms.programs.map(({ state }) => state),
+  );
 });
 
 test("a state's health note names only the programs that state runs", () => {
@@ -341,15 +333,17 @@ test("the old copy survives on a run without health coverage and TANF", () => {
     screen.getByRole("radio", { name: /net government revenue change/i }),
   );
   expect(document.body).toHaveTextContent(
-    /the benefits band counts tanf as federal/i,
+    /the benefits band includes tanf\./i,
   );
   expect(document.body).toHaveTextContent(
-    /it leaves out medicaid, chip and tanf \(apart from massachusetts's tafdc\)/i,
+    /we leave medicaid, chip and tanf out of these figures, apart from massachusetts's tafdc\./i,
   );
   expect(document.body).not.toHaveTextContent(/the health band includes/i);
 
   fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
     target: { value: "CA" },
   });
-  expect(document.body).not.toHaveTextContent(/the tanf band counts/i);
+  expect(document.body).not.toHaveTextContent(
+    /congress sets each state's tanf block grant/i,
+  );
 });

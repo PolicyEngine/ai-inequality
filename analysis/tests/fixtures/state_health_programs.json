@@ -1,0 +1,16 @@
+{
+  "description": "Every state health program in analysis/health_tanf.py's STATE_HEALTH, with the state that runs it. analysis/tests/test_health_tanf.py checks this list against STATE_HEALTH, and src/components/ShiftSweep.test.jsx checks that the page assigns each program to its state.",
+  "programs": [
+    { "variable": "assigned_ca_premium_subsidy", "state": "CA" },
+    { "variable": "co_omnisalud", "state": "CO" },
+    { "variable": "assigned_co_premium_assistance", "state": "CO" },
+    { "variable": "md_premium_assistance", "state": "MD" },
+    { "variable": "assigned_nm_premium_assistance", "state": "NM" },
+    { "variable": "or_healthier_oregon_cost", "state": "OR" },
+    { "variable": "ct_covered_connecticut", "state": "CT" },
+    { "variable": "ma_connector_care", "state": "MA" },
+    { "variable": "nj_njhps", "state": "NJ" },
+    { "variable": "vt_premium_assistance", "state": "VT" },
+    { "variable": "wa_cascade_care_savings", "state": "WA" }
+  ]
+}
