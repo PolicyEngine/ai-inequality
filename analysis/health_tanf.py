@@ -96,6 +96,10 @@ HEALTHIER_OREGON = "or_healthier_oregon_cost"
 #: coverage whatever the parent's immigration status.
 FCEP_ELIGIBLE = "is_chip_fcep_eligible_person"
 CHIP_ENROLLED = "chip_enrolled"
+#: The immigration statuses whose federal shares ``state_only_coverage`` may
+#: move. CMS counts neither as lawfully residing for the election in 42 USC
+#: 1396b(v)(4)(A), so no state gets federal matching for them under it.
+STATE_ONLY_STATUSES = ("UNDOCUMENTED", "DACA")
 #: Spreads each state's Medicaid spending over that state's enrollees.
 MEDICAID_DENOMINATOR = "medicaid_slcsp_state_denominator"
 #: Every state TANF program, summed.
@@ -319,6 +323,28 @@ def state_only_federal_share(federal, shares, fcep):
     return np.where(np.asarray(federal, dtype=bool), 0.0, movable)
 
 
+def check_moved_statuses(status, moved):
+    """Raise if anyone with a moved federal share holds a status outside ``STATE_ONLY_STATUSES``.
+
+    ``status`` gives each person's immigration status and ``moved`` the federal
+    share ``state_only_federal_share`` moves for them. A state that took the
+    election in 42 USC 1396b(v)(4)(A) gets federal matching for lawfully
+    residing children and pregnant women with other statuses, and the federal
+    test doesn't apply the election.
+    """
+    status = np.asarray(status).astype(str)
+    reached = status[np.asarray(moved, dtype=float) != 0]
+    others = sorted(set(reached.tolist()) - set(STATE_ONLY_STATUSES))
+    if others:
+        raise ValueError(
+            "state_only_coverage would move federal shares for people with "
+            f"{', '.join(others)} status. A state that took the election in "
+            "42 USC 1396b(v)(4)(A) gets federal matching for lawfully residing "
+            "children and pregnant women, so apply the election to the federal "
+            "test before moving their shares."
+        )
+
+
 def state_only_coverage(sim, year):
     """Federal share policyengine-us books for coverage only a state pays for, by household.
 
@@ -326,23 +352,27 @@ def state_only_coverage(sim, year):
     rates to every enrollee, including people a state covers whatever their
     immigration status, such as California's Medi-Cal for undocumented and
     DACA residents. Federal law matches only emergency care for such people
-    (42 USC 1396b(v)), so this moves their whole federal share to the state. If
-    the state spending totals that ``medicaid_cost`` spreads count that
-    federally matched emergency care, the move overstates the state's cost by
-    the federal share of their emergency care, an amount this accounting can't
-    measure. The line depends on the immigration status the data assign:
-    Microcosm treats anyone who reports Medicaid in the CPS as documented.
+    (42 USC 1396b(v)), so this moves their whole federal share to the state.
+    The state spending totals that ``medicaid_cost`` spreads may count that
+    federally matched emergency care. If they do, the move overstates the
+    state's cost by the federal share of their emergency care, and this
+    accounting can't measure that share. The line depends on the immigration
+    status the data assign: Microcosm treats anyone who reports Medicaid in the
+    CPS as documented.
 
-    The federal test leaves out the election in 42 USC 1396b(v)(4)(A). Under
-    it, a state can cover lawfully residing children under 21 and pregnant
-    women with federal matching, even during the five-year bar.
-    policyengine-us 1.764.6 models no such election; 2.25.0 models it in
-    Medicaid and CHIP (PolicyEngine/policyengine-us#9737), so a run on 2.25.0
-    or later needs the federal test to apply it too. Microcosm's build p
-    assigns no one Temporary Protected Status and leaves
-    ``years_since_us_entry`` at its default of 5, so everyone this moves has
-    undocumented or DACA status. The Marketplace rule, 45 CFR 155.20, counts
-    TPS holders as lawfully present and leaves out both of those groups.
+    The federal test, like policyengine-us 1.764.6, leaves out the election in
+    42 USC 1396b(v)(4)(A). Under it, a state can cover lawfully residing
+    children under 21 and pregnant women with federal matching, even during the
+    five-year bar. policyengine-us 2.25.0 models the election in Medicaid and
+    CHIP (PolicyEngine/policyengine-us#9737), so a run on 2.25.0 or later needs
+    the federal test to apply it too. For the election, CMS's letter SHO
+    #10-006 counts TPS holders as lawfully present, and SHO #12-002 excludes
+    DACA recipients. Undocumented immigrants hold none of the statuses SHO
+    #10-006 lists. Microcosm's build p assigns no one Temporary Protected
+    Status and leaves ``years_since_us_entry`` at its default of 5, so everyone
+    this moves has undocumented or DACA status. No state gets federal matching
+    for them under the election, and ``check_moved_statuses`` raises if a later
+    build moves anyone else.
     """
     p = _parameters(sim, year).gov.hhs.medicaid.eligibility
     status = sim.calculate("immigration_status", period=year, decode_enums=True)
@@ -355,6 +385,7 @@ def state_only_coverage(sim, year):
         sim.calculate(CHIP_ENROLLED, period=year), dtype=bool
     )
     moved = state_only_federal_share(federal, shares, fcep)
+    check_moved_statuses(status, moved)
     return np.asarray(sim.map_result(moved, "person", "household"), dtype=float)
 
 

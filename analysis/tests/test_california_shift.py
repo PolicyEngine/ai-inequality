@@ -82,7 +82,9 @@ from analysis.california_shift import (
 from analysis.health_tanf import (
     FEDERAL_SHARE_COSTS,
     MEDICAID_DENOMINATOR,
+    STATE_ONLY_STATUSES,
     check_health_split,
+    check_moved_statuses,
     federally_eligible_status,
     health_programs,
     state_only_coverage,
@@ -1189,6 +1191,71 @@ def test_state_only_coverage_keeps_fcep_match_federal():
     assert np.asarray(sim.calculate("chip_enrolled", 2026)).tolist() == [True]
     assert float(np.asarray(sim.calculate("chip_federal_cost", 2026))[0]) > 0
     assert state_only_coverage(sim, 2026).tolist() == pytest.approx([0.0])
+
+
+def test_check_moved_statuses_examples():
+    # Undocumented and DACA enrollees can move, and someone whose share stays
+    # federal can hold any status.
+    check_moved_statuses(["UNDOCUMENTED", "DACA", "CITIZEN", "TPS"], [900.0, 200.0, 0.0, 0.0])
+    # A state that took the 42 USC 1396b(v)(4)(A) election gets federal
+    # matching for a TPS child and for a permanent-resident child in the
+    # five-year bar, so moving either raises.
+    with pytest.raises(ValueError, match="LEGAL_PERMANENT_RESIDENT, TPS status"):
+        check_moved_statuses(
+            ["UNDOCUMENTED", "TPS", "LEGAL_PERMANENT_RESIDENT"], [900.0, 300.0, 50.0]
+        )
+
+
+IMMIGRATION_STATUSES = (
+    "CITIZEN",
+    "LEGAL_PERMANENT_RESIDENT",
+    "REFUGEE",
+    "ASYLEE",
+    "DEPORTATION_WITHHELD",
+    "CUBAN_HAITIAN_ENTRANT",
+    "CONDITIONAL_ENTRANT",
+    "PAROLED_ONE_YEAR",
+    "UNDOCUMENTED",
+    "DACA",
+    "TPS",
+)
+
+
+@settings(max_examples=300, deadline=None)
+@given(st.data())
+def test_check_moved_statuses_raises_exactly_when_another_status_moves(data):
+    n = data.draw(st.integers(1, 30))
+    status = data.draw(st.lists(st.sampled_from(IMMIGRATION_STATUSES), min_size=n, max_size=n))
+    moved = data.draw(st.lists(st.just(0.0) | SPENDING, min_size=n, max_size=n))
+    others = sorted({s for s, m in zip(status, moved) if m != 0} - set(STATE_ONLY_STATUSES))
+    if others:
+        with pytest.raises(ValueError, match=f"for people with {', '.join(others)} status"):
+            check_moved_statuses(status, moved)
+    else:
+        check_moved_statuses(status, moved)
+
+
+def test_state_only_coverage_refuses_a_status_the_election_covers():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    # Medi-Cal enrolls a TPS child whom the federal test doesn't match. A state
+    # that took the 42 USC 1396b(v)(4)(A) election gets federal matching for
+    # the child, so the move refuses to shift the child's federal share.
+    # (policyengine-us 1.764.6 enrolls no permanent-resident child in the
+    # five-year bar, so a simulation can't reach that case.)
+    people = {
+        "parent": {"age": {2026: 30}, "immigration_status": {2026: "CITIZEN"}},
+        "tps_child": {"age": {2026: 5}, "immigration_status": {2026: "TPS"}},
+        "undocumented_child": {"age": {2026: 6}, "immigration_status": {2026: "UNDOCUMENTED"}},
+    }
+    for person in people.values():
+        person["takes_up_medicaid_if_eligible"] = {2026: True}
+    sim = Simulation(situation=_situation("CA", people))
+    federal = sum(np.asarray(sim.calculate(v, 2026), dtype=float) for v in FEDERAL_SHARE_COSTS)
+    assert federal[1] > 0, "the TPS child should be enrolled with a federal share booked"
+    with pytest.raises(ValueError, match="for people with TPS status"):
+        state_only_coverage(sim, 2026)
 
 
 # --- Medicaid priced at the baseline ------------------------------------------
