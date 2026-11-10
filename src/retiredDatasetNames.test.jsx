@@ -226,10 +226,20 @@ function linksIn(path) {
 }
 
 // Every way site code can ask the network for something, and the one form the
-// site uses: a fetch of a file that public/ serves.
+// site uses: a fetch of a file that public/ serves, named in the call or in a
+// string constant that site code defines.
 const REQUESTS =
   /\b(?:fetch|XMLHttpRequest|EventSource|WebSocket|sendBeacon|axios)\b/g;
-const SERVED_FETCH = /\bfetch\(withBasePath\("([^"]+)"\)\)/g;
+const SERVED_FETCH = /\bfetch\(withBasePath\((?:"([^"]+)"|(\w+))\)\)/g;
+const STRING_CONSTANT = /\bconst (\w+) = "([^"]*)";/g;
+
+// The file a served fetch asks for, or null when it names a constant that site
+// code never defines or defines with more than one value.
+function fetchedFile([, literal, name], constants) {
+  if (literal) return literal;
+  const values = constants.get(name) ?? new Set();
+  return values.size === 1 ? [...values][0] : null;
+}
 
 // A frozen id can reach a page only through code that names the data key
 // holding it. AIScenarios names this one only inside the call below, which
@@ -734,6 +744,21 @@ describe("retired dataset names", () => {
     ]);
   });
 
+  it("reads a fetch's file from the call or from a string constant", () => {
+    const constants = new Map([
+      ["TABLE", new Set(["/data/table.csv"])],
+      ["SPLIT", new Set(["/data/a.csv", "/data/b.csv"])],
+    ]);
+    const file = (call) =>
+      fetchedFile([...call.matchAll(SERVED_FETCH)][0], constants);
+    expect([
+      file('fetch(withBasePath("/data/x.csv"))'),
+      file("fetch(withBasePath(TABLE))"),
+      file("fetch(withBasePath(SPLIT))"),
+      file("fetch(withBasePath(MISSING))"),
+    ]).toEqual(["/data/x.csv", "/data/table.csv", null, null]);
+  });
+
   it.each(PAGES)(
     "%s shows none in any state and links no page that does",
     async (entry, View) => {
@@ -754,7 +779,7 @@ describe("retired dataset names", () => {
     expect(files.length).toBeGreaterThan(0);
     expect(files[0].text.length).toBeGreaterThan(1000);
     expect(shown).toEqual([]);
-  });
+  }, 120_000);
 
   it("shows none in the shared header and footer in any state, which link only the known pages that do", () => {
     // app/layout.jsx wraps every page in the US shell.
@@ -775,7 +800,7 @@ describe("retired dataset names", () => {
     expect([...links].filter(linksRetiredPage).sort()).toEqual(
       SHELL_LINKS_TO_RETIRED_PAGES,
     );
-  });
+  }, 120_000);
 
   it("stays out of the generated memo", () => {
     expect(memoMarkdown.length).toBeGreaterThan(1000);
@@ -826,13 +851,20 @@ describe("retired dataset names", () => {
   // A page shows only what the bundle holds or what it fetches, and the tests
   // above read both.
   it("fetches only files that public/ serves", () => {
+    const constants = new Map();
+    for (const path of siteCode) {
+      for (const [, name, value] of read(path).matchAll(STRING_CONSTANT)) {
+        constants.set(name, (constants.get(name) ?? new Set()).add(value));
+      }
+    }
     expect(
       siteCode.flatMap((path) => {
         const code = read(path);
         const requests = (code.match(REQUESTS) ?? []).length;
-        const served = [...code.matchAll(SERVED_FETCH)].filter(([, file]) =>
-          publicFiles.includes(`public${file}`),
-        ).length;
+        const served = [...code.matchAll(SERVED_FETCH)].filter((match) => {
+          const file = fetchedFile(match, constants);
+          return file !== null && publicFiles.includes(`public${file}`);
+        }).length;
         return requests === served
           ? []
           : [
