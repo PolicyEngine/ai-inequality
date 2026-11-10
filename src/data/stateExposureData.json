@@ -1,6 +1,6 @@
 {
   "year": 2030,
-  "scope_note": "Net = state income and use tax \u2212 refundable state credits \u2212 state-paid benefits. We count state supplements to SSI, child care subsidies and other programs, such as New Jersey's property tax relief, as state-paid. New York's and Maryland's figures include New York City's income tax and refundable credits, Maryland's county income taxes and Montgomery County's earned income credit. California's include San Francisco's Working Families Tax Credit, the Los Angeles Department of Water and Power's EZ Save program, and Los Angeles County's infant supplement and expectant parent payment. We leave out Medicaid, CHIP and TANF, apart from Massachusetts's TAFDC. We count no sales, property, corporate or severance taxes, so we measure no exposure through them.",
+  "scope_note": "Net = state income and use tax \u2212 refundable state credits \u2212 state-paid benefits. We count state supplements to SSI, child care subsidies and other programs, such as New Jersey's property tax relief, as state-paid. New York's and Maryland's figures include New York City's income tax and refundable credits, Maryland's county income taxes and Montgomery County's earned income credit. California's include San Francisco's Working Families Tax Credit. We leave out Medicaid, CHIP and TANF, apart from Massachusetts's TAFDC. We count no sales, property, corporate or severance taxes, so we measure no exposure through them.",
   "metadata": {
     "policyengine_version": "5.0.1",
     "country_model_version": "1.764.6",

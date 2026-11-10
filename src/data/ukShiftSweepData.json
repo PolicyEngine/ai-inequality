@@ -20,8 +20,8 @@
     "dataset_uri": null,
     "policyengine_bundle": null,
     "revenue_label": "Net government revenue change",
-    "revenue_description": "UK government effect including Income Tax, National Insurance, and modelled household benefit changes.",
-    "revenue_summary_note": "Includes Income Tax and National Insurance receipts net of modelled household benefit costs.",
+    "revenue_description": "Net government revenue change = taxes (Income Tax, Capital Gains Tax and National Insurance, employers' contributions included) minus household benefits.",
+    "revenue_summary_note": "We count Income Tax, Capital Gains Tax and National Insurance, employers' contributions included, and subtract household benefits.",
     "baseline_facts": {
       "labor_income_t": 1.3510881821985308,
       "positive_labor_income_t": 1.3510881821985308,

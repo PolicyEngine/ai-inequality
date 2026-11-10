@@ -416,12 +416,13 @@ def _metadata(baseline, baseline_metrics):
         "policyengine_bundle": bundle or None,
         "revenue_label": "Net government revenue change",
         "revenue_description": (
-            "UK government effect including Income Tax, National Insurance, "
-            "and modelled household benefit changes."
+            "Net government revenue change = taxes (Income Tax, Capital Gains "
+            "Tax and National Insurance, employers' contributions included) "
+            "minus household benefits."
         ),
         "revenue_summary_note": (
-            "Includes Income Tax and National Insurance receipts net of modelled "
-            "household benefit costs."
+            "We count Income Tax, Capital Gains Tax and National Insurance, "
+            "employers' contributions included, and subtract household benefits."
         ),
         "baseline_facts": _baseline_facts(baseline, baseline_metrics),
     }

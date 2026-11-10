@@ -14,9 +14,16 @@ policyengine-us 1.764.6: `state_income_tax_before_refundable_credits` and
 programs in `household_state_benefits`. New York's and Maryland's figures
 include New York City's income tax and refundable credits, Maryland's county
 income taxes and Montgomery County's earned income credit. California's
-include San Francisco's Working Families Tax Credit, the Los Angeles
-Department of Water and Power's EZ Save program, and Los Angeles County's
-infant supplement and expectant parent payment.
+include San Francisco's Working Families Tax Credit.
+
+`household_state_benefits` also lists three programs that policyengine-us
+1.764.6 computes only in Los Angeles County: the Los Angeles Department of
+Water and Power's EZ Save program, and two foster care payments, the infant
+supplement and the expectant parent payment, that its own parameters credit to
+the California Department of Social Services. Build p carries no electricity
+bills (`pre_subsidy_electricity_expense`) and no foster care placements
+(`is_in_foster_care`), so all three pay nothing, and the scope note leaves them
+out.
 
 It is *not* state own-source revenue in the budgetary sense. This script
 counts no general sales, property, corporate income or severance taxes, and
@@ -75,9 +82,7 @@ SCOPE_NOTE = (
     "New York's and Maryland's figures include New York City's income tax and "
     "refundable credits, Maryland's county income taxes and Montgomery "
     "County's earned income credit. California's include San Francisco's "
-    "Working Families Tax Credit, the Los Angeles Department of Water and "
-    "Power's EZ Save program, and Los Angeles County's infant supplement and "
-    "expectant parent payment. We leave out Medicaid, CHIP and TANF, apart "
+    "Working Families Tax Credit. We leave out Medicaid, CHIP and TANF, apart "
     "from Massachusetts's TAFDC. We count no sales, property, corporate or "
     "severance taxes, so we measure no exposure through them."
 )
