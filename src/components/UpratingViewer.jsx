@@ -154,11 +154,12 @@ function UpratingViewer({ table }) {
           fontSize: "1.1rem",
         }}
       >
-        Explore the <strong>{datasetCounts.parameters} parameter files</strong>{" "}
-        and <strong>{datasetCounts.variables} input variables</strong> that hold
-        values PolicyEngine-US {POLICYENGINE_US_SNAPSHOT.version} (
+        Explore the values that PolicyEngine-US{" "}
+        {POLICYENGINE_US_SNAPSHOT.version} (
         {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time
-        with economic indexes.
+        with economic indexes, in{" "}
+        <strong>{datasetCounts.parameters} parameter files</strong> and{" "}
+        <strong>{datasetCounts.variables} input variables</strong>.
       </p>
       <div
         style={{
