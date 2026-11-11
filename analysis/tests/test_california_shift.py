@@ -1121,22 +1121,29 @@ def test_check_health_split_refuses_gaps():
 def test_unfunded_coverage_leaves_every_line():
     # policyengine-us books $1,000 of Medicare Savings Program benefits for an
     # undocumented Texas senior who gains Medicare eligibility: $600 federal
-    # and $400 state. No government pays for that coverage, so no line moves.
+    # and $400 state. It books $500 for one in California, $250 from each. No
+    # government pays for that coverage, so no line moves, and the run reports
+    # both shares.
     base = _frame(["TX", STATE], [1e9, 1e9])
     scen = _frame(
         ["TX", STATE],
         [1e9, 1e9],
-        fmap_split_cost=[1000.0, 0.0],
-        federal_health_split=[600.0, 0.0],
-        state_health_split=[400.0, 0.0],
-        unfunded_federal=[600.0, 0.0],
-        unfunded_state=[400.0, 0.0],
+        fmap_split_cost=[1000.0, 500.0],
+        federal_health_split=[600.0, 250.0],
+        state_health_split=[400.0, 250.0],
+        unfunded_federal=[600.0, 250.0],
+        unfunded_state=[400.0, 250.0],
     )
     check_health_split(scen)
     out = _health_tanf_accounting(base, scen, {"TX": 0.0, STATE: 0.0}, 0.0)
     assert out["state_net_with_health_tanf_change_b"]["TX"] == pytest.approx(0.0)
+    assert out["state_net_with_health_tanf_change_b"][STATE] == pytest.approx(0.0)
     assert out["health_federal_change_b"] == pytest.approx(0.0)
     assert out["all_government_with_health_change_b"] == pytest.approx(0.0)
+    assert out["unfunded_coverage_change_b"] == pytest.approx(1500.0)
+    total, _ = _california_rows(base, scen)
+    assert total["state_health_change_b"] == pytest.approx(0.0)
+    assert total["unfunded_state_coverage_change_b"] == pytest.approx(250.0)
 
 
 def test_federally_eligible_status_examples():
