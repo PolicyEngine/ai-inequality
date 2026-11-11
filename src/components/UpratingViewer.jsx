@@ -232,6 +232,8 @@ function UpratingViewer({ table }) {
               border: "2px solid #e2e8f0",
               borderRadius: "8px",
               flex: 1,
+              // Lets the select shrink below its longest option on a phone.
+              minWidth: 0,
             }}
           >
             <option value="all">All categories ({data.length} total)</option>
