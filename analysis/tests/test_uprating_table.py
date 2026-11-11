@@ -476,10 +476,6 @@ SOURCES = {"gov/reader.py": "cost = parameters(period).s.direct", "gov/other.py"
 
 def test_index_rows_gives_rows_to_the_listed_direct_series(index_lists):
     assert table.index_rows(EXTENDED, {"s.used"}, SOURCES) == {"s.direct": STEP}
-    # A listed series keeps its row when values also grow by it.
-    assert table.index_rows(EXTENDED, {"s.used", "s.direct"}, SOURCES) == {
-        "s.direct": STEP
-    }
 
 
 @pytest.mark.parametrize(
@@ -493,6 +489,9 @@ def test_index_rows_gives_rows_to_the_listed_direct_series(index_lists):
             "no index step extends",
         ),
         (EXTENDED, {"s.used", "s.unread"}, SOURCES, "a value grows by"),
+        # A listed direct series stops the run once values grow by it, since
+        # the rows of those values name it.
+        (EXTENDED, {"s.used", "s.direct"}, SOURCES, "a value grows by"),
         (
             EXTENDED,
             {"s.used"},

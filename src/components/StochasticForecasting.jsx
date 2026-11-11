@@ -93,7 +93,7 @@ function StochasticForecasting() {
 
       <div style={{ marginBottom: "2rem" }}>
         <p style={{ fontSize: "1.1rem", lineHeight: "1.6" }}>
-          PolicyEngine-US grows the values in{" "}
+          PolicyEngine-US grows values in{" "}
           <strong>{shown(uprating.parameters)} parameter files</strong> and{" "}
           <strong>{shown(uprating.variables)} input variables</strong> over time
           with economic indexes such as CPI-U, chained CPI-U, wages, population

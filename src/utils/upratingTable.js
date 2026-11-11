@@ -156,7 +156,7 @@ export const UPRATING_CARDS = [
       "National average wage index",
     ),
     description:
-      "In each year that consumer prices rise, the Social Security Act requires the Commissioner of Social Security to raise Social Security benefits and SSI payments by that rise, unless the program's trust funds run low. PolicyEngine-US measures the rise with CPI-W, projects it for later years with CBO's forecast of CPI-U, and grows SSI payments, state supplements and veterans benefits with it. It grows the Social Security benefits in its microdata with the IRS's total per person instead, which it extends with CBO's projections. It grows the payroll tax cap, the bend points in Social Security's benefit formula and other wage-indexed amounts with the national average wage index.",
+      "In each year that consumer prices rise, the Social Security Act requires the Commissioner of Social Security to raise Social Security benefits by that rise, unless the program's trust funds run low. Whenever benefits rise, the Commissioner must also raise SSI payments by the rise in prices. PolicyEngine-US measures the rise with CPI-W, projects it for later years with CBO's forecast of CPI-U, and grows SSI payments, state supplements and veterans benefits with it. It grows the Social Security benefits in its microdata with the IRS's total of those benefits per person instead, which it extends with CBO's projections. It grows the payroll tax cap, the bend points in Social Security's benefit formula and other wage-indexed amounts with the national average wage index.",
     examples: [
       {
         label: "Maximum federal SSI payment",

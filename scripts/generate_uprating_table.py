@@ -143,7 +143,8 @@ EXTENSIONS_ENTRY = "set_all_uprating_parameters"
 # Steps that carry an index series past its last projection. The table lists
 # the values that grow by a series, not the series itself, so an extended
 # series gets a row only when DIRECT_INDEX_SERIES lists it. The run stops on an
-# extended series that no value grows by and that neither list below names.
+# extended series that no value grows by and that neither list below names, and
+# on a listed series that a value grows by.
 INDEX_STEPS = frozenset({"extend_parameter_values", EXTENSIONS_ENTRY})
 # Extended series that no value grows by and that variables' formulas read
 # directly, each with files under policyengine_us/variables that read it. Each
@@ -435,9 +436,9 @@ def index_rows(
     holds every series some value grows by, and `sources` maps each file under
     policyengine_us/variables to its text. Stops on an extended series that no
     value grows by and that DIRECT_INDEX_SERIES and UNREAD_INDEX_SERIES leave
-    out, on an entry of either list that no index step extends, on an
-    UNREAD_INDEX_SERIES entry that a value now grows by or a variable names,
-    and on a DIRECT_INDEX_SERIES reader that no longer names its series.
+    out, on an entry of either list that no index step extends or that a value
+    now grows by, on an UNREAD_INDEX_SERIES entry that a variable names, and on
+    a DIRECT_INDEX_SERIES reader that no longer names its series.
     """
     listed = DIRECT_INDEX_SERIES.keys() | UNREAD_INDEX_SERIES
     fail(
@@ -450,8 +451,8 @@ def index_rows(
         listed - extended.keys(),
     )
     fail(
-        "UNREAD_INDEX_SERIES entries that a value grows by",
-        UNREAD_INDEX_SERIES & in_use,
+        "DIRECT_INDEX_SERIES and UNREAD_INDEX_SERIES entries that a value grows by",
+        listed & in_use,
     )
     fail(
         "Variables that name UNREAD_INDEX_SERIES entries",
