@@ -26,9 +26,10 @@ the household's state:
   books a federal share for them anyway. ``state_only_accounting`` sorts those
   shares by whether a state rule in policyengine-us covers the enrollee:
 
-  - We charge the state the federal share of Medicaid, and of CHIP where a
-    state rule covers the person (the state's ``undocumented_immigrant`` rule
-    or California's own), since the state pays for that coverage alone.
+  - We charge the state the federal share of Medicaid. We also charge it the
+    federal share of CHIP in a state whose ``undocumented_immigrant`` rule is
+    on, or where California's own rule covers the person, since the state pays
+    for that coverage alone.
     Federal funds still match these enrollees' emergency care, labor and
     delivery included (42 USC 1396b(v)(3)), so we likely overstate the
     state's cost.
@@ -60,7 +61,7 @@ Congress fixes each state's TANF block grant (42 USC 603(a)(1)), so we charge
 every TANF change to the states, and we count each TANF dollar once. Needy
 states can also draw on a TANF contingency fund that Congress funded at up to
 $608 million for fiscal 2018 (42 USC 603(b)(2)). We can overstate the states'
-share by about that much.
+share by up to that amount a year.
 
 policyengine-us spreads each state's fixed Medicaid spending over the
 enrollees in each simulation (``medicaid_slcsp_state_denominator``). Left to
@@ -286,8 +287,8 @@ def programs_metadata(sim, year):
         "excluded": list(excluded),
         "unfunded": (
             "CHIP policyengine-us books for people whose immigration status fails "
-            "the federal test, where no state rule covers them (the state's "
-            "undocumented_immigrant rule or California's own), apart from the "
+            "the federal test, outside states whose undocumented_immigrant rule "
+            "is on and outside California's own rule, apart from the "
             "unborn-child option; and Medicare Savings Program benefits "
             "for people whose status fails the federal test"
         ),
@@ -387,9 +388,9 @@ def state_only_split(federal, costs, fcep, pregnancy_match, state_rule):
     policyengine-us books for each person. ``fcep`` says whether CHIP's
     unborn-child (FCEP) option covers the person, ``pregnancy_match`` whether
     she is pregnant in a state that takes that option, with income at or under
-    its limit, and ``state_rule`` whether a state rule covers the person
-    whatever their status (``state_only_accounting`` reads the state's
-    ``undocumented_immigrant`` rule and California's own).
+    its limit, and ``state_rule`` whether the person lives in a state whose
+    ``undocumented_immigrant`` rule is on, or California's own rule covers them
+    (``state_only_accounting`` reads both).
 
     For people federal matching can't cover, returns ``(moved, unfunded_federal,
     unfunded_state)``:
@@ -455,23 +456,27 @@ def _by_state(parameter, state):
 def state_only_accounting(sim, year):
     """Federal shares a state pays alone, and coverage no government pays, by household.
 
-    ``medicaid_federal_share``, ``chip_federal_share`` and ``msp_federal_cost``
-    apply federal matching rates to every enrollee, including people whose
-    immigration status fails the federal test. Federal law matches only their
-    emergency care, labor and delivery included (42 USC 1396b(v)(1)-(3)).
-    policyengine-us enrolls such people in Medicaid only through a state rule
-    (``undocumented_immigrant``, California's own rule, its foster youth rule
-    and Illinois's HBI programs), such as California's Medi-Cal for
-    undocumented and DACA residents. It also books CHIP for a DACA child in
-    any state with a children's CHIP limit, since its CHIP test bars only an
-    ``UNDOCUMENTED`` label, and it gives the Medicare Savings Programs no
-    status test.
-    ``state_only_split`` sorts each share. For CHIP, ``state_rule`` reads the
-    state's ``undocumented_immigrant`` rule and California's own
-    (``CA_STATE_RULE``), as policyengine-us's
-    ``is_medicaid_immigration_status_eligible`` does. At policyengine-us
-    1.764.6, California offers CHIP only through the unborn-child option, so
-    its rule moves no CHIP share yet. The state spending totals that
+    ``medicaid_federal_share``, ``chip_federal_share`` and
+    ``msp_federal_cost`` apply federal matching rates to every enrollee,
+    including people whose immigration status fails the federal test. Federal
+    law matches only their emergency care, labor and delivery included (42 USC
+    1396b(v)(1)-(3)). policyengine-us enrolls such people in Medicaid only
+    through a state rule (``undocumented_immigrant``, California's own rule,
+    its foster youth rule and Illinois's HBI programs), such as California's
+    Medi-Cal for undocumented and DACA residents. Its CHIP test bars only an
+    ``UNDOCUMENTED`` label, so it books CHIP for a DACA child in any state
+    with a children's CHIP limit. It also books CHIP for a pregnant DACA woman
+    in a state whose standard CHIP pregnancy limit exceeds its unborn-child
+    limit. It gives the Medicare Savings Programs no status test.
+    ``state_only_split`` sorts each share. For CHIP, ``state_rule`` holds for
+    anyone in a state whose ``undocumented_immigrant`` rule is on, whatever
+    their label, and for anyone California's own rule covers
+    (``CA_STATE_RULE``). policyengine-us's
+    ``is_medicaid_immigration_status_eligible`` applies the first rule to the
+    ``UNDOCUMENTED`` label alone, and its CHIP test bars that label, so in
+    those states we also charge the state a DACA child's CHIP. policyengine-us
+    1.764.6 gives California CHIP only through the unborn-child option, so
+    California's rule moves no CHIP share yet. The state spending totals that
     ``medicaid_cost`` spreads likely count the federally matched emergency
     care. If they do, we overstate the state's cost by a federal share of that
     care we can't measure here.

@@ -1144,6 +1144,10 @@ def test_unfunded_coverage_leaves_every_line():
     total, _ = _california_rows(base, scen)
     assert total["state_health_change_b"] == pytest.approx(0.0)
     assert total["unfunded_state_coverage_change_b"] == pytest.approx(250.0)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        assert _baseline_concentration(scen)["unfunded_state_coverage_b"] == pytest.approx(
+            250.0
+        )
 
 
 def test_federally_eligible_status_examples():
@@ -1317,15 +1321,17 @@ def test_state_only_split_bounds(data):
 
 def test_pregnancy_match_examples():
     # Under, at and just over a 200% limit; with no income; in a state without
-    # the option, whose limit policyengine-us stores as -inf; and not pregnant.
-    pregnant = [True, True, True, True, True, False]
-    income = [1.5, 2.0, 2.0001, 0.0, 0.0, 1.0]
-    limit = [2.0, 2.0, 2.0, 2.0, float("-inf"), 2.0]
+    # the option, whose limit policyengine-us stores as -inf; with a zero
+    # limit, the default for a state the parameter leaves out; and not pregnant.
+    pregnant = [True, True, True, True, True, True, False]
+    income = [1.5, 2.0, 2.0001, 0.0, 0.0, 0.0, 1.0]
+    limit = [2.0, 2.0, 2.0, 2.0, float("-inf"), 0.0, 2.0]
     assert pregnancy_match(pregnant, income, limit).tolist() == [
         True,
         True,
         False,
         True,
+        False,
         False,
         False,
     ]

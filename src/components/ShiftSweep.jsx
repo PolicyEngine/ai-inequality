@@ -305,7 +305,7 @@ export function revenueDescriptionUsHealthTanf(programs) {
     .filter(Boolean);
   if (notes.length < excluded.length) {
     notes.push(
-      "We leave out other state health programs that we don't yet model.",
+      `We leave out ${notes.length ? "other " : ""}state health programs that we don't yet model.`,
     );
   }
   return [

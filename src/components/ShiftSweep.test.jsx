@@ -378,7 +378,16 @@ test("the revenue description names the state programs the run counts and leaves
   expect(
     revenueDescriptionUsHealthTanf({ state: [], excluded: ["xx_program"] }),
   ).toMatch(
-    /ACA premium tax credits and the Basic Health Program\. We leave out other state health programs that we don't yet model\. We price/,
+    /ACA premium tax credits and the Basic Health Program\. We leave out state health programs that we don't yet model\. We price/,
+  );
+  // "other" follows only a program the description has already named.
+  expect(
+    revenueDescriptionUsHealthTanf({
+      state: [],
+      excluded: ["co_omnisalud", "xx_program"],
+    }),
+  ).toMatch(
+    /so we leave it out\. We leave out other state health programs that we don't yet model\. We price/,
   );
   expect(revenueDescriptionUsHealthTanf(undefined)).toMatch(
     /ACA premium tax credits and the Basic Health Program\. We price/,
