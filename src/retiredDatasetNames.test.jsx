@@ -20,11 +20,12 @@ const VIEW_MODULES = import.meta.glob(
 
 // Microcosm's pre-August name and the dataset it replaced as the default, in
 // the spellings they take in prose, release ids and package names, such as
-// ecps_2024, with any space, underscore, dash or minus sign between words.
-// Published ids keep the old spelling in data and code; pages never show them.
-const SEP = String.raw`[\s_\p{Pd}\u2212]`;
+// ecps_2024, with any run of spaces, underscores, dashes, hyphen bullets or
+// minus signs between words. Published ids keep the old spelling in data and
+// code; pages never show them.
+const SEP = String.raw`[\s_\p{Pd}\p{Dash}\u02d7\u2043\u2052\u2796\u2e43]`;
 const RETIRED = new RegExp(
-  String.raw`populace|enhanced${SEP}*(?:cps|current${SEP}*population${SEP}*survey)|(?<![a-z])e${SEP}?cps(?![a-z])|policyengine${SEP}*us${SEP}*data`,
+  String.raw`populace|enhanced${SEP}*(?:cps|current${SEP}*population${SEP}*survey)|(?<![a-z])e${SEP}*cps(?![a-z])|policyengine${SEP}*us${SEP}*data`,
   "iu",
 );
 
@@ -104,13 +105,13 @@ function isText(path) {
   }
 }
 
-// Folds compatibility characters and drops the ones Unicode marks as
-// ignorable, so a zero-width space, a soft hyphen or a joiner can't split a
-// name, then blanks the allowed phrases.
+// Folds compatibility characters and drops format characters and the ones
+// Unicode classes as default-ignorable, so a zero-width space, a soft hyphen
+// or a joiner can't split a name, then blanks the allowed phrases.
 function normalize(text) {
   let folded = text
     .normalize("NFKC")
-    .replace(/\p{Default_Ignorable_Code_Point}/gu, "");
+    .replace(/[\p{Default_Ignorable_Code_Point}\p{Cf}]/gu, "");
   for (const phrase of ALLOWED_PHRASES) {
     folded = folded.split(phrase).join(" ");
   }
@@ -633,6 +634,50 @@ function importsOf(path) {
   });
 }
 
+// Every file under app/, with each module its code may load. Next.js gives a
+// file there a page or a slot of its own by its name alone, as it does for
+// not-found, error, loading and template files and for metadata routes, and
+// the sweep renders nothing under app/. So a new file or a new import fails
+// until someone reads what it shows visitors and lists it here.
+const APP_FILES = {
+  "app/[[...slug]]/page.jsx": ["../../src/ClientAppRouter"],
+  "app/globals.css": [],
+  "app/layout.jsx": [
+    "@policyengine/ui-kit/layout",
+    "@policyengine/ui-kit/styles.css",
+    "./globals.css",
+    "next/script",
+  ],
+};
+
+// Every module a file loads, as its code names it: imports, re-exports,
+// import() and require(). Null when espree can't parse the file.
+function loadsOf(path) {
+  const ast = parseModule(read(path));
+  if (!ast) return null;
+  const loads = [];
+  walk(ast, (node) => {
+    const loadsModule =
+      [
+        "ImportDeclaration",
+        "ExportNamedDeclaration",
+        "ExportAllDeclaration",
+        "ImportExpression",
+      ].includes(node.type) && node.source;
+    const requires =
+      node.type === "CallExpression" &&
+      node.callee.type === "Identifier" &&
+      node.callee.name === "require";
+    const source = loadsModule ? node.source : requires && node.arguments[0];
+    if (source) {
+      loads.push(
+        typeof source.value === "string" ? source.value : "(computed)",
+      );
+    }
+  });
+  return loads;
+}
+
 // The code modules the site runs: what the Next.js layout and pages import,
 // directly or through other site modules. A module nothing imports never
 // renders.
@@ -789,9 +834,24 @@ function dataUrlText(url) {
     : decoded;
 }
 
+// An address as a browser's URL parser reads it: without tabs or newlines,
+// and without the spaces and control characters around it.
+function asAddress(url) {
+  const text = String(url).replace(/[\t\n\r]/g, "");
+  let start = 0;
+  let end = text.length;
+  while (start < end && text.charCodeAt(start) <= 0x20) start += 1;
+  while (end > start && text.charCodeAt(end - 1) <= 0x20) end -= 1;
+  return text.slice(start, end);
+}
+
+// Whether an address holds a file itself, as data: and blob: addresses do.
+const holdsFile = (url) => /^(?:data|blob):/i.test(asAddress(url));
+
 // Notes a file a page hands over or shows from a data: or blob: address, once.
-function noteFile(name, url) {
-  if (!/^(?:data|blob):/i.test(url) || handedUrls.has(url)) return;
+function noteFile(name, address) {
+  const url = asAddress(address);
+  if (!holdsFile(url) || handedUrls.has(url)) return;
   handedUrls.add(url);
   handed.push(
     url.toLowerCase().startsWith("data:")
@@ -804,8 +864,8 @@ function noteFile(name, url) {
 // or open a page.
 function noteAnchor(anchor) {
   if (!anchor) return;
-  const url = anchor.getAttribute("href") ?? "";
-  if (anchor.hasAttribute("download") || /^(?:data|blob):/i.test(url)) {
+  const url = asAddress(anchor.getAttribute("href") ?? "");
+  if (anchor.hasAttribute("download") || holdsFile(url)) {
     noteFile(anchor.getAttribute("download") ?? "", anchor.href || url);
   } else if (url && !url.startsWith("#")) {
     opened.push(anchor.href || url);
@@ -831,7 +891,7 @@ function embeddedFiles(value) {
   return [
     value.trim(),
     ...[...value.matchAll(/url\(\s*["']?([^"')]+)/gi)].map(([, url]) => url),
-  ].filter((url) => /^(?:data|blob):/i.test(url));
+  ].filter(holdsFile);
 }
 
 // Lets the event loop run whatever has queued, such as replies to the worker,
@@ -1344,8 +1404,8 @@ describe("retired dataset names", () => {
     // A data: or blob: address that code opens shows a file, which the test
     // reads like one a page hands over.
     vi.spyOn(window, "open").mockImplementation((url) => {
-      const address = urlOf(url ?? "");
-      if (/^(?:data|blob):/i.test(address)) noteFile("", address);
+      const address = asAddress(urlOf(url ?? ""));
+      if (holdsFile(address)) noteFile("", address);
       else opened.push(address);
       return null;
     });
@@ -1407,6 +1467,10 @@ describe("retired dataset names", () => {
       "enhanced\u2013current\u00a0population survey",
       "policyengine\u2212us\u2212data",
       "e\u034fcps",
+      "e\u2053cps",
+      "e\u02d7CPS",
+      "e \u2013 CPS",
+      "e\u0600cps",
       "Pop\u200bulace",
       "\uff25\uff23\uff30\uff33",
     ]) {
@@ -1430,6 +1494,13 @@ describe("retired dataset names", () => {
         /(?:^|\/)(?:page|route)\.[cm]?[jt]sx?$/.test(path),
       ),
     ).toEqual(["app/[[...slug]]/page.jsx"]);
+  });
+
+  it("keeps app/ to the layout, its stylesheet and the catch-all page, with the imports each has today", () => {
+    expect(pathsUnder("app").sort()).toEqual(Object.keys(APP_FILES).sort());
+    for (const [path, allowed] of Object.entries(APP_FILES)) {
+      if (isCode(path)) expect(loadsOf(path), path).toEqual(allowed);
+    }
   });
 
   it("finds press and hover handlers on elements that declare no role", () => {
@@ -1577,6 +1648,22 @@ describe("retired dataset names", () => {
           >
             Opened
           </button>
+          <button
+            type="button"
+            onClick={() => window.open(` ${asBlob(json("spaced blob"))}`)}
+          >
+            Spaced
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const link = document.createElement("a");
+              link.setAttribute("href", `\n${asData(json("spaced data"))}`);
+              link.click();
+            }}
+          >
+            Spaced link
+          </button>
           <a href={rendered} download="rendered.json">
             Rendered blob
           </a>
@@ -1599,6 +1686,8 @@ describe("retired dataset names", () => {
       "opened blob",
       "rendered base64",
       "rendered blob",
+      "spaced blob",
+      "spaced data",
       "style data",
     ]);
   }, 120_000);
