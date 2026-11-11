@@ -130,7 +130,7 @@ export function stateLineNoteHealthTanf(stateCode, statePrograms = []) {
   } else if (own.length > 0) {
     ownClause = ", and on health programs it runs on its own";
   }
-  return `The health band includes what the state spends on its matching share of Medicaid, CHIP and the Medicare Savings Programs${ownClause}. For enrollees whose immigration status bars federal matching, we charge the state the federal share as well. The federal government still matches their emergency care, so we overstate the state's cost. Congress sets each state's TANF block grant at a fixed amount, so we charge the state every change in its TANF benefits.`;
+  return `The health band includes what the state spends on its matching share of Medicaid, CHIP and the Medicare Savings Programs${ownClause}. Where the state covers people whose immigration status bars federal matching, we charge it the federal share as well. The federal government still matches their emergency care, so we likely overstate the state's cost. In states that cover unborn children through CHIP, the federal government also matches a pregnant woman's coverage, so we leave her federal share in place. Congress sets each state's TANF block grant at a fixed amount, so we charge the state every change in its TANF benefits.`;
 }
 
 function federalBuckets(countryId, withHealthTanf = false) {
@@ -266,7 +266,7 @@ const REVENUE_DESCRIPTION_US =
   "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. We leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.";
 
 const REVENUE_DESCRIPTION_US_HEALTH_TANF =
-  "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits + health coverage), across federal, state and local governments. We count what governments spend on Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax credits, the Basic Health Program and state programs such as Colorado's OmniSalud. We price each new Medicaid enrollee at the baseline cost of an enrollee in their state with the same ACA benchmark premium. The federal and state charts add up to the total, apart from three groups of taxes. We count workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations only in the total. We put New York City's and Maryland's local income taxes in those states' charts instead.";
+  "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits + health coverage), across federal, state and local governments. We count what governments spend on Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax credits, the Basic Health Program and state programs such as Healthier Oregon. We don't yet model Colorado's OmniSalud program for the people it covers, so we leave it out. We price each new Medicaid enrollee at the baseline cost of an enrollee in their state with the same ACA benchmark premium. The federal and state charts add up to the total, apart from three groups of taxes. We count workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations only in the total. We put New York City's and Maryland's local income taxes in those states' charts instead.";
 
 function measuresForMetadata(metadata, withHealthTanf = false) {
   const currencySymbol = metadata.currency_symbol ?? "$";
@@ -1167,11 +1167,13 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
             subsidies and other programs, such as New Jersey&apos;s property tax
             relief, as state-paid. For health coverage, we count the programs
             the state runs on its own and its matching share of Medicaid, CHIP
-            and the Medicare Savings Programs. We also charge the state the
-            federal share of coverage for enrollees whose immigration status
-            bars federal matching. The federal government still matches those
-            enrollees&apos; emergency care, so we overstate the state&apos;s
-            cost.
+            and the Medicare Savings Programs. Where a state covers people whose
+            immigration status bars federal matching, we charge it the federal
+            share as well. The federal government still matches their emergency
+            care, so we likely overstate the state&apos;s cost. In states that
+            cover unborn children through CHIP, the federal government also
+            matches a pregnant woman&apos;s coverage, so we leave her federal
+            share in place.
           </>
         ) : (
           <>

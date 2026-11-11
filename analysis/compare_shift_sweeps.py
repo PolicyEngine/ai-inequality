@@ -51,8 +51,12 @@ ROW_FIELDS = (
     "health_change_b",
     "federal_health_change_b",
     "state_health_change_b",
+    "health_value_change_b",
     "state_only_coverage_change_b",
     "healthier_oregon_overlap_change_b",
+    "unfunded_federal_coverage_change_b",
+    "unfunded_state_coverage_change_b",
+    "excluded_health_programs_change_b",
     "tanf_change_b",
     "tanf_state_charge_change_b",
     "tanf_in_state_benefits_change_b",
@@ -72,6 +76,9 @@ STATE_FIELDS = (
     "health_change_b",
     "state_only_coverage_change_b",
     "healthier_oregon_overlap_change_b",
+    "unfunded_federal_coverage_change_b",
+    "unfunded_state_coverage_change_b",
+    "excluded_health_programs_change_b",
     "tanf_change_b",
     "tanf_state_charge_change_b",
     "tanf_in_state_benefits_change_b",
@@ -90,6 +97,9 @@ STATE_SUMS = (
     "health_change_b",
     "state_only_coverage_change_b",
     "healthier_oregon_overlap_change_b",
+    "unfunded_federal_coverage_change_b",
+    "unfunded_state_coverage_change_b",
+    "excluded_health_programs_change_b",
 )
 
 #: Largest chart identity residual check_sweep accepts, in $B. policyengine-us
@@ -186,6 +196,21 @@ def _check_row(row):
                 f"{label}: {field} {row[field]:.6f} differs from {description}, "
                 f"{expected:.6f}"
             )
+    # policyengine-us adds healthcare_benefit_value in float32, so this one
+    # holds to float32 rounding of the aggregates, as the chart identity does.
+    priced = (
+        row["health_value_change_b"]
+        - row["healthier_oregon_overlap_change_b"]
+        - row["excluded_health_programs_change_b"]
+        - row["unfunded_federal_coverage_change_b"]
+        - row["unfunded_state_coverage_change_b"]
+    )
+    if abs(row["health_change_b"] - priced) >= CHART_RESIDUAL_LIMIT_B:
+        problems.append(
+            f"{label}: health_change_b {row['health_change_b']:.6f} differs from "
+            "healthcare_benefit_value less the Healthier Oregon overlap, the excluded "
+            f"programs and the unfunded coverage, {priced:.6f}"
+        )
     residual = row["chart_identity_residual_b"]
     if abs(residual) >= CHART_RESIDUAL_LIMIT_B:
         problems.append(

@@ -3,7 +3,9 @@
 Invariants:
 
 * a sweep built the way analysis/compute_shift_sweep.py builds one passes
-  check_sweep, and each identity check catches a row that breaks it;
+  check_sweep, and each identity check catches a row that breaks it, among
+  them health spending against healthcare_benefit_value less what the frame
+  leaves out;
 * decompose's parts add up to the change in the total for any pair of runs,
   and decompose_state's to the change in a state's chart total;
 * comparing a run with itself leaves nothing in ``same_definition``;
@@ -41,6 +43,9 @@ def _state_row(draw, code):
         "federal_health_change_b": draw(5),
         "state_only_coverage_change_b": draw(0.5),
         "healthier_oregon_overlap_change_b": draw(0.1),
+        "unfunded_federal_coverage_change_b": draw(0.1),
+        "unfunded_state_coverage_change_b": draw(0.05),
+        "excluded_health_programs_change_b": draw(0.05),
     }
     d["health_change_b"] = d["federal_health_change_b"] + d["state_health_change_b"]
     d["tanf_state_charge_change_b"] = d["tanf_change_b"] - in_state_benefits
@@ -71,6 +76,17 @@ def synthetic_sweep(seed):
         row = {"shift_pct": pct, "state_deltas": states}
         for field in cmp.STATE_SUMS:
             row[field] = sum(d[field] for d in states.values())
+        # healthcare_benefit_value prices every program, and the frame leaves
+        # out the overlap, the excluded programs and the unfunded coverage.
+        row["health_value_change_b"] = row["health_change_b"] + sum(
+            row[field]
+            for field in (
+                "healthier_oregon_overlap_change_b",
+                "excluded_health_programs_change_b",
+                "unfunded_federal_coverage_change_b",
+                "unfunded_state_coverage_change_b",
+            )
+        )
         row["taxes_outside_charts_change_b"] = draw(1)
         row["chart_identity_residual_b"] = draw(0.05)
         row["total_rev_change_published_definition_b"] = draw(200)
@@ -187,6 +203,10 @@ def _skew_state_health_total(s):
     _row(s, 50)["state_deltas"]["CA"]["health_change_b"] += 0.1
 
 
+def _skew_health_value(s):
+    _row(s, 50)["health_value_change_b"] += 0.5
+
+
 def _drop_state_federal_health(s):
     del _row(s, 50)["state_deltas"]["MA"]["federal_health_change_b"]
 
@@ -237,6 +257,7 @@ def _drop_deciles(s):
         (_drop_health, "no federal_health_change_b"),
         (_skew_national_federal_health, "the states' federal_health_change_b"),
         (_skew_state_health_total, "CA: health_change_b"),
+        (_skew_health_value, "differs from healthcare_benefit_value"),
         (_drop_state_federal_health, "50% MA: no federal_health_change_b"),
         (_skew_state_net, "CA: state_net_change_b"),
         (

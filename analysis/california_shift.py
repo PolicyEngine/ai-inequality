@@ -44,12 +44,13 @@ records:
   charge each state its share of Medicaid, CHIP and Medicare Savings Program
   costs under federal matching rules (``state_benefit_cost``, from
   ``gov.hhs.medicaid.cost_share``), the federal share policyengine-us books
-  for people whose immigration status rules out federal matching (federal
-  funds still match their emergency care, so this overstates the state's
-  cost; CHIP's unborn-child coverage keeps its federal match), its own health
-  subsidies, and its TANF change beyond the copy its line holds, because
-  federal law fixes each state's TANF block grant. The all-government total
-  adds every program in ``healthcare_benefit_value`` and counts TANF once, as
+  for people whose immigration status rules out federal matching where a
+  state rule covers them (``health_tanf.state_only_accounting``; federal funds
+  still match their emergency care, so this likely overstates the state's
+  cost), its own health subsidies, and its TANF change beyond the copy its
+  line holds, because federal law fixes each state's TANF block grant. The
+  all-government total adds every program in ``healthcare_benefit_value``
+  apart from the coverage ``health_tanf`` leaves out, and counts TANF once, as
   ``tanf`` pays it; federal net revenue is again what the states and
   localities leave.
 * Medicaid at the baseline's cost per enrollee. policyengine-us spreads each
@@ -148,16 +149,25 @@ RUN_DESCRIPTION = (
     "enrollment. The *_with_health_tanf fields "
     "also charge each state its share of Medicaid, CHIP and Medicare "
     "Savings Program costs under federal matching rules (state_benefit_cost), "
-    "the whole cost of coverage it funds alone for people whose immigration "
-    "status rules out federal matching (CHIP coverage through the "
-    "unborn-child option keeps its federal match), its own health programs "
-    "that healthcare_benefit_value prices (California's Covered California "
-    "premium subsidy from policyengine-us 2.x, which 1.764.6 doesn't model; "
-    "Healthier Oregon only for people not also enrolled in Medicaid) and the TANF "
-    "change its line doesn't already hold (CalWORKs for California; "
+    "and the federal share policyengine-us books for people whose immigration "
+    "status rules out federal matching, where a state rule covers them: "
+    "Medicaid, and CHIP in states whose undocumented_immigrant rule covers "
+    "people without satisfactory status. Pregnant enrollees in states that "
+    "take CHIP's unborn-child option keep their federal share, as does CHIP "
+    "coverage through that option. CHIP that policyengine-us books for such "
+    "people elsewhere, and their Medicare Savings Program benefits, count on "
+    "neither line, since no government pays for them. The fields also charge "
+    "each state its own health programs that healthcare_benefit_value prices "
+    "(California's Covered California premium subsidy from policyengine-us "
+    "2.x, which 1.764.6 doesn't model; Healthier Oregon only for people "
+    "policyengine-us prices in neither Medicaid nor CHIP and who take Medicaid "
+    "up; not Colorado's OmniSalud, which policyengine-us prices as the "
+    "benchmark premium of members who can buy Marketplace coverage) and the "
+    "TANF change its line doesn't already hold (CalWORKs for California; "
     "Massachusetts's TAFDC already sits in its state benefits), since the "
-    "federal TANF block grant is fixed; the all-government total adds every "
-    "program in healthcare_benefit_value and counts TANF once. "
+    "federal TANF block grant is fixed. The all-government total adds every "
+    "program in healthcare_benefit_value apart from that coverage and counts "
+    "TANF once. "
     "The shift sets employment_income and self_employment_income and their "
     "stored *_before_lsr inputs, so the TANF and SNAP formulas that read the "
     "stored inputs see the wage cut. "
@@ -385,6 +395,7 @@ def _baseline_concentration(base):
         "state_health_b": float((base["state_health"][mask] * w).sum() / 1e9),
         "state_health_split_b": float((base["state_health_split"][mask] * w).sum() / 1e9),
         "state_only_coverage_b": float((base["state_only_coverage"][mask] * w).sum() / 1e9),
+        "unfunded_state_coverage_b": float((base["unfunded_state"][mask] * w).sum() / 1e9),
         "state_health_programs_b": float((base["state_health_programs"][mask] * w).sum() / 1e9),
         "tanf_b": float((base["tanf"][mask] * w).sum() / 1e9),
         "state_payroll_tax_b": float((base["state_payroll_tax"][mask] * w).sum() / 1e9),
@@ -419,6 +430,9 @@ def _california_rows(base, scen):
         "state_health_change_b": delta("state_health"),
         "state_health_split_change_b": delta("state_health_split"),
         "state_only_coverage_change_b": delta("state_only_coverage"),
+        # Coverage policyengine-us books that no government pays for; the
+        # state's health change leaves out its state share.
+        "unfunded_state_coverage_change_b": delta("unfunded_state"),
         "state_health_programs_change_b": delta("state_health_programs"),
         # TANF the state's line doesn't already hold: for California, CalWORKs.
         "tanf_change_b": delta("tanf_charge"),
@@ -511,6 +525,8 @@ def _health_tanf_accounting(base, scen, state_net, all_government):
         "health_federal_change_b": federal_health / 1e9,
         "health_state_change_b": sum(state_health.values()) / 1e9,
         "healthier_oregon_overlap_change_b": total("healthier_oregon_overlap") / 1e9,
+        "unfunded_coverage_change_b": (total("unfunded_federal") + total("unfunded_state")) / 1e9,
+        "excluded_health_programs_change_b": total("excluded_health_programs") / 1e9,
         "tanf_change_b": total("tanf") / 1e9,
         # The copy of TANF in household_state_benefits, under the name the
         # committed outputs and california_summary use.

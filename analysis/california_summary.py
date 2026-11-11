@@ -4,8 +4,8 @@ Prints, for each shift level:
 
 * California's net change, with and without its employee SDI contribution;
 * the same once health spending and TANF count: California's share of
-  Medi-Cal, CHIP and Medicare Savings Program costs, the state-only coverage it
-  pays for in full, its premium subsidy and CalWORKs, with the other states and
+  Medi-Cal, CHIP and Medicare Savings Program costs, the federal share it pays
+  for coverage it funds alone, its premium subsidy and CalWORKs, with the other states and
   federal lines on the same basis (runs without these fields skip the lines);
 * all other states combined, every state, and federal net revenue;
 * the federal split into income tax, federal payroll taxes, refundable credits

@@ -5,8 +5,9 @@ Covers ``analysis.health_tanf``, the health and TANF totals in
 ``analysis.labor_inputs``. The invariants, checked over generated inputs:
 
 - each household's federal and state health spending add up to every program
-  ``healthcare_benefit_value`` prices, less the Healthier Oregon overlap, and
-  each state's TANF charge is its TANF less what its state benefits hold;
+  ``healthcare_benefit_value`` prices, less the Healthier Oregon overlap, the
+  excluded programs and the coverage no government pays for, and each state's
+  TANF charge is its TANF less what its state benefits hold;
 - each state's totals add up to the national totals;
 - the all-government total with health and TANF is the published total plus
   the TANF it counted twice, less health spending;
@@ -49,6 +50,7 @@ from analysis.fiscal import (
     states_chart_change,
 )
 from analysis.health_tanf import (
+    EXCLUDED_HEALTH,
     FEDERAL_HEALTH,
     FEDERAL_SHARE_COSTS,
     FMAP_SPLIT_HEALTH,
@@ -113,8 +115,21 @@ LISTED_1764 = ["medicaid", "msp_cost", "chip", "premium_tax_credit", "basic_heal
 #: ``healthcare_benefit_value`` prices every state program, and
 #: ``household_health_benefits`` leaves out Connecticut's, Massachusetts's, New
 #: Jersey's, Vermont's and Washington's premium subsidies.
-ADDS_221 = list(FMAP_SPLIT_HEALTH) + list(FEDERAL_HEALTH) + list(STATE_HEALTH)
-LISTED_221 = list(FMAP_SPLIT_HEALTH) + list(FEDERAL_HEALTH) + list(STATE_HEALTH[:6])
+ADDS_221 = (
+    list(FMAP_SPLIT_HEALTH) + list(FEDERAL_HEALTH) + list(STATE_HEALTH) + list(EXCLUDED_HEALTH)
+)
+LISTED_221 = (
+    list(FMAP_SPLIT_HEALTH)
+    + list(FEDERAL_HEALTH)
+    + [
+        "assigned_ca_premium_subsidy",
+        "co_omnisalud",
+        "assigned_co_premium_assistance",
+        "md_premium_assistance",
+        "assigned_nm_premium_assistance",
+        "or_healthier_oregon_cost",
+    ]
+)
 BENEFITS = ["snap", "ssi", "tanf", "ca_capi", "ma_tafdc"]
 
 
@@ -124,17 +139,20 @@ def _classify(adds=ADDS_1764, listed=LISTED_1764, federal=FEDERAL_SHARE_COSTS,
 
 
 def test_classification_at_policyengine_us_1764():
-    fmap, federal, state = _classify()
+    fmap, federal, state, excluded = _classify()
     assert fmap == FMAP_SPLIT_HEALTH
     assert federal == FEDERAL_HEALTH
-    assert state == ("co_omnisalud", "or_healthier_oregon_cost")
+    assert state == ("or_healthier_oregon_cost",)
+    # policyengine-us prices OmniSalud for people it doesn't cover, so the
+    # totals leave it out.
+    assert excluded == ("co_omnisalud",)
 
 
 def test_classification_at_policyengine_us_221():
-    fmap, federal, state = _classify(adds=ADDS_221, listed=LISTED_221)
-    assert (fmap, federal, state) == (FMAP_SPLIT_HEALTH, FEDERAL_HEALTH, STATE_HEALTH)
+    classified = _classify(adds=ADDS_221, listed=LISTED_221)
+    assert classified == (FMAP_SPLIT_HEALTH, FEDERAL_HEALTH, STATE_HEALTH, EXCLUDED_HEALTH)
     # Later releases list the other state subsidies too; nothing changes.
-    assert _classify(adds=ADDS_221, listed=ADDS_221) == (fmap, federal, state)
+    assert _classify(adds=ADDS_221, listed=ADDS_221) == classified
 
 
 def test_classification_refuses_what_it_would_get_wrong():
@@ -182,10 +200,19 @@ def frames(draw, n=None):
         "federal_health_other": spending(),
         "state_health_programs": spending(),
         "healthier_oregon_overlap": np.where(state == "OR", spending(), 0.0),
+        "excluded_health_programs": spending(),
         "tanf": spending(),
     }
-    share = np.asarray(draw(st.lists(SHARES, min_size=n, max_size=n)))
-    frame["state_only_coverage"] = frame["federal_health_split"] * share
+
+    def shares():
+        return np.asarray(draw(st.lists(SHARES, min_size=n, max_size=n)))
+
+    # The state-only move and the unfunded coverage take disjoint parts of the
+    # federal share, and the unfunded coverage takes part of the state share.
+    moved, unfunded = shares(), shares()
+    frame["state_only_coverage"] = frame["federal_health_split"] * moved
+    frame["unfunded_federal"] = frame["federal_health_split"] * (1 - moved) * unfunded
+    frame["unfunded_state"] = frame["state_health_split"] * shares()
     frame["fmap_split_cost"] = frame["federal_health_split"] + frame["state_health_split"]
     # household_state_benefits holds Massachusetts's TAFDC at its full amount
     # for every eligible family; tanf holds it only for families that take
@@ -194,13 +221,14 @@ def frames(draw, n=None):
     copy = spending()
     frame["tanf_in_state_benefits"] = np.where(state == "MA", copy, 0.0)
     frame["tanf"] = np.where(state == "MA", np.where(takes_up, copy, 0.0), frame["tanf"])
-    # healthcare_benefit_value prices the overlap too; the frame's state
-    # programs leave it out.
+    # healthcare_benefit_value prices the overlap and the excluded programs
+    # too; the frame's state programs leave them out.
     frame["health_value"] = (
         frame["fmap_split_cost"]
         + frame["federal_health_other"]
         + frame["state_health_programs"]
         + frame["healthier_oregon_overlap"]
+        + frame["excluded_health_programs"]
     )
     return with_derived(frame)
 
@@ -213,14 +241,25 @@ def test_health_spending_is_conserved(frame):
         + frame["state_health_split"]
         + frame["federal_health_other"]
         + frame["state_health_programs"]
+        - frame["unfunded_federal"]
+        - frame["unfunded_state"]
     )
     np.testing.assert_allclose(
         frame["state_health"] + frame["federal_health"], every_program, rtol=1e-12, atol=1e-6
     )
     np.testing.assert_allclose(
-        frame["health_total"], frame["health_value"] - frame["healthier_oregon_overlap"],
-        rtol=1e-12, atol=1e-6,
+        frame["health_total"],
+        frame["health_value"]
+        - frame["healthier_oregon_overlap"]
+        - frame["excluded_health_programs"]
+        - frame["unfunded_federal"]
+        - frame["unfunded_state"],
+        rtol=1e-12,
+        atol=1e-6,
     )
+    # Neither government's line pays for the unfunded coverage, and the
+    # state's line never falls below what it would pay without the move.
+    assert (frame["state_health"] >= -1e-6).all()
     # A Massachusetts family that takes TANF up owes nothing beyond the copy in
     # its state's line, one that doesn't takes that copy back out, and every
     # other state pays all of its TANF.
@@ -288,6 +327,48 @@ def test_check_frame_refuses_a_gap():
     moved = dict(frame, state_only_coverage=frame["federal_health_split"] + 10.0)
     with pytest.raises(AssertionError, match="moves more"):
         check_frame(moved)
+    # The move and the unfunded federal share together can't pass the federal
+    # share, the unfunded state share can't pass the state share, and neither
+    # can fall below zero.
+    both = dict(frame, unfunded_federal=frame["federal_health_split"] - frame["state_only_coverage"] + 10.0)
+    with pytest.raises(AssertionError, match="moves more"):
+        check_frame(with_derived(both))
+    state = dict(frame, unfunded_state=frame["state_health_split"] + 10.0)
+    with pytest.raises(AssertionError, match="drops more"):
+        check_frame(with_derived(state))
+    negative = dict(frame, unfunded_state=frame["state_health_split"] * 0 - 1.0)
+    with pytest.raises(AssertionError, match="negative"):
+        check_frame(with_derived(negative))
+
+
+def test_unfunded_coverage_leaves_both_lines():
+    # policyengine-us books $1,000 of Medicare Savings Program benefits for an
+    # undocumented Texas senior: $600 federal and $400 state. No government
+    # pays for it, so neither line counts it, though healthcare_benefit_value
+    # prices it. OmniSalud's $300 is priced and left out too.
+    frame = {
+        "state": np.asarray(["TX", "CO"]),
+        "weight": np.asarray([10.0, 10.0]),
+        "federal_health_split": np.asarray([600.0, 0.0]),
+        "state_health_split": np.asarray([400.0, 0.0]),
+        "fmap_split_cost": np.asarray([1_000.0, 0.0]),
+        "federal_health_other": np.zeros(2),
+        "state_health_programs": np.zeros(2),
+        "healthier_oregon_overlap": np.zeros(2),
+        "excluded_health_programs": np.asarray([0.0, 300.0]),
+        "state_only_coverage": np.zeros(2),
+        "unfunded_federal": np.asarray([600.0, 0.0]),
+        "unfunded_state": np.asarray([400.0, 0.0]),
+        "health_value": np.asarray([1_000.0, 300.0]),
+        "tanf": np.zeros(2),
+        "tanf_in_state_benefits": np.zeros(2),
+    }
+    frame = with_derived(frame)
+    check_frame(frame)
+    assert frame["federal_health"].tolist() == [0.0, 0.0]
+    assert frame["state_health"].tolist() == [0.0, 0.0]
+    assert national_totals(frame)["unfunded_federal"] == 6_000.0
+    assert national_totals(frame)["excluded_health_programs"] == 3_000.0
 
 
 def test_check_frame_allows_float32_rounding_of_large_amounts():
@@ -650,14 +731,14 @@ def test_california_note_names_the_premium_subsidy_only_where_counted():
     )
 
     # policyengine-us 1.764.6 counts no Californian premium subsidy.
-    at_1764 = california_note("with_health_tanf", ["co_omnisalud", "or_healthier_oregon_cost"])
+    at_1764 = california_note("with_health_tanf", ["or_healthier_oregon_cost"])
     assert at_1764 == CALIFORNIA_HEALTH_TANF_NOTE_NO_SUBSIDY
     assert "subsid" not in at_1764
     assert california_note("with_health_tanf", list(STATE_HEALTH)) == CALIFORNIA_HEALTH_TANF_NOTE
     assert "premium subsidy" in CALIFORNIA_HEALTH_TANF_NOTE
     # Runs from before the record existed (#49's, on 2.2.1) counted the subsidy.
     assert california_note("with_health_tanf") == CALIFORNIA_HEALTH_TANF_NOTE
-    assert california_note("study", ["co_omnisalud"]) == CALIFORNIA_MEASURE_NOTE
+    assert california_note("study", ["or_healthier_oregon_cost"]) == CALIFORNIA_MEASURE_NOTE
 
 
 # --- Labor inputs ---------------------------------------------------------------
@@ -828,9 +909,10 @@ def test_classification_matches_the_installed_engine():
     from policyengine_us import Simulation
 
     sim = Simulation(situation={"people": {"p": {"age": {2026: 30}}}})
-    fmap, federal, state = health_tanf.health_programs(sim, 2026)
+    fmap, federal, state, excluded = health_tanf.health_programs(sim, 2026)
     adds = set(health_tanf.adds(sim, health_tanf.HEALTH_VALUE_VARIABLE, 2026))
-    assert set(fmap) | set(federal) | set(state) == adds
+    assert set(fmap) | set(federal) | set(state) | set(excluded) == adds
+    assert excluded == health_tanf.EXCLUDED_HEALTH
     tanf_programs = health_tanf.state_tanf_variables(sim)
     assert "ca_tanf" in tanf_programs
     listed = sim.tax_benefit_system.parameters("2026-01-01").gov.household.household_state_benefits
@@ -843,6 +925,7 @@ def test_classification_matches_the_installed_engine():
     assert record["split_by_federal_matching"] == list(fmap)
     assert record["federal"] == list(federal)
     assert record["state"] == list(state)
+    assert record["excluded"] == list(excluded)
     assert record["tanf_programs_in_state_benefits"] == programs
     assert set(record["tanf_states_in_state_benefits"]) <= {"MA"}
 

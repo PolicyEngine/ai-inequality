@@ -96,6 +96,11 @@ _FISCAL_FIELDS = [
     ("health_value_change_b", "health_value_change"),
     ("healthier_oregon_overlap_change_b", "healthier_oregon_overlap_change"),
     ("state_only_coverage_change_b", "state_only_coverage_change"),
+    # Coverage policyengine-us prices that no government pays for, and the
+    # programs whose pricing we leave out (health_tanf.EXCLUDED_HEALTH).
+    ("unfunded_federal_coverage_change_b", "unfunded_federal_change"),
+    ("unfunded_state_coverage_change_b", "unfunded_state_change"),
+    ("excluded_health_programs_change_b", "excluded_health_programs_change"),
     # The TANF charged to the states beyond the copy household_state_benefits
     # holds, and that copy, which the totals above drop.
     ("tanf_state_charge_change_b", "tanf_charge_change"),
@@ -143,6 +148,9 @@ _STATE_HEALTH_TANF_FIELDS = (
     ("health_change_b", "health_total"),
     ("state_only_coverage_change_b", "state_only_coverage"),
     ("healthier_oregon_overlap_change_b", "healthier_oregon_overlap"),
+    ("unfunded_federal_coverage_change_b", "unfunded_federal"),
+    ("unfunded_state_coverage_change_b", "unfunded_state"),
+    ("excluded_health_programs_change_b", "excluded_health_programs"),
     ("tanf_change_b", "tanf"),
     ("tanf_state_charge_change_b", "tanf_charge"),
     ("tanf_in_state_benefits_change_b", "tanf_in_state_benefits"),

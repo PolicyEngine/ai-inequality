@@ -31,7 +31,7 @@ const MOCK_HEALTH_TANF_PAYLOAD = {
   metadata: {
     ...sweepData.metadata,
     health_tanf_programs: {
-      state: ["co_omnisalud", "or_healthier_oregon_cost"],
+      state: ["or_healthier_oregon_cost"],
     },
   },
   scenarios: sweepData.scenarios.map((scenario) => ({
@@ -239,7 +239,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   expect(document.body).not.toHaveTextContent(/capital-gains tax and niit/i);
   // The state ranking charges each state the federal share it moves.
   expect(document.body).toHaveTextContent(
-    /we also charge the state the federal share of coverage for enrollees whose immigration status bars federal matching\. the federal government still matches those enrollees' emergency care, so we overstate the state's cost\./i,
+    /where a state covers people whose immigration status bars federal matching, we charge it the federal share as well\. the federal government still matches their emergency care, so we likely overstate the state's cost\. in states that cover unborn children through chip, the federal government also matches a pregnant woman's coverage, so we leave her federal share in place\./i,
   );
   expect(document.body).not.toHaveTextContent(/the whole cost/i);
 
@@ -250,17 +250,17 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     screen.getByRole("heading", { name: /ca state revenue decomposition/i }),
   ).toBeInTheDocument();
   expect(document.body).toHaveTextContent(
-    /medicare savings programs\. for enrollees whose immigration status bars federal matching, we charge the state the federal share as well/i,
+    /medicare savings programs\. where the state covers people whose immigration status bars federal matching, we charge it the federal share as well\. the federal government still matches their emergency care, so we likely overstate the state's cost\./i,
   );
   expect(document.body).toHaveTextContent(
     /congress sets each state's tanf block grant at a fixed amount, so we charge the state every change in its tanf benefits\./i,
   );
 
   fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
-    target: { value: "CO" },
+    target: { value: "OR" },
   });
   expect(document.body).toHaveTextContent(
-    /medicare savings programs, and on its own omnisalud program\./i,
+    /medicare savings programs, and on its own healthier oregon program\./i,
   );
 });
 
@@ -319,7 +319,8 @@ test("each state health program maps to its state", () => {
 });
 
 test("a state's health note names only the programs that state runs", () => {
-  // At policyengine-us 1.764.6, the sweep's metadata lists these two.
+  // At policyengine-us 1.764.6, the sweep's metadata lists Healthier Oregon.
+  // A run that also counts OmniSalud lists it too, and the note names it.
   const programs = ["co_omnisalud", "or_healthier_oregon_cost"];
   expect(stateLineNoteHealthTanf("OR", programs)).toMatch(
     /Medicare Savings Programs, and on its own Healthier Oregon program\./,
@@ -328,20 +329,25 @@ test("a state's health note names only the programs that state runs", () => {
     /Medicare Savings Programs, and on its own OmniSalud program\./,
   );
   expect(stateLineNoteHealthTanf("TX", programs)).toMatch(
-    /Medicare Savings Programs\. For enrollees/,
+    /Medicare Savings Programs\. Where the state covers/,
   );
   expect(stateLineNoteHealthTanf("TX")).not.toMatch(/OmniSalud|Oregon/);
   // Later releases add programs the page has no display name for.
-  expect(stateLineNoteHealthTanf("CO", STATE_HEALTH)).toMatch(
+  expect(
+    stateLineNoteHealthTanf("CO", [...STATE_HEALTH, "co_omnisalud"]),
+  ).toMatch(
     /Medicare Savings Programs, and on OmniSalud and other health programs it runs on its own\./,
   );
-  for (const state of ["CA", "NM", "MD", "MA"]) {
+  expect(stateLineNoteHealthTanf("OR", STATE_HEALTH)).toMatch(
+    /Medicare Savings Programs, and on its own Healthier Oregon program\./,
+  );
+  for (const state of ["CA", "CO", "NM", "MD", "MA"]) {
     expect(stateLineNoteHealthTanf(state, STATE_HEALTH)).toMatch(
       /Medicare Savings Programs, and on health programs it runs on its own\./,
     );
   }
   expect(stateLineNoteHealthTanf("TX", STATE_HEALTH)).toMatch(
-    /Medicare Savings Programs\. For enrollees/,
+    /Medicare Savings Programs\. Where the state covers/,
   );
 });
 

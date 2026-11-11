@@ -17,8 +17,9 @@ The invariants, checked over generated household frames:
   as the published sweep's national shift (a differential check, run when
   policyengine_us is installed, plus a closed-form check that always runs);
 - the health accounting conserves health spending: each household's state and
-  federal health spending add up to every health program it counts, and moving
-  state-only coverage changes who pays, not how much;
+  federal health spending add up to every health program it counts, less the
+  coverage no government pays for, and moving state-only coverage changes who
+  pays, not how much;
 - the federal line with health and TANF, every state's line, and the state
   payroll and local taxes add up to the all-government total with health;
   TANF moves dollar for dollar from the federal line to the state's, and TANF
@@ -27,22 +28,30 @@ The invariants, checked over generated household frames:
   add up to the all-government total, and the summary's federal split adds up
   to the same total, with no residual when the aggregates hold only the parts
   policyengine-us builds them from;
-- the state-only adjustment moves nothing for people whose status allows
-  federal matching, never moves more than the federal share policyengine-us
-  books, and never moves CHIP's unborn-child (FCEP) match;
+- the state-only split moves or drops nothing for people whose status allows
+  federal matching, never moves or drops more than the shares policyengine-us
+  books, never touches CHIP's unborn-child (FCEP) match or a pregnant
+  enrollee's Medicaid match in a state that takes the FCEP option, moves
+  Medicaid's federal share and, where the state's own rule covers the person,
+  CHIP's, and drops both shares of the Medicare Savings Programs and of CHIP
+  outside such a rule;
 - a shifted branch prices Medicaid at the baseline's cost per enrollee, so new
   enrollees add cost, and the pricing refuses a branch that already
   calculated its own;
 - the federal immigration-status test matches policyengine-us's
-  ``is_medicaid_immigration_status_eligible`` where no state coverage applies,
-  the state-only adjustment moves exactly the federal share policyengine-us
-  books for a California child covered without satisfactory status, it
-  leaves the federal CHIP match for an undocumented pregnant woman's FCEP
-  coverage in place, Medicaid priced at the baseline rises with enrollment
-  over a four-household dataset where policyengine-us alone holds the state's
-  total fixed, and the household frame drops Healthier Oregon's cost for an
-  adult policyengine-us also enrolls in Medicaid (all run when
-  policyengine_us is installed).
+  ``is_medicaid_immigration_status_eligible`` where no state coverage applies;
+  the state-only accounting moves exactly the federal share policyengine-us
+  books for a California child covered without satisfactory status and for a
+  New York DACA child's CHIP, keeps the federal match for an undocumented
+  pregnant woman's FCEP coverage in Texas and her Medicaid in California,
+  drops a Florida DACA teen's CHIP and a Texas undocumented senior's Medicare
+  Savings Program benefits, and refuses a Texas permanent-resident child in the
+  five-year bar and a Texas refugee child in 2027; Medicaid priced at the
+  baseline rises with enrollment over a four-household dataset where
+  policyengine-us alone holds the state's total fixed; and the household frame
+  drops Healthier Oregon's cost for anyone policyengine-us also enrolls in
+  Medicaid or CHIP or who doesn't take Medicaid up, and leaves out Colorado's
+  OmniSalud (all run when policyengine_us is installed).
 
 The differential checks against ``_apply_shift``, the immigration rules,
 Medicaid pricing, the household frame and the tax aggregates are the only tests
@@ -83,12 +92,15 @@ from analysis.health_tanf import (
     FEDERAL_SHARE_COSTS,
     MEDICAID_DENOMINATOR,
     STATE_ONLY_STATUSES,
+    STATE_SHARE_COSTS,
     check_health_split,
     check_moved_statuses,
     federally_eligible_status,
     health_programs,
+    household_frame,
+    state_only_accounting,
     state_only_coverage,
-    state_only_federal_share,
+    state_only_split,
     tanf_states_in_state_benefits,
 )
 
@@ -108,6 +120,8 @@ VALUE_KEYS = (
     "federal_health_other",
     "state_health_programs",
     "state_only_coverage",
+    "unfunded_federal",
+    "unfunded_state",
     "healthier_oregon_overlap",
     "tanf",
     "tanf_in_state_benefits",
@@ -897,9 +911,15 @@ def health_pair(draw):
         cols = {
             key: np.asarray(draw(st.lists(SPENDING, min_size=n, max_size=n))) for key in HEALTH_KEYS
         }
-        # State-only coverage moves part of the federal share, never more.
-        share = np.asarray(draw(st.lists(SHARES, min_size=n, max_size=n)))
-        cols["state_only_coverage"] = cols["federal_health_split"] * share
+        # State-only coverage moves part of the federal share, and coverage no
+        # government pays for drops part of the rest and part of the state share.
+        def shares():
+            return np.asarray(draw(st.lists(SHARES, min_size=n, max_size=n)))
+
+        moved, unfunded = shares(), shares()
+        cols["state_only_coverage"] = cols["federal_health_split"] * moved
+        cols["unfunded_federal"] = cols["federal_health_split"] * (1 - moved) * unfunded
+        cols["unfunded_state"] = cols["state_health_split"] * shares()
         cols["fmap_split_cost"] = cols["federal_health_split"] + cols["state_health_split"]
         cols["state_tax"] = draw(st.lists(FLOATS, min_size=n, max_size=n))
         cols["tanf_in_state_benefits"] = np.where(np.asarray(state) == "MA", cols["tanf"], 0.0)
@@ -920,8 +940,12 @@ def test_health_spending_is_conserved(pair):
             + frame["federal_health_other"]
             + frame["state_health_programs"]
         )
+        unfunded = frame["unfunded_federal"] + frame["unfunded_state"]
         np.testing.assert_allclose(
-            frame["state_health"] + frame["federal_health"], every_program, rtol=1e-12, atol=1e-6
+            frame["state_health"] + frame["federal_health"],
+            every_program - unfunded,
+            rtol=1e-12,
+            atol=1e-6,
         )
         # A state's line pays the TANF it doesn't already hold, and only that.
         np.testing.assert_allclose(
@@ -1047,6 +1071,59 @@ def test_check_health_split_refuses_gaps():
     )
     with pytest.raises(AssertionError, match="moves more"):
         check_health_split(overmoved)
+    # The move and the unfunded federal share draw on the same federal share.
+    overdropped = _frame(
+        [STATE],
+        [1.0],
+        fmap_split_cost=[100.0],
+        federal_health_split=[50.0],
+        state_health_split=[50.0],
+        state_only_coverage=[30.0],
+        unfunded_federal=[30.0],
+    )
+    with pytest.raises(AssertionError, match="moves more"):
+        check_health_split(overdropped)
+    state = _frame(
+        [STATE],
+        [1.0],
+        fmap_split_cost=[100.0],
+        federal_health_split=[50.0],
+        state_health_split=[50.0],
+        unfunded_state=[60.0],
+    )
+    with pytest.raises(AssertionError, match="drops more"):
+        check_health_split(state)
+    negative = _frame(
+        [STATE],
+        [1.0],
+        fmap_split_cost=[100.0],
+        federal_health_split=[50.0],
+        state_health_split=[50.0],
+        unfunded_federal=[-5.0],
+    )
+    with pytest.raises(AssertionError, match="negative"):
+        check_health_split(negative)
+
+
+def test_unfunded_coverage_leaves_every_line():
+    # policyengine-us books $1,000 of Medicare Savings Program benefits for an
+    # undocumented Texas senior who gains Medicare eligibility: $600 federal
+    # and $400 state. No government pays for that coverage, so no line moves.
+    base = _frame(["TX", STATE], [1e9, 1e9])
+    scen = _frame(
+        ["TX", STATE],
+        [1e9, 1e9],
+        fmap_split_cost=[1000.0, 0.0],
+        federal_health_split=[600.0, 0.0],
+        state_health_split=[400.0, 0.0],
+        unfunded_federal=[600.0, 0.0],
+        unfunded_state=[400.0, 0.0],
+    )
+    check_health_split(scen)
+    out = _health_tanf_accounting(base, scen, {"TX": 0.0, STATE: 0.0}, 0.0)
+    assert out["state_net_with_health_tanf_change_b"]["TX"] == pytest.approx(0.0)
+    assert out["health_federal_change_b"] == pytest.approx(0.0)
+    assert out["all_government_with_health_change_b"] == pytest.approx(0.0)
 
 
 def test_federally_eligible_status_examples():
@@ -1069,11 +1146,27 @@ def test_federally_eligible_status_examples():
     assert got.tolist() == [True, True, False, True, False, False, False]
 
 
-def _situation(state, people):
+def _situation(state, people, year=2026):
     return {
         "people": people,
-        "households": {"household": {"members": list(people), "state_code": {2026: state}}},
+        "households": {"household": {"members": list(people), "state_code": {year: state}}},
     }
+
+
+def _person(age, status="CITIZEN", income=0.0, year=2026, **inputs):
+    """A person who takes Medicaid up, with ``inputs`` set for ``year``."""
+    person = {
+        "age": {year: age},
+        "immigration_status": {year: status},
+        "employment_income": {year: income},
+        "takes_up_medicaid_if_eligible": {year: True},
+    }
+    person.update({name: {year: value} for name, value in inputs.items()})
+    return person
+
+
+def _person_values(sim, variable, year=2026):
+    return np.asarray(sim.calculate(variable, year), dtype=float)
 
 
 def test_federally_eligible_status_matches_policyengine():
@@ -1133,41 +1226,73 @@ def test_state_only_coverage_matches_policyengine():
     assert state_only_coverage(sim, 2026).tolist() == pytest.approx([federal[2]])
 
 
-def test_state_only_federal_share_examples():
-    # A citizen on Medicaid, an undocumented woman covered through CHIP's
-    # unborn-child option, a DACA child on CHIP and an undocumented adult on
-    # state-funded Medicaid with a Medicare Savings Program share.
-    federal = [True, False, False, False]
-    shares = {
-        "medicaid_federal_cost": [100.0, 0.0, 0.0, 900.0],
-        "chip_federal_cost": [0.0, 300.0, 200.0, 0.0],
-        "msp_federal_cost": [0.0, 0.0, 0.0, 10.0],
+def test_state_only_split_examples():
+    # 0. A citizen on Medicaid.
+    # 1. An undocumented woman covered through CHIP's unborn-child option.
+    # 2. A DACA child on CHIP in a state whose own rule covers her (New York).
+    # 3. A DACA child on CHIP in a state with no such rule (Florida).
+    # 4. An undocumented adult on state-funded Medicaid with a Medicare Savings
+    #    Program share.
+    # 5. An undocumented pregnant woman on Medicaid in a state that takes the
+    #    FCEP option, with income under its limit (California).
+    federal = [True, False, False, False, False, False]
+    costs = {
+        "medicaid_federal_cost": [100.0, 0.0, 0.0, 0.0, 900.0, 800.0],
+        "chip_federal_cost": [0.0, 300.0, 200.0, 250.0, 0.0, 0.0],
+        "msp_federal_cost": [0.0, 0.0, 0.0, 0.0, 10.0, 0.0],
+        "medicaid_state_cost": [100.0, 0.0, 0.0, 0.0, 900.0, 800.0],
+        "chip_state_cost": [0.0, 120.0, 100.0, 110.0, 0.0, 0.0],
+        "msp_state_cost": [0.0, 0.0, 0.0, 0.0, 6.0, 0.0],
     }
-    fcep = [False, True, False, False]
-    got = state_only_federal_share(federal, shares, fcep)
-    assert got.tolist() == [0.0, 0.0, 200.0, 910.0]
+    fcep = [False, True, False, False, False, False]
+    pregnancy_match = [False, True, False, False, False, True]
+    state_rule = [True, False, True, False, True, True]
+    moved, unfunded_federal, unfunded_state = state_only_split(
+        federal, costs, fcep, pregnancy_match, state_rule
+    )
+    assert moved.tolist() == [0.0, 0.0, 200.0, 0.0, 900.0, 0.0]
+    assert unfunded_federal.tolist() == [0.0, 0.0, 0.0, 250.0, 10.0, 0.0]
+    assert unfunded_state.tolist() == [0.0, 0.0, 0.0, 110.0, 6.0, 0.0]
 
 
 @settings(max_examples=300, deadline=None)
 @given(st.data())
-def test_state_only_federal_share_bounds(data):
+def test_state_only_split_bounds(data):
     n = data.draw(st.integers(1, 30))
-    federal = np.asarray(data.draw(st.lists(st.booleans(), min_size=n, max_size=n)))
-    shares = {
+
+    def flags():
+        return np.asarray(data.draw(st.lists(st.booleans(), min_size=n, max_size=n)))
+
+    federal, fcep, pregnancy_match, state_rule = flags(), flags(), flags(), flags()
+    costs = {
         v: np.asarray(data.draw(st.lists(SPENDING, min_size=n, max_size=n)))
-        for v in FEDERAL_SHARE_COSTS
+        for v in FEDERAL_SHARE_COSTS + STATE_SHARE_COSTS
     }
-    fcep = np.asarray(data.draw(st.lists(st.booleans(), min_size=n, max_size=n)))
-    moved = state_only_federal_share(federal, shares, fcep)
-    total = sum(shares.values())
-    assert (moved >= 0).all()
-    assert (moved <= total + 1e-9).all()
-    assert (moved[federal] == 0).all()
-    np.testing.assert_allclose(
-        moved[~federal & fcep],
-        (shares["medicaid_federal_cost"] + shares["msp_federal_cost"])[~federal & fcep],
+    moved, unfunded_federal, unfunded_state = state_only_split(
+        federal, costs, fcep, pregnancy_match, state_rule
     )
-    np.testing.assert_allclose(moved[~federal & ~fcep], total[~federal & ~fcep])
+    federal_total = sum(costs[v] for v in FEDERAL_SHARE_COSTS)
+    state_total = sum(costs[v] for v in STATE_SHARE_COSTS)
+    for part in (moved, unfunded_federal, unfunded_state):
+        assert (part >= 0).all()
+        # Nothing moves or drops for anyone federal matching covers.
+        assert (part[federal] == 0).all()
+    assert (moved + unfunded_federal <= federal_total + 1e-9).all()
+    assert (unfunded_state <= state_total + 1e-9).all()
+    blocked = ~federal
+    # Medicaid's federal share moves unless the FCEP state matches a pregnancy.
+    medicaid = costs["medicaid_federal_cost"]
+    chip, chip_state = costs["chip_federal_cost"], costs["chip_state_cost"]
+    msp, msp_state = costs["msp_federal_cost"], costs["msp_state_cost"]
+    expected_moved = np.where(blocked & ~pregnancy_match, medicaid, 0.0) + np.where(
+        blocked & ~fcep & state_rule, chip, 0.0
+    )
+    np.testing.assert_allclose(moved, expected_moved)
+    # CHIP outside a state rule and the Medicare Savings Programs drop out,
+    # both shares; FCEP coverage never moves or drops.
+    dropped_chip = blocked & ~fcep & ~state_rule
+    np.testing.assert_allclose(unfunded_federal, np.where(dropped_chip, chip, 0.0) + np.where(blocked, msp, 0.0))
+    np.testing.assert_allclose(unfunded_state, np.where(dropped_chip, chip_state, 0.0) + np.where(blocked, msp_state, 0.0))
 
 
 def test_state_only_coverage_keeps_fcep_match_federal():
@@ -1190,7 +1315,9 @@ def test_state_only_coverage_keeps_fcep_match_federal():
     assert np.asarray(sim.calculate("is_chip_fcep_eligible_person", 2026)).tolist() == [True]
     assert np.asarray(sim.calculate("chip_enrolled", 2026)).tolist() == [True]
     assert float(np.asarray(sim.calculate("chip_federal_cost", 2026))[0]) > 0
-    assert state_only_coverage(sim, 2026).tolist() == pytest.approx([0.0])
+    accounting = state_only_accounting(sim, 2026)
+    for key in ("state_only_coverage", "unfunded_federal", "unfunded_state"):
+        assert accounting[key].tolist() == pytest.approx([0.0]), key
 
 
 def test_check_moved_statuses_examples():
@@ -1242,8 +1369,6 @@ def test_state_only_coverage_refuses_a_status_the_election_covers():
     # Medi-Cal enrolls a TPS child whom the federal test doesn't match. A state
     # that took the 42 USC 1396b(v)(4)(A) election gets federal matching for
     # the child, so the move refuses to shift the child's federal share.
-    # (policyengine-us 1.764.6 enrolls no permanent-resident child in the
-    # five-year bar, so a simulation can't reach that case.)
     people = {
         "parent": {"age": {2026: 30}, "immigration_status": {2026: "CITIZEN"}},
         "tps_child": {"age": {2026: 5}, "immigration_status": {2026: "TPS"}},
@@ -1256,6 +1381,103 @@ def test_state_only_coverage_refuses_a_status_the_election_covers():
     assert federal[1] > 0, "the TPS child should be enrolled with a federal share booked"
     with pytest.raises(ValueError, match="for people with TPS status"):
         state_only_coverage(sim, 2026)
+
+
+def test_state_only_accounting_sorts_chip_by_the_state_rule():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    # policyengine-us 1.764.6's CHIP test bars only an UNDOCUMENTED label, so
+    # it enrolls a DACA child in CHIP in any state. New York's own rule covers
+    # the child, so New York pays the federal share too. Florida has no such
+    # rule, and federal CHIP funds don't cover the child, so no government
+    # pays and neither share counts.
+    for state, age, moves in (("NY", 10, True), ("FL", 16, False)):
+        people = {"parent": _person(40, income=20_000), "child": _person(age, "DACA")}
+        sim = Simulation(situation=_situation(state, people))
+        chip = _person_values(sim, "chip_federal_cost")[1]
+        chip_state = _person_values(sim, "chip_state_cost")[1]
+        assert chip > 0 and chip_state > 0, f"{state}: the DACA child should be on CHIP"
+        accounting = state_only_accounting(sim, 2026)
+        moved = [chip] if moves else [0.0]
+        dropped = [0.0] if moves else [chip]
+        dropped_state = [0.0] if moves else [chip_state]
+        assert accounting["state_only_coverage"].tolist() == pytest.approx(moved), state
+        assert accounting["unfunded_federal"].tolist() == pytest.approx(dropped), state
+        assert accounting["unfunded_state"].tolist() == pytest.approx(dropped_state), state
+
+
+def test_state_only_accounting_drops_medicare_savings_for_an_undocumented_senior():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    # policyengine-us 1.764.6 gives the Medicare Savings Programs no
+    # immigration test, so it books them for an undocumented Texas senior.
+    # Federal law bars that coverage and Texas offers none, so no line counts
+    # it, though healthcare_benefit_value prices it.
+    sim = Simulation(situation=_situation("TX", {"senior": _person(70, "UNDOCUMENTED", 9_000)}))
+    msp = _person_values(sim, "msp_federal_cost")[0]
+    msp_state = _person_values(sim, "msp_state_cost")[0]
+    assert msp > 0 and msp_state > 0, "policyengine-us no longer books this senior's MSP"
+    frame = household_frame(sim, 2026)
+    assert frame["state_only_coverage"].tolist() == pytest.approx([0.0])
+    assert frame["unfunded_federal"].tolist() == pytest.approx([msp])
+    assert frame["unfunded_state"].tolist() == pytest.approx([msp_state])
+    assert frame["health_total"].tolist() == pytest.approx([0.0], abs=1e-3)
+    assert frame["health_value"].tolist() == pytest.approx([msp + msp_state])
+
+
+def test_state_only_accounting_keeps_a_pregnancy_match_federal():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    # Medi-Cal covers an undocumented pregnant woman and her undocumented son
+    # under California's own rule, so California pays the son's federal share.
+    # California also takes CHIP's unborn-child (FCEP) option, so federal funds
+    # match coverage for a pregnant woman under its income limit whatever her
+    # status, and her federal share stays federal.
+    people = {
+        "mother": _person(28, "UNDOCUMENTED", is_pregnant=True),
+        "son": _person(6, "UNDOCUMENTED"),
+    }
+    sim = Simulation(situation=_situation("CA", people))
+    medicaid = _person_values(sim, "medicaid_federal_cost")
+    assert (medicaid > 0).all(), "Medi-Cal should enroll both"
+    accounting = state_only_accounting(sim, 2026)
+    assert accounting["state_only_coverage"].tolist() == pytest.approx([medicaid[1]])
+    assert accounting["unfunded_federal"].tolist() == pytest.approx([0.0])
+
+
+def test_state_only_accounting_refuses_federally_matched_children():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    # policyengine-us enrolls a Texas permanent-resident child in the five-year
+    # bar in CHIP. The federal test can't match the child, but a state that
+    # took the 42 USC 1396b(v)(4)(A) election can, so the accounting refuses.
+    people = {
+        "parent": _person(35, income=25_000),
+        "child": _person(8, "LEGAL_PERMANENT_RESIDENT", years_since_us_entry=2),
+    }
+    sim = Simulation(situation=_situation("TX", people))
+    assert _person_values(sim, "chip_federal_cost")[1] > 0
+    with pytest.raises(ValueError, match="for people with LEGAL_PERMANENT_RESIDENT status"):
+        state_only_accounting(sim, 2026)
+    # policyengine-us matches a refugee child's Medicaid in 2026. From 2027 its
+    # federal test drops refugees, while its CHIP test still enrolls the child,
+    # so the accounting refuses a 2027 run.
+    for year, refuses in ((2026, False), (2027, True)):
+        people = {
+            "parent": _person(35, income=25_000, year=year),
+            "child": _person(8, "REFUGEE", year=year),
+        }
+        sim = Simulation(situation=_situation("TX", people, year))
+        if refuses:
+            with pytest.raises(ValueError, match="for people with REFUGEE status"):
+                state_only_accounting(sim, year)
+        else:
+            accounting = state_only_accounting(sim, year)
+            assert all(not values.any() for values in accounting.values())
 
 
 # --- Medicaid priced at the baseline ------------------------------------------
@@ -1369,6 +1591,61 @@ def test_household_frame_drops_healthier_oregon_for_medicaid_enrollees():
     )
     assert frame["state_health_programs"].tolist() == pytest.approx((programs - oregon).tolist())
     assert frame["state_health"][0] > 0 and frame["tanf_in_state_benefits"].tolist() == [0.0]
+
+
+def test_household_frame_drops_healthier_oregon_beside_chip_and_for_non_takers():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    # policyengine-us books Healthier Oregon for a DACA teen it also enrolls in
+    # CHIP, and for an undocumented adult who doesn't take Medicaid up. The
+    # frame counts the CHIP coverage for the first and nothing for the second.
+    teen = Simulation(
+        situation=_situation("OR", {"parent": _person(40, income=20_000), "teen": _person(16, "DACA")})
+    )
+    adult = Simulation(
+        situation=_situation("OR", {"adult": _person(35, "UNDOCUMENTED", takes_up_medicaid_if_eligible=False)})
+    )
+    for sim, also_priced in ((teen, "chip_enrolled"), (adult, None)):
+        oregon = _person_values(sim, "or_healthier_oregon_cost")
+        person = int(np.argmax(oregon))
+        assert oregon[person] > 0, "policyengine-us no longer books Healthier Oregon here"
+        if also_priced:
+            assert _person_values(sim, also_priced)[person] > 0
+        frame = household_frame(sim, 2026)
+        assert frame["healthier_oregon_overlap"].tolist() == pytest.approx([oregon[person]])
+    assert household_frame(adult, 2026)["health_total"].tolist() == pytest.approx([0.0], abs=1e-3)
+
+
+def test_household_frame_leaves_out_omnisalud():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    # policyengine-us 1.764.6's co_omnisalud adds the benchmark premium for a
+    # citizen whose undocumented spouse the program would cover, on top of the
+    # citizen's premium tax credit, and nothing for the undocumented adult it
+    # covers. The frame leaves it out and keeps the tax credit. When
+    # policyengine-us prices OmniSalud for the people it covers, the last
+    # assertion fails, and the study should count the program again.
+    def colorado(people, married):
+        situation = _situation("CO", people)
+        situation["tax_units"] = {"tax_unit": {"members": list(people)}}
+        if married:
+            situation["marital_units"] = {"marital_unit": {"members": list(people)}}
+        return Simulation(situation=situation)
+
+    couple = colorado(
+        {"citizen": _person(35, income=32_350), "spouse": _person(35, "UNDOCUMENTED")}, True
+    )
+    omnisalud = _person_values(couple, "co_omnisalud").sum()
+    credit = _person_values(couple, "assigned_aca_ptc").sum()
+    assert omnisalud > 0 and credit > 0
+    frame = household_frame(couple, 2026)
+    assert frame["excluded_health_programs"].tolist() == pytest.approx([omnisalud])
+    assert frame["federal_health"].tolist() == pytest.approx([credit])
+    assert frame["state_health"].tolist() == pytest.approx([0.0], abs=1e-3)
+    single = colorado({"adult": _person(35, "UNDOCUMENTED", 20_000)}, False)
+    assert _person_values(single, "co_omnisalud").sum() == 0.0
 
 
 def test_household_frame_carries_the_unlisted_state_subsidies():

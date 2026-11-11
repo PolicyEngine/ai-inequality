@@ -20,21 +20,45 @@ the household's state:
 
 * Medicaid, CHIP and the Medicare Savings Programs follow federal matching
   rules (``federal_benefit_cost`` and ``state_benefit_cost``, which
-  policyengine-us builds from ``gov.hhs.medicaid.cost_share``). We also charge
-  the state the federal share policyengine-us books for enrollees whose
-  immigration status bars federal matching (42 USC 1396b(v)). Federal funds
-  still match their emergency care, which this accounting can't separate, so
-  the charge overstates the state's cost. CHIP coverage through the
-  unborn-child option keeps its federal match (42 CFR 457.10).
+  policyengine-us builds from ``gov.hhs.medicaid.cost_share``). Federal law
+  bars federal matching, apart from emergency care, for enrollees whose
+  immigration status fails its test (42 USC 1396b(v)), and policyengine-us
+  books a federal share for them anyway. ``state_only_accounting`` sorts those
+  shares by whether a state rule in policyengine-us covers the enrollee:
+
+  - We charge the state the federal share of Medicaid, and of CHIP in a state
+    whose ``undocumented_immigrant`` rule covers people without satisfactory
+    status, since the state pays for that coverage alone. Federal funds still
+    match these enrollees' emergency care, labor and delivery included (42 USC
+    1396b(v)(3)), so the charge likely overstates the state's cost.
+  - We keep the federal share for a pregnant enrollee in a state that takes
+    CHIP's unborn-child option, with income under that option's limit: federal
+    CHIP funds match her prenatal care whatever her status, and Medicaid
+    matches her delivery as emergency care. CHIP coverage through the option
+    itself keeps its federal match too. 42 CFR 457.10 counts an unborn child as
+    a child, and CMS read it to cover unborn children whatever the parent's
+    status (67 FR 61956, 61965-66); 42 USC 1397ll(f)(1)(A) preserves the option.
+  - We leave out CHIP that policyengine-us books in a state with no such rule,
+    and the Medicare Savings Programs for these enrollees, from both
+    governments' lines: no government pays for that coverage.
+    policyengine-us 1.764.6 bars only an ``UNDOCUMENTED`` label from CHIP and
+    tests no status for the Medicare Savings Programs.
 * The federal government pays ACA premium tax credits and the Basic Health
   Program.
-* The state pays its own health programs: Colorado's OmniSalud and Healthier
-  Oregon at policyengine-us 1.764.6, and the state premium subsidies that later
-  releases model. Healthier Oregon counts only for people policyengine-us
-  doesn't also enroll in Medicaid, because it prices their coverage in both.
+* The state pays its own health programs: Healthier Oregon at policyengine-us
+  1.764.6, and the state premium subsidies that later releases model. We leave
+  Healthier Oregon out for people policyengine-us also prices in Medicaid or
+  CHIP, and for people who don't take Medicaid up, since its cost has no
+  enrollment or take-up test of its own. We leave out Colorado's OmniSalud
+  (``co_omnisalud``): policyengine-us 1.764.6 prices it as the tax unit's
+  benchmark premium, which counts only members who can buy Marketplace
+  coverage, so it never prices the people OmniSalud covers.
 
-Federal law fixes each state's TANF block grant, so we charge every TANF change
-to the states, and each TANF dollar counts once.
+Congress fixes each state's TANF block grant (42 USC 603(a)(1)), so we charge
+every TANF change to the states, and each TANF dollar counts once. A needy
+state can also draw on a contingency fund that Congress caps at $608 million
+a year (42 USC 603(b)), so the charge can overstate the states' share by up to
+that amount.
 
 policyengine-us spreads each state's fixed Medicaid spending over the
 enrollees in each simulation (``medicaid_slcsp_state_denominator``). Left to
@@ -64,10 +88,9 @@ FMAP_SPLIT_HEALTH = ("medicaid_cost", "chip", "msp_cost")
 #: received) mostly pay for.
 FEDERAL_HEALTH = ("assigned_aca_ptc", "basic_health_program")
 #: State health programs across policyengine-us releases. 1.764.6 models
-#: OmniSalud and Healthier Oregon; later releases add the premium subsidies.
+#: Healthier Oregon; later releases add the premium subsidies.
 STATE_HEALTH = (
     "assigned_ca_premium_subsidy",
-    "co_omnisalud",
     "assigned_co_premium_assistance",
     "md_premium_assistance",
     "assigned_nm_premium_assistance",
@@ -78,6 +101,13 @@ STATE_HEALTH = (
     "vt_premium_assistance",
     "wa_cascade_care_savings",
 )
+#: Programs ``healthcare_benefit_value`` adds that we leave out, because
+#: policyengine-us prices them for people the program doesn't cover.
+#: ``co_omnisalud`` adds the tax unit's ``slcsp``, which sums the benchmark
+#: premiums of the members who can buy Marketplace coverage (``pays_aca_premium``
+#: excludes ``UNDOCUMENTED`` and ``DACA``), so it prices the lawfully present
+#: members, whose premium tax credit already prices the same premium.
+EXCLUDED_HEALTH = ("co_omnisalud",)
 #: Names ``gov.household.household_health_benefits`` uses at 1.764.6 for
 #: programs ``healthcare_benefit_value`` adds under the name they add:
 #: ``medicaid`` adds ``medicaid_cost`` and ``premium_tax_credit`` adds
@@ -88,17 +118,21 @@ HEALTH_LIST_ALIASES = {"medicaid": "medicaid_cost", "premium_tax_credit": "assig
 FEDERAL_SHARE_COSTS = ("medicaid_federal_cost", "chip_federal_cost", "msp_federal_cost")
 STATE_SHARE_COSTS = ("medicaid_state_cost", "chip_state_cost", "msp_state_cost")
 #: Healthier Oregon covers people federal Medicaid can't. Its cost has no
-#: enrollment test, and policyengine-us also enrolls Oregon's undocumented
-#: residents in Medicaid, so it would price their coverage twice.
+#: enrollment or take-up test, and policyengine-us also enrolls Oregon's
+#: undocumented residents in Medicaid and DACA children in CHIP, so it would
+#: price their coverage twice.
 HEALTHIER_OREGON = "or_healthier_oregon_cost"
+HEALTHIER_OREGON_ALSO_PRICED = ("medicaid_enrolled", "chip_enrolled")
+MEDICAID_TAKE_UP = "takes_up_medicaid_if_eligible"
 #: Whether CHIP's From-Conception-to-End-of-Pregnancy option covers a pregnant
 #: person. The unborn child is the beneficiary, so federal CHIP funds match the
 #: coverage whatever the parent's immigration status.
 FCEP_ELIGIBLE = "is_chip_fcep_eligible_person"
 CHIP_ENROLLED = "chip_enrolled"
-#: The immigration statuses whose federal shares ``state_only_coverage`` may
-#: move. CMS counts neither as lawfully residing for the election in 42 USC
-#: 1396b(v)(4)(A), so no state gets federal matching for them under it.
+#: The labels whose federal shares ``state_only_accounting`` may move or leave
+#: out. CMS counts neither status as lawfully residing for the election in 42
+#: USC 1396b(v)(4)(A), so no state gets federal matching for people who hold
+#: them under it.
 STATE_ONLY_STATUSES = ("UNDOCUMENTED", "DACA")
 #: Spreads each state's Medicaid spending over that state's enrollees.
 MEDICAID_DENOMINATOR = "medicaid_slcsp_state_denominator"
@@ -118,6 +152,9 @@ TOTAL_KEYS = (
     "state_health_programs",
     "state_only_coverage",
     "healthier_oregon_overlap",
+    "unfunded_federal",
+    "unfunded_state",
+    "excluded_health_programs",
     "tanf",
     "tanf_in_state_benefits",
     "tanf_charge",
@@ -157,8 +194,10 @@ def classify_health_programs(
     ``gov.household.household_benefits`` and
     ``gov.household.household_state_benefits``.
 
-    Returns ``(fmap_split, federal, state)``, each in this module's order.
-    Refuses a model this accounting would get wrong: one that puts health
+    Returns ``(fmap_split, federal, state, excluded)``, each in this module's
+    order; ``excluded`` holds the programs in ``EXCLUDED_HEALTH`` that the model
+    prices, which the totals leave out. Refuses a model this accounting would
+    get wrong: one that puts health
     benefits in net income (``household_benefits`` would already count them),
     prices a health program this module doesn't classify, lists a health
     benefit ``healthcare_benefit_value`` doesn't price, splits other costs
@@ -171,7 +210,9 @@ def classify_health_programs(
             "already counts them; the health accounting would count them twice"
         )
     value = set(health_value_programs)
-    known = set(FMAP_SPLIT_HEALTH) | set(FEDERAL_HEALTH) | set(STATE_HEALTH)
+    known = (
+        set(FMAP_SPLIT_HEALTH) | set(FEDERAL_HEALTH) | set(STATE_HEALTH) | set(EXCLUDED_HEALTH)
+    )
     unknown = value - known
     if unknown:
         raise ValueError(
@@ -207,6 +248,7 @@ def classify_health_programs(
         tuple(p for p in FMAP_SPLIT_HEALTH if p in value),
         tuple(p for p in FEDERAL_HEALTH if p in value),
         tuple(p for p in STATE_HEALTH if p in value),
+        tuple(p for p in EXCLUDED_HEALTH if p in value),
     )
 
 
@@ -224,12 +266,24 @@ def health_programs(sim, year):
 
 
 def programs_metadata(sim, year):
-    """The programs the health and TANF lines count, by who pays, for a run's record."""
-    fmap_split, federal, state = health_programs(sim, year)
+    """The programs the health and TANF lines count, by who pays, for a run's record.
+
+    ``excluded`` lists the programs the model prices that the totals leave out,
+    and ``unfunded`` names the coverage ``state_only_accounting`` leaves out of
+    both governments' lines.
+    """
+    fmap_split, federal, state, excluded = health_programs(sim, year)
     return {
         "split_by_federal_matching": list(fmap_split),
         "federal": list(federal),
         "state": list(state),
+        "excluded": list(excluded),
+        "unfunded": (
+            "CHIP policyengine-us books for people whose immigration status fails "
+            "the federal test, in states with no undocumented_immigrant rule, apart "
+            "from the unborn-child option; and Medicare Savings Program benefits "
+            "for people whose status fails the federal test"
+        ),
         "tanf_programs_in_state_benefits": tanf_programs_in_state_benefits(
             state_tanf_variables(sim),
             _parameters(sim, year).gov.household.household_state_benefits,
@@ -299,36 +353,57 @@ def federally_eligible_status(status, years_since_entry, p):
     return citizen | (qualified & (bar_exempt | past_bar))
 
 
-def state_only_federal_share(federal, shares, fcep):
-    """Federal share to move to the state, by person.
+def state_only_split(federal, costs, fcep, pregnancy_match, state_rule):
+    """Federal shares to move to the state, and coverage no government pays for, by person.
 
     ``federal`` says whether each person's immigration status lets federal
-    funds match their coverage, ``shares`` maps each name in
-    ``FEDERAL_SHARE_COSTS`` to the federal share policyengine-us books for each
-    person, and ``fcep`` says whether CHIP's unborn-child (FCEP) option covers
-    each person. For people federal matching can't cover, the Medicaid,
-    Medicare Savings Program and CHIP shares move, except CHIP for people the
-    FCEP option covers, which federal funds match whatever the parent's status.
+    funds match their coverage, and ``costs`` maps each name in
+    ``FEDERAL_SHARE_COSTS`` and ``STATE_SHARE_COSTS`` to the share
+    policyengine-us books for each person. ``fcep`` says whether CHIP's
+    unborn-child (FCEP) option covers the person, ``pregnancy_match`` whether
+    she is pregnant in a state that takes that option, with income under its
+    limit, and ``state_rule`` whether the person's state covers people without
+    satisfactory status under its ``undocumented_immigrant`` rule.
+
+    For people federal matching can't cover, returns ``(moved, unfunded_federal,
+    unfunded_state)``:
+
+    * ``moved``: the federal share of Medicaid, apart from pregnant enrollees
+      in ``pregnancy_match``, plus the federal share of CHIP where
+      ``state_rule`` holds, apart from FCEP coverage. policyengine-us enrolls
+      such people in Medicaid only through a state rule, so the state pays.
+    * ``unfunded_federal`` and ``unfunded_state``: both shares of CHIP outside
+      ``state_rule`` (apart from FCEP coverage) and of the Medicare Savings
+      Programs. No government pays for that coverage.
     """
-    chip = np.where(
-        np.asarray(fcep, dtype=bool),
-        0.0,
-        np.asarray(shares["chip_federal_cost"], dtype=float),
+    blocked = ~np.asarray(federal, dtype=bool)
+    fcep = np.asarray(fcep, dtype=bool)
+    keep_medicaid = np.asarray(pregnancy_match, dtype=bool)
+    state_rule = np.asarray(state_rule, dtype=bool)
+
+    def cost(name):
+        return np.asarray(costs[name], dtype=float)
+
+    chip_blocked = blocked & ~fcep
+    moved = np.where(blocked & ~keep_medicaid, cost("medicaid_federal_cost"), 0.0) + np.where(
+        chip_blocked & state_rule, cost("chip_federal_cost"), 0.0
     )
-    movable = (
-        np.asarray(shares["medicaid_federal_cost"], dtype=float)
-        + chip
-        + np.asarray(shares["msp_federal_cost"], dtype=float)
+    chip_unfunded = chip_blocked & ~state_rule
+    unfunded_federal = np.where(chip_unfunded, cost("chip_federal_cost"), 0.0) + np.where(
+        blocked, cost("msp_federal_cost"), 0.0
     )
-    return np.where(np.asarray(federal, dtype=bool), 0.0, movable)
+    unfunded_state = np.where(chip_unfunded, cost("chip_state_cost"), 0.0) + np.where(
+        blocked, cost("msp_state_cost"), 0.0
+    )
+    return moved, unfunded_federal, unfunded_state
 
 
 def check_moved_statuses(status, moved):
-    """Raise if anyone with a moved federal share holds a status outside ``STATE_ONLY_STATUSES``.
+    """Raise if anyone whose share we move or leave out carries a label outside ``STATE_ONLY_STATUSES``.
 
-    ``status`` gives each person's immigration status and ``moved`` the federal
-    share ``state_only_federal_share`` moves for them. A state that took the
-    election in 42 USC 1396b(v)(4)(A) gets federal matching for lawfully
+    ``status`` gives each person's immigration status label and ``moved`` the
+    share ``state_only_split`` moves or leaves out for them. A state that took
+    the election in 42 USC 1396b(v)(4)(A) gets federal matching for lawfully
     residing children and pregnant women with other statuses, and the federal
     test doesn't apply the election.
     """
@@ -337,64 +412,114 @@ def check_moved_statuses(status, moved):
     others = sorted(set(reached.tolist()) - set(STATE_ONLY_STATUSES))
     if others:
         raise ValueError(
-            "state_only_coverage would move federal shares for people with "
-            f"{', '.join(others)} status. A state that took the election in "
+            "state_only_accounting would move or leave out federal shares for people "
+            f"with {', '.join(others)} status. A state that took the election in "
             "42 USC 1396b(v)(4)(A) gets federal matching for lawfully residing "
             "children and pregnant women, so apply the election to the federal "
             "test before moving their shares."
         )
 
 
-def state_only_coverage(sim, year):
-    """Federal share policyengine-us books for coverage only a state pays for, by household.
+def _by_state(parameter, state):
+    """A state-indexed parameter's value for each entry of ``state``."""
+    values = {code: float(getattr(parameter, code, 0.0)) for code in np.unique(state)}
+    return np.asarray([values[code] for code in state], dtype=float)
 
-    ``medicaid_federal_share`` and ``chip_federal_share`` apply federal matching
-    rates to every enrollee, including people a state covers whatever their
-    immigration status, such as California's Medi-Cal for undocumented and
-    DACA residents. Federal law matches only emergency care for such people
-    (42 USC 1396b(v)), so this moves their whole federal share to the state.
-    The state spending totals that ``medicaid_cost`` spreads may count that
-    federally matched emergency care. If they do, the move overstates the
-    state's cost by the federal share of their emergency care, and this
-    accounting can't measure that share. The line depends on the immigration
-    status the data assign: Microcosm treats anyone who reports Medicaid in the
-    CPS as documented.
+
+def state_only_accounting(sim, year):
+    """Federal shares a state pays alone, and coverage no government pays, by household.
+
+    ``medicaid_federal_share``, ``chip_federal_share`` and ``msp_federal_cost``
+    apply federal matching rates to every enrollee, including people whose
+    immigration status fails the federal test. Federal law matches only their
+    emergency care, labor and delivery included (42 USC 1396b(v)(1)-(3)).
+    policyengine-us enrolls such people in Medicaid only through a state rule
+    (``undocumented_immigrant``, California's own rule, its foster youth rule
+    and Illinois's HBI programs), such as California's Medi-Cal for
+    undocumented and DACA residents. It also books CHIP for a DACA child in
+    any state, since its CHIP test bars only an ``UNDOCUMENTED`` label, and the
+    Medicare Savings Programs, which it gives no status test.
+    ``state_only_split`` sorts each share. The state spending totals that
+    ``medicaid_cost`` spreads likely count the federally matched emergency
+    care, so the move likely overstates the state's cost by the federal share
+    of that care, which this accounting can't measure.
+
+    The split depends on the immigration status labels the data assign.
+    Microcosm treats anyone who reports Medicaid coverage in the prior year
+    (the CPS's ``CAID``) as documented. It assigns ``UNDOCUMENTED`` to the
+    non-citizens left after its documented-status tests, ``DACA`` by a cohort
+    test on work-authorized non-citizens, and no Temporary Protected Status
+    label. So some people who carry the ``UNDOCUMENTED`` or ``DACA`` label hold
+    a status CMS's letter SHO #10-006 counts as lawfully present, such as TPS,
+    and the federal test can't see them.
 
     The federal test, like policyengine-us 1.764.6, leaves out the election in
     42 USC 1396b(v)(4)(A). Under it, a state can cover lawfully residing
     children under 21 and pregnant women with federal matching, even during the
     five-year bar. policyengine-us 2.25.0 models the election in Medicaid and
     CHIP (PolicyEngine/policyengine-us#9737), so a run on 2.25.0 or later needs
-    the federal test to apply it too. For the election, CMS's letter SHO
-    #10-006 counts TPS holders as lawfully present, and SHO #12-002 excludes
-    DACA recipients. Undocumented immigrants hold none of the statuses SHO
-    #10-006 lists. Microcosm's build p assigns no one Temporary Protected
-    Status and leaves ``years_since_us_entry`` at its default of 5, so everyone
-    this moves has undocumented or DACA status. No state gets federal matching
-    for them under the election, and ``check_moved_statuses`` raises if a later
-    build moves anyone else.
+    the federal test to apply it too. For the election, SHO #10-006 counts TPS
+    holders as lawfully present, and SHO #12-002 excludes DACA recipients.
+    Undocumented immigrants hold none of the statuses SHO #10-006 lists.
+    ``check_moved_statuses`` raises if the split reaches a label other than
+    ``UNDOCUMENTED`` or ``DACA``, such as a later build's TPS label or a
+    permanent resident in the five-year bar.
     """
-    p = _parameters(sim, year).gov.hhs.medicaid.eligibility
-    status = sim.calculate("immigration_status", period=year, decode_enums=True)
+    parameters = _parameters(sim, year)
+    p = parameters.gov.hhs.medicaid.eligibility
+    status = np.asarray(sim.calculate("immigration_status", period=year, decode_enums=True))
     years = sim.calculate("years_since_us_entry", period=year)
-    federal = federally_eligible_status(np.asarray(status), np.asarray(years), p)
-    shares = {
-        v: np.asarray(sim.calculate(v, period=year), dtype=float) for v in FEDERAL_SHARE_COSTS
+    federal = federally_eligible_status(status, np.asarray(years), p)
+    costs = {
+        v: np.asarray(sim.calculate(v, period=year), dtype=float)
+        for v in FEDERAL_SHARE_COSTS + STATE_SHARE_COSTS
     }
     fcep = np.asarray(sim.calculate(FCEP_ELIGIBLE, period=year), dtype=bool) & np.asarray(
         sim.calculate(CHIP_ENROLLED, period=year), dtype=bool
     )
-    moved = state_only_federal_share(federal, shares, fcep)
-    check_moved_statuses(status, moved)
-    return np.asarray(sim.map_result(moved, "person", "household"), dtype=float)
+    state = np.asarray(sim.calculate("state_code_str", period=year, map_to="person")).astype(str)
+    fcep_limit = _by_state(parameters.gov.hhs.chip.fcep.income_limit, state)
+    pregnancy_match = (
+        np.asarray(sim.calculate("is_pregnant", period=year), dtype=bool)
+        & (fcep_limit > 0)
+        & (np.asarray(sim.calculate("medicaid_income_level", period=year), dtype=float) <= fcep_limit)
+    )
+    state_rule = _by_state(p.undocumented_immigrant, state) > 0
+    moved, unfunded_federal, unfunded_state = state_only_split(
+        federal, costs, fcep, pregnancy_match, state_rule
+    )
+    check_moved_statuses(status, moved + unfunded_federal + unfunded_state)
+
+    def household(values):
+        return np.asarray(sim.map_result(values, "person", "household"), dtype=float)
+
+    return {
+        "state_only_coverage": household(moved),
+        "unfunded_federal": household(unfunded_federal),
+        "unfunded_state": household(unfunded_state),
+    }
+
+
+def state_only_coverage(sim, year):
+    """The federal share each household's state pays alone (``state_only_accounting``)."""
+    return state_only_accounting(sim, year)["state_only_coverage"]
 
 
 def healthier_oregon_overlap(sim, year):
-    """Healthier Oregon cost for people policyengine-us also enrolls in Medicaid, by household."""
+    """Healthier Oregon cost we leave out, by household.
+
+    Healthier Oregon's cost has no enrollment or take-up test, so we leave it
+    out for people policyengine-us also prices in Medicaid or CHIP and for
+    people who don't take Medicaid up.
+    """
     cost = np.asarray(sim.calculate(HEALTHIER_OREGON, period=year), dtype=float)
-    enrolled = np.asarray(sim.calculate("medicaid_enrolled", period=year), dtype=bool)
+    also_priced = np.zeros(cost.shape, dtype=bool)
+    for variable in HEALTHIER_OREGON_ALSO_PRICED:
+        also_priced |= np.asarray(sim.calculate(variable, period=year), dtype=bool)
+    declines = ~np.asarray(sim.calculate(MEDICAID_TAKE_UP, period=year), dtype=bool)
     return np.asarray(
-        sim.map_result(np.where(enrolled, cost, 0.0), "person", "household"), dtype=float
+        sim.map_result(np.where(also_priced | declines, cost, 0.0), "person", "household"),
+        dtype=float,
     )
 
 
@@ -404,17 +529,29 @@ def with_derived(frame):
     ``state_health`` is each household's health spending that falls on its
     state and ``federal_health`` the part that falls on the federal government;
     between them they hold every program in ``healthcare_benefit_value`` once,
-    less the Healthier Oregon overlap. ``tanf_charge`` is the household's TANF
-    less the copy its state's line already holds (``tanf_in_state_benefits``),
-    so that line and the charge hold its TANF once, as ``tanf`` pays it. The
-    charge turns negative for a family eligible for a listed program that
-    doesn't take TANF up.
+    less the Healthier Oregon overlap, the excluded programs and the coverage
+    no government pays for (``unfunded_federal`` and ``unfunded_state``). A
+    frame without those last arrays gets zeros. ``tanf_charge`` is the
+    household's TANF less the copy its state's line already holds
+    (``tanf_in_state_benefits``), so that line and the charge hold its TANF
+    once, as ``tanf`` pays it. The charge turns negative for a family eligible
+    for a listed program that doesn't take TANF up.
     """
+    zeros = np.zeros_like(np.asarray(frame["state_health_split"], dtype=float))
+    for key in ("unfunded_federal", "unfunded_state", "excluded_health_programs"):
+        if key not in frame:
+            frame[key] = zeros.copy()
     frame["state_health"] = (
-        frame["state_health_split"] + frame["state_only_coverage"] + frame["state_health_programs"]
+        frame["state_health_split"]
+        + frame["state_only_coverage"]
+        - frame["unfunded_state"]
+        + frame["state_health_programs"]
     )
     frame["federal_health"] = (
-        frame["federal_health_split"] - frame["state_only_coverage"] + frame["federal_health_other"]
+        frame["federal_health_split"]
+        - frame["state_only_coverage"]
+        - frame["unfunded_federal"]
+        + frame["federal_health_other"]
     )
     frame["health_total"] = frame["federal_health"] + frame["state_health"]
     frame["tanf_charge"] = frame["tanf"] - frame["tanf_in_state_benefits"]
@@ -451,8 +588,10 @@ def check_health_split(frame):
     """Refuse a frame whose federal and state shares don't add up.
 
     policyengine-us's federal and state shares must add up to the Medicaid,
-    CHIP and Medicare Savings Program costs they split, and the state-only move
-    can't exceed the federal share it comes from.
+    CHIP and Medicare Savings Program costs they split. The state-only move and
+    the unfunded federal share together can't exceed the federal share they
+    come from, nor the unfunded state share the state share, and none of them
+    can fall below zero.
     """
     _refuse_gap(
         "federal_benefit_cost + state_benefit_cost differ from Medicaid, CHIP and MSP cost",
@@ -460,21 +599,40 @@ def check_health_split(frame):
         frame["weight"],
         frame["fmap_split_cost"],
     )
+    zeros = np.zeros_like(np.asarray(frame["state_only_coverage"], dtype=float))
     moved = frame["state_only_coverage"]
-    if (moved < -1e-6).any() or (moved > frame["federal_health_split"] + 1e-6).any():
+    unfunded_federal = frame.get("unfunded_federal", zeros)
+    unfunded_state = frame.get("unfunded_state", zeros)
+    if (
+        (moved < -1e-6).any()
+        or (unfunded_federal < -1e-6).any()
+        or (unfunded_state < -1e-6).any()
+    ):
+        raise AssertionError("the state-only accounting moves or drops a negative share")
+    if (moved + unfunded_federal > frame["federal_health_split"] + 1e-6).any():
         raise AssertionError("state-only coverage moves more than the federal share it comes from")
+    if (unfunded_state > frame["state_health_split"] + 1e-6).any():
+        raise AssertionError("unfunded coverage drops more than the state share it comes from")
 
 
 def check_frame(frame):
     """Refuse a frame whose pieces don't add up.
 
     Beyond ``check_health_split``, the federal and state parts must hold
-    ``healthcare_benefit_value`` less the Healthier Oregon overlap.
+    ``healthcare_benefit_value`` less the Healthier Oregon overlap, the
+    excluded programs and the unfunded coverage.
     """
     check_health_split(frame)
+    zeros = np.zeros_like(np.asarray(frame["health_value"], dtype=float))
+    left_out = (
+        frame["healthier_oregon_overlap"]
+        + frame.get("excluded_health_programs", zeros)
+        + frame.get("unfunded_federal", zeros)
+        + frame.get("unfunded_state", zeros)
+    )
     _refuse_gap(
         f"the federal and state health parts differ from {HEALTH_VALUE_VARIABLE}",
-        frame["health_total"] - (frame["health_value"] - frame["healthier_oregon_overlap"]),
+        frame["health_total"] - (frame["health_value"] - left_out),
         frame["weight"],
         frame["health_value"],
     )
@@ -482,7 +640,7 @@ def check_frame(frame):
 
 def household_frame(sim, year):
     """Each household's health spending by payer and its TANF, as arrays."""
-    fmap_split, federal, state_programs = health_programs(sim, year)
+    fmap_split, federal, state_programs, excluded = health_programs(sim, year)
     parameters = _parameters(sim, year)
 
     def hh(variable):
@@ -518,7 +676,8 @@ def household_frame(sim, year):
         "federal_health_other": total(federal),
         "state_health_programs": total(state_programs) - overlap,
         "healthier_oregon_overlap": overlap,
-        "state_only_coverage": state_only_coverage(sim, year),
+        "excluded_health_programs": total(excluded),
+        **state_only_accounting(sim, year),
         "health_value": hh(HEALTH_VALUE_VARIABLE),
         "tanf": tanf,
         "tanf_in_state_benefits": tanf_in_state_benefits,
