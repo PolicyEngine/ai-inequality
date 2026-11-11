@@ -830,8 +830,13 @@ function embeddedFiles(value) {
   ].filter((url) => /^(?:data|blob):/i.test(url));
 }
 
-// Lets the event loop run whatever has queued, such as replies to the worker.
-const breathe = () => new Promise((resolve) => setTimeout(resolve, 0));
+// Lets the event loop run whatever has queued, such as replies to the worker,
+// and stops a sweep whose test has timed out, so it can't run on beside the
+// next test.
+const breathe = async (signal) => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  signal?.throwIfAborted();
+};
 
 // Renders a page, works each control and option, and checks the text, title
 // and attribute values of every state it reaches. Returns the page's starting
@@ -839,8 +844,9 @@ const breathe = () => new Promise((resolve) => setTimeout(resolve, 0));
 // policyengine.org, the links into the study resolved as there, the addresses
 // it asked the network for, and any field it couldn't fill. It hands the event
 // loop a turn before each render, so a long sweep never holds up Vitest's
-// messages to its workers past their 60-second timeout.
-async function sweep(entry, View) {
+// messages to its workers past their 60-second timeout, and it stops when the
+// test's signal aborts.
+async function sweep(entry, View, signal) {
   const body = document.body;
   const [page, slashed] = pageUrls(entry);
   requested.length = 0;
@@ -1192,7 +1198,7 @@ async function sweep(entry, View) {
   unmount();
   for (let index = 0; index < sizes.length; index += 1) {
     for (let position = 0; position < sizes[index]; position += 1) {
-      await breathe();
+      await breathe(signal);
       optionPass([], index, position);
     }
   }
@@ -1211,7 +1217,7 @@ async function sweep(entry, View) {
     }
   };
   for (let nextRoute = 0, nextReveal = 0; ; ) {
-    await breathe();
+    await breathe(signal);
     if (nextRoute < routes.length) {
       counted();
       const route = routes[nextRoute];
@@ -1241,7 +1247,7 @@ async function sweep(entry, View) {
     unmount();
     for (let position = 0; position < size; position += 1) {
       counted();
-      await breathe();
+      await breathe(signal);
       optionPass(route, index, position);
     }
   }
@@ -1251,7 +1257,7 @@ async function sweep(entry, View) {
   // render, and each second group returns to its starting option before the
   // next one, so no choice hides the groups after it.
   for (let first = 0; first < sizes.length; first += 1) {
-    await breathe();
+    await breathe(signal);
     ({ unmount } = mount());
     const group = groups()[first];
     for (const option of group.options) {
@@ -1448,7 +1454,9 @@ describe("retired dataset names", () => {
     ]).toEqual([0, 0, 0, 1, 1, 1, 1]);
   });
 
-  it("gives each option of a group that a step reveals a pass of its own", async () => {
+  it("gives each option of a group that a step reveals a pass of its own", async ({
+    signal,
+  }) => {
     // Shows a retired name only with the second tab chosen and the details
     // open, and choosing a tab closes the details. The tabs appear only after
     // a click, so the passes for starting groups never hold the second tab.
@@ -1493,12 +1501,14 @@ describe("retired dataset names", () => {
         </div>
       );
     }
-    expect([...(await sweep("/", RevealedTabs)).shown].length).toBeGreaterThan(
-      0,
-    );
-  });
+    expect(
+      [...(await sweep("/", RevealedTabs, signal)).shown].length,
+    ).toBeGreaterThan(0);
+  }, 120_000);
 
-  it("reads every file a page hands over or shows from a data: or blob: address", async () => {
+  it("reads every file a page hands over or shows from a data: or blob: address", async ({
+    signal,
+  }) => {
     const json = (label) => JSON.stringify({ label });
     const save = (href, how) => {
       const link = document.createElement("a");
@@ -1546,7 +1556,7 @@ describe("retired dataset names", () => {
         </div>
       );
     }
-    await sweep("/", Downloads);
+    await sweep("/", Downloads, signal);
     const { files } = await handedOver();
     const labels = files.map(({ text }) => JSON.parse(text).label);
     expect([...new Set(labels)].sort()).toEqual([
@@ -1557,9 +1567,11 @@ describe("retired dataset names", () => {
       "rendered blob",
       "style data",
     ]);
-  });
+  }, 120_000);
 
-  it("catches every request a page makes and every page it opens without a link", async () => {
+  it("catches every request a page makes and every page it opens without a link", async ({
+    signal,
+  }) => {
     function Requests() {
       return (
         <button
@@ -1579,7 +1591,7 @@ describe("retired dataset names", () => {
         </button>
       );
     }
-    const { requests, links } = await sweep("/", Requests);
+    const { requests, links } = await sweep("/", Requests, signal);
     expect([...new Set(requests)]).toEqual([
       "https://example.test/fetch",
       "https://example.test/xhr",
@@ -1597,16 +1609,18 @@ describe("retired dataset names", () => {
         "https://raw.githubusercontent.com/PolicyEngine/ai-inequality/main/public/data/uprating_analysis.csv",
       ].map(servesFile),
     ).toEqual([true, false, false]);
-  });
+  }, 120_000);
 
-  it("resolves the home page's relative links without a trailing slash, as policyengine.org serves it", async () => {
+  it("resolves the home page's relative links without a trailing slash, as policyengine.org serves it", async ({
+    signal,
+  }) => {
     function Home() {
       return <a href="research">Research</a>;
     }
     expect(
-      [...(await sweep("/", Home)).links].filter(linksRetiredPage),
+      [...(await sweep("/", Home, signal)).links].filter(linksRetiredPage),
     ).toEqual(["https://policyengine.org/us/research"]);
-  });
+  }, 120_000);
 
   it("tells a link into a page the test renders from one into a state the sweep never reached", () => {
     expect(
@@ -1716,12 +1730,15 @@ describe("retired dataset names", () => {
     ]);
   });
 
-  it.each(PAGES)(
+  // The longest sweeps take about 30 seconds alone and several minutes on a
+  // loaded machine.
+  it.for(PAGES)(
     "%s shows none in any state and links no page that does",
-    async (entry, View) => {
+    async ([entry, View], { signal }) => {
       const { text, shown, links, studyLinks, requests, fields } = await sweep(
         entry,
         View,
+        signal,
       );
       expect(text.length).toBeGreaterThan(200);
       expect([...shown]).toEqual([]);
@@ -1731,19 +1748,23 @@ describe("retired dataset names", () => {
       expect([...fields]).toEqual([]);
       expect((await handedOver()).shown).toEqual([]);
     },
-    120_000,
+    600_000,
   );
 
-  it("reads the file a download hands over, such as the references' BibTeX", async () => {
+  it("reads the file a download hands over, such as the references' BibTeX", async ({
+    signal,
+  }) => {
     const references = ROUTES.find(({ path }) => path === "/references");
-    await sweep("/references", references.View);
+    await sweep("/references", references.View, signal);
     const { files, shown } = await handedOver();
     expect(files.length).toBeGreaterThan(0);
     expect(files[0].text.length).toBeGreaterThan(1000);
     expect(shown).toEqual([]);
   }, 120_000);
 
-  it("shows none in the shared header and footer in any state, which link only the known pages that do", async () => {
+  it("shows none in the shared header and footer in any state, which link only the known pages that do", async ({
+    signal,
+  }) => {
     // app/layout.jsx wraps every page in the US shell.
     expect(
       [
@@ -1757,7 +1778,7 @@ describe("retired dataset names", () => {
         <p>Page</p>
       </PolicyEngineShell>
     );
-    const { shown, links, requests } = await sweep("/", Shell);
+    const { shown, links, requests } = await sweep("/", Shell, signal);
     expect([...shown]).toEqual([]);
     expect([...links].filter(linksRetiredPage).sort()).toEqual(
       SHELL_LINKS_TO_RETIRED_PAGES,
