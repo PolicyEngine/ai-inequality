@@ -20,10 +20,13 @@ const VIEW_MODULES = import.meta.glob(
 
 // Microcosm's pre-August name and the dataset it replaced as the default, in
 // the spellings they take in prose, release ids and package names, such as
-// ecps_2024. Published ids keep the old spelling in data and code; pages
-// never show them.
-const RETIRED =
-  /populace|enhanced[\s_-]*(?:cps|current[\s_-]*population[\s_-]*survey)|(?<![a-z])e[\s_-]?cps(?![a-z])|policyengine[\s_-]*us[\s_-]*data/i;
+// ecps_2024, with any space, underscore, dash or minus sign between words.
+// Published ids keep the old spelling in data and code; pages never show them.
+const SEP = String.raw`[\s_\p{Pd}\u2212]`;
+const RETIRED = new RegExp(
+  String.raw`populace|enhanced${SEP}*(?:cps|current${SEP}*population${SEP}*survey)|(?<![a-z])e${SEP}?cps(?![a-z])|policyengine${SEP}*us${SEP}*data`,
+  "iu",
+);
 
 // Exact phrases that match RETIRED but name no dataset, such as a reference
 // title that uses the English noun. Add one only after reading it in context.
@@ -101,12 +104,13 @@ function isText(path) {
   }
 }
 
-// Folds compatibility characters and drops invisible ones, so a zero-width
-// space or a soft hyphen can't split a name, then blanks the allowed phrases.
+// Folds compatibility characters and drops the ones Unicode marks as
+// ignorable, so a zero-width space, a soft hyphen or a joiner can't split a
+// name, then blanks the allowed phrases.
 function normalize(text) {
   let folded = text
     .normalize("NFKC")
-    .replace(/[\u00ad\u180e\u200b-\u200f\u2060-\u2064\ufeff]/g, "");
+    .replace(/\p{Default_Ignorable_Code_Point}/gu, "");
   for (const phrase of ALLOWED_PHRASES) {
     folded = folded.split(phrase).join(" ");
   }
@@ -851,6 +855,7 @@ async function sweep(entry, View, signal) {
   const [page, slashed] = pageUrls(entry);
   requested.length = 0;
   opened.length = 0;
+  handed.length = 0;
   handedUrls.clear();
   const found = {
     text: "",
@@ -1336,8 +1341,12 @@ describe("retired dataset names", () => {
         return true;
       },
     });
+    // A data: or blob: address that code opens shows a file, which the test
+    // reads like one a page hands over.
     vi.spyOn(window, "open").mockImplementation((url) => {
-      opened.push(urlOf(url ?? ""));
+      const address = urlOf(url ?? "");
+      if (/^(?:data|blob):/i.test(address)) noteFile("", address);
+      else opened.push(address);
       return null;
     });
     URL.createObjectURL = (blob) => {
@@ -1389,6 +1398,24 @@ describe("retired dataset names", () => {
       }),
     };
   }
+
+  it("matches a name split by a space, underscore, dash, minus sign or ignorable character", () => {
+    for (const spelling of [
+      "ecps_2024",
+      "e\u2010CPS",
+      "Enhanced\u2011CPS",
+      "enhanced\u2013current\u00a0population survey",
+      "policyengine\u2212us\u2212data",
+      "e\u034fcps",
+      "Pop\u200bulace",
+      "\uff25\uff23\uff30\uff33",
+    ]) {
+      expect(showsRetiredName(spelling), spelling).toBe(true);
+    }
+    for (const text of ["the CPS", "specps", "policyengine-us docs"]) {
+      expect(showsRetiredName(text), text).toBe(false);
+    }
+  });
 
   it("renders every route App.jsx declares, and the app serves no other page", () => {
     expect(ROUTES.length).toBeGreaterThan(0);
@@ -1544,6 +1571,12 @@ describe("retired dataset names", () => {
           >
             Dispatched
           </button>
+          <button
+            type="button"
+            onClick={() => window.open(asBlob(json("opened blob")))}
+          >
+            Opened
+          </button>
           <a href={rendered} download="rendered.json">
             Rendered blob
           </a>
@@ -1563,6 +1596,7 @@ describe("retired dataset names", () => {
       "clicked blob",
       "clicked data",
       "dispatched blob",
+      "opened blob",
       "rendered base64",
       "rendered blob",
       "style data",
