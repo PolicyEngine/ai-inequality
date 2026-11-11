@@ -128,6 +128,6 @@ test("the decile chart names each decile it leaves out", () => {
     screen.getByRole("radio", { name: /net government revenue change/i }),
   );
   expect(document.body).toHaveTextContent(
-    "We leave out D1 and D2, whose baseline mean net incomes are zero or negative.",
+    "We leave out D1 and D2, whose baseline mean net incomes don't exceed zero.",
   );
 });
