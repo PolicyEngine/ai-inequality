@@ -417,8 +417,8 @@ def _metadata(baseline, baseline_metrics):
         "revenue_label": "Net government revenue change",
         "revenue_description": (
             "Net government revenue change = taxes (Income Tax, Capital Gains "
-            "Tax and National Insurance, employers' contributions included) "
-            "minus household benefits."
+            "Tax, and workers' and employers' National Insurance) minus "
+            "household benefits."
         ),
         "revenue_summary_note": (
             "We estimate Income Tax and Capital Gains Tax receipts, taken "

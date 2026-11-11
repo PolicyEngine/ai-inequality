@@ -1000,7 +1000,7 @@ function DecileImpactChart({
           ? " Bars show the change in each decile's mean household net income, as a percentage of its baseline mean."
           : ` Bars show the total change in each decile's net income (${currencySymbol}B).`}
         {omitted.length > 0 &&
-          ` We leave out ${omitted.slice(0, -1).join(", ")}${omitted.length > 1 ? " and " : ""}${omitted[omitted.length - 1]}, whose baseline mean net ${omitted.length > 1 ? "incomes are" : "income is"} zero or negative.`}
+          ` We leave out ${omitted.slice(0, -1).join(", ")}${omitted.length > 1 ? " and " : ""}${omitted[omitted.length - 1]}, whose baseline mean net ${omitted.length > 1 ? "incomes don't" : "income doesn't"} exceed zero.`}
       </p>
       <ResponsiveContainer width="100%" height={360}>
         <BarChart
