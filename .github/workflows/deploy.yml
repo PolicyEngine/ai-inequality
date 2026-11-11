@@ -19,7 +19,10 @@ concurrency:
 
 jobs:
   lint-and-test:
-    runs-on: ubuntu-latest
+    # GitHub is moving ubuntu-latest to Ubuntu 26.04, where Playwright 1.56.0
+    # (bun.lock's pin) can't install Chromium. Both jobs stay on 24.04 until we
+    # move to Playwright 1.61 or later.
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -61,7 +64,7 @@ jobs:
         run: bunx playwright test tests/e2e/images.spec.js --project=chromium
 
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: lint-and-test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
