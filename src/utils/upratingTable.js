@@ -83,7 +83,7 @@ export const UPRATING_CARDS = [
   },
   {
     id: "income-by-source",
-    title: "Income by source",
+    title: "CBO income projections",
     includes: (category) => category.startsWith("CBO "),
     description:
       "PolicyEngine-US grows wages, self-employment income, capital gains, dividends, interest, pensions, Social Security benefits and unemployment compensation in its microdata with the IRS's total for each, per person. It extends those totals with CBO's projections, and grows other dollar inputs with CBO's projection of adjusted gross income per person.",
@@ -156,7 +156,7 @@ export const UPRATING_CARDS = [
       "National average wage index",
     ),
     description:
-      "Each year the Commissioner of Social Security raises Social Security benefits and SSI payments by the rise in consumer prices, as the Social Security Act requires. PolicyEngine-US measures that rise with CPI-W and grows SSI payments, state supplements and veterans benefits with it. For later years, it projects the rise with CBO's forecast of CPI-U. It grows the payroll tax cap, the bend points in Social Security's benefit formula and other wage-indexed amounts with the national average wage index.",
+      "In each year that consumer prices rise, the Social Security Act requires the Commissioner of Social Security to raise Social Security benefits and SSI payments by that rise, unless the program's trust funds run low. PolicyEngine-US measures the rise with CPI-W, projects it for later years with CBO's forecast of CPI-U, and grows SSI payments, state supplements and veterans benefits with it. It grows the Social Security benefits in its microdata with the IRS's total per person instead, which it extends with CBO's projections. It grows the payroll tax cap, the bend points in Social Security's benefit formula and other wage-indexed amounts with the national average wage index.",
     examples: [
       {
         label: "Maximum federal SSI payment",
@@ -205,7 +205,7 @@ export const UPRATING_CARDS = [
     title: "Population",
     includes: among("Population"),
     description:
-      "PolicyEngine-US grows household and family weights with CBO's population projections, along with its counts of tax returns and of Social Security, SSI and SNAP participants.",
+      "PolicyEngine-US grows household and family weights, and its counts of tax returns and of Social Security, SSI and SNAP participants, with CBO's population projections.",
     examples: [
       { label: "Household weights", path: "household_weight" },
       {

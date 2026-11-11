@@ -49,7 +49,7 @@ test("names the release its links open", async () => {
   const parameters = rows.filter((row) => row.type === "parameter").length;
   const variables = rows.filter((row) => row.type === "variable").length;
   expect(intro).toHaveTextContent(
-    `Explore the ${parameters} parameter files and ${variables} input variables that PolicyEngine-US ${POLICYENGINE_US_SNAPSHOT.version} (${formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time with economic indexes.`,
+    `Explore the ${parameters} parameter files and ${variables} input variables whose values PolicyEngine-US ${POLICYENGINE_US_SNAPSHOT.version} (${formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time with economic indexes.`,
   );
 });
 

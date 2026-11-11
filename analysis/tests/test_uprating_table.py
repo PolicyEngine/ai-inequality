@@ -474,9 +474,9 @@ EXTENDED = {"s.used": STEP, "s.direct": STEP, "s.unread": STEP}
 SOURCES = {"gov/reader.py": "cost = parameters(period).s.direct", "gov/other.py": ""}
 
 
-def test_index_rows_gives_rows_to_the_series_formulas_read(index_lists):
+def test_index_rows_gives_rows_to_the_listed_direct_series(index_lists):
     assert table.index_rows(EXTENDED, {"s.used"}, SOURCES) == {"s.direct": STEP}
-    # A series a formula reads keeps its row when values also grow by it.
+    # A listed series keeps its row when values also grow by it.
     assert table.index_rows(EXTENDED, {"s.used", "s.direct"}, SOURCES) == {
         "s.direct": STEP
     }
@@ -1084,7 +1084,7 @@ def test_committed_formula_rows_match_the_formula_steps():
                     assert table.FORMULA_STEPS.get(step) == series, row["path"]
 
 
-def test_committed_table_lists_the_index_series_formulas_read_and_no_unread_one():
+def test_committed_table_lists_the_direct_index_series_and_no_unread_one():
     paths = {row["path"] for row in TABLE_ROWS if row["type"] == "parameter"}
     assert set(table.DIRECT_INDEX_SERIES) <= paths
     assert not paths & table.UNREAD_INDEX_SERIES

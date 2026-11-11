@@ -142,7 +142,10 @@ function UpratingViewer({ table }) {
 
   return (
     <div id="uprating-viewer" className="section section-alt">
-      <h2>PolicyEngine-US uprating parameters & variables</h2>
+      <h2>
+        Parameter files and variables that{" "}
+        <span style={{ whiteSpace: "nowrap" }}>PolicyEngine-US</span> uprates
+      </h2>
       <p
         style={{
           textAlign: "center",
@@ -152,8 +155,8 @@ function UpratingViewer({ table }) {
         }}
       >
         Explore the <strong>{datasetCounts.parameters} parameter files</strong>{" "}
-        and <strong>{datasetCounts.variables} input variables</strong> that
-        PolicyEngine-US {POLICYENGINE_US_SNAPSHOT.version} (
+        and <strong>{datasetCounts.variables} input variables</strong> whose
+        values PolicyEngine-US {POLICYENGINE_US_SNAPSHOT.version} (
         {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time
         with economic indexes.
       </p>

@@ -39,7 +39,7 @@ test("counts the parameters and variables the table lists", async () => {
   const intro = await screen.findByText(/over time with economic indexes/);
   await within(intro).findByText(`${parameters} parameter files`);
   expect(intro).toHaveTextContent(
-    `PolicyEngine-US grows ${parameters} parameter files and ${variables} input variables over time`,
+    `PolicyEngine-US grows the values in ${parameters} parameter files and ${variables} input variables over time`,
   );
 });
 

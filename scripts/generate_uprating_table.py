@@ -18,8 +18,11 @@ what the model applies rather than what a scan of its files suggests:
   has passed down the tree, so a file-level ``uprating`` key reaches a
   breakdown's values only where the file asks for that.
 - policyengine-us extends its index series, such as CPI-U, past their last
-  projection. They grow other values and get no row, except the ones that
-  variables' formulas read directly.
+  projection. A series that values grow by gets no row of its own, since the
+  rows of those values name it, even when a variable's formula also reads it,
+  as formulas read the national average wage index. A series that no value
+  grows by gets a row when DIRECT_INDEX_SERIES lists it as one that variables'
+  formulas read, and the run stops on any such series the script leaves out.
 - A variable gets a row when its ``uprating`` is set once the system is built.
   That includes the series policyengine-us assigns to inputs that name none,
   and the per-person versions it swaps in for national totals.
@@ -139,14 +142,14 @@ EXTENSIONS_MODULE = "parameters/uprating_extensions.py"
 EXTENSIONS_ENTRY = "set_all_uprating_parameters"
 # Steps that carry an index series past its last projection. The table lists
 # the values that grow by a series, not the series itself, so an extended
-# series gets no row unless a variable's formula reads it directly. The run
-# stops on an extended series that no value grows by and that neither list
-# below names.
+# series gets a row only when DIRECT_INDEX_SERIES lists it. The run stops on an
+# extended series that no value grows by and that neither list below names.
 INDEX_STEPS = frozenset({"extend_parameter_values", EXTENSIONS_ENTRY})
-# Extended series that variables' formulas read directly, each with files under
-# policyengine_us/variables that read it. Each gets a row whose uprating names
-# the series and the step that extends it. The run checks that each listed file
-# still names its series.
+# Extended series that no value grows by and that variables' formulas read
+# directly, each with files under policyengine_us/variables that read it. Each
+# gets a row whose uprating names the series and the step that extends it. The
+# run checks that each listed file still names its series. Formulas also read
+# series that values grow by, such as gov.ssa.nawi; those get no row.
 DIRECT_INDEX_SERIES = {
     "calibration.gov.hhs.medicare.per_capita_cost": (
         "gov/hhs/medicare/costs/medicare_cost.py",

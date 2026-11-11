@@ -93,14 +93,15 @@ function StochasticForecasting() {
 
       <div style={{ marginBottom: "2rem" }}>
         <p style={{ fontSize: "1.1rem", lineHeight: "1.6" }}>
-          PolicyEngine-US grows{" "}
+          PolicyEngine-US grows the values in{" "}
           <strong>{shown(uprating.parameters)} parameter files</strong> and{" "}
           <strong>{shown(uprating.variables)} input variables</strong> over time
           with economic indexes such as CPI-U, chained CPI-U, wages, population
           and the income projections of the Congressional Budget Office (CBO).
-          Each index could grow faster or slower than forecast, and the indexes
-          tend to move together, so our estimates of policy impacts under
-          AI-driven economic scenarios depend on their joint distribution.
+          Each index could grow faster or slower than forecast, and the price
+          and wage indexes tend to move together, so our estimates of policy
+          impacts under AI-driven economic scenarios depend on the indexes'
+          joint distribution.
         </p>
       </div>
 
