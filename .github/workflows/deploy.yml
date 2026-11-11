@@ -19,7 +19,9 @@ concurrency:
 
 jobs:
   lint-and-test:
-    runs-on: ubuntu-latest
+    # Playwright 1.56.0, which bun.lock pins, can't install Chromium on
+    # ubuntu-latest's Ubuntu 26.04 image, so we keep both jobs on 24.04.
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -61,7 +63,7 @@ jobs:
         run: bunx playwright test tests/e2e/images.spec.js --project=chromium
 
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: lint-and-test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
