@@ -231,6 +231,25 @@ def _skew_tanf_charge(s):
     _row(s, 50)["state_deltas"]["MA"]["tanf_state_charge_change_b"] += 0.1
 
 
+def _skew_left_out(field):
+    """Move one term the health identity subtracts, in a row and its states."""
+
+    def mutate(s):
+        row = _row(s, 50)
+        row[field] += 0.5
+        row["state_deltas"]["CA"][field] += 0.5
+
+    return mutate
+
+
+LEFT_OUT_HEALTH = (
+    "healthier_oregon_overlap_change_b",
+    "excluded_health_programs_change_b",
+    "unfunded_federal_coverage_change_b",
+    "unfunded_state_coverage_change_b",
+)
+
+
 def _drop_exclusion_record(s):
     del s["metadata"]["policyengine_bundle"]["net_income_excluded_benefits"]
 
@@ -272,6 +291,10 @@ def _drop_deciles(s):
         (_nonzero_baseline, "0%: nonzero federal_health_change_b"),
         (_drop_state_rows, "50%: no state rows"),
         (_drop_deciles, "decile_impacts"),
+    ]
+    + [
+        (_skew_left_out(field), "differs from healthcare_benefit_value")
+        for field in LEFT_OUT_HEALTH
     ],
 )
 def test_each_identity_check_catches_a_row_that_breaks_it(mutate, expected):

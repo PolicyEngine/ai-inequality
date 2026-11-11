@@ -392,7 +392,8 @@ def test_the_parent_s_copy_of_a_read_only_input_takes_a_write_core_refuses(
     # Intended: core hands the parent the read-only input itself, so the write
     # raises. Here the parent's first read after the branch copies the input,
     # and the copy takes the write. A pandas 3 data frame hands core read-only
-    # inputs; core completes the sweep, so the sweep makes no such write.
+    # inputs. In the sweep, none of policyengine-us's five in-place writers
+    # writes into an input, so the sweep makes no such write.
     salaries = [4000.0, 2500.0]
     assert _write_into_a_read_only_input_after_branching() == (
         "raised",

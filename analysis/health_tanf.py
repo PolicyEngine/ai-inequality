@@ -360,6 +360,24 @@ def federally_eligible_status(status, years_since_entry, p):
     return citizen | (qualified & (bar_exempt | past_bar))
 
 
+def pregnancy_match(is_pregnant, income_level, fcep_limit):
+    """Whether federal funds still match a pregnant enrollee's coverage, by person.
+
+    Holds for a pregnant person in a state that takes CHIP's unborn-child
+    option, with income at or under that option's limit. ``fcep_limit`` gives
+    each person's state limit (``gov.hhs.chip.fcep.income_limit``), and
+    policyengine-us sets it to ``-inf`` in a state without the option.
+    ``income_level`` gives the ``medicaid_income_level`` that policyengine-us's
+    FCEP test reads.
+    """
+    fcep_limit = np.asarray(fcep_limit, dtype=float)
+    return (
+        np.asarray(is_pregnant, dtype=bool)
+        & (fcep_limit > 0)
+        & (np.asarray(income_level, dtype=float) <= fcep_limit)
+    )
+
+
 def state_only_split(federal, costs, fcep, pregnancy_match, state_rule):
     """Federal shares to move to the state, and coverage no government pays for, by person.
 
@@ -492,17 +510,16 @@ def state_only_accounting(sim, year):
         sim.calculate(CHIP_ENROLLED, period=year), dtype=bool
     )
     state = np.asarray(sim.calculate("state_code_str", period=year, map_to="person")).astype(str)
-    fcep_limit = _by_state(parameters.gov.hhs.chip.fcep.income_limit, state)
-    pregnancy_match = (
-        np.asarray(sim.calculate("is_pregnant", period=year), dtype=bool)
-        & (fcep_limit > 0)
-        & (np.asarray(sim.calculate("medicaid_income_level", period=year), dtype=float) <= fcep_limit)
+    pregnant_match = pregnancy_match(
+        sim.calculate("is_pregnant", period=year),
+        sim.calculate("medicaid_income_level", period=year),
+        _by_state(parameters.gov.hhs.chip.fcep.income_limit, state),
     )
     state_rule = (_by_state(p.undocumented_immigrant, state) > 0) | np.asarray(
         sim.calculate(CA_STATE_RULE, period=year), dtype=bool
     )
     moved, unfunded_federal, unfunded_state = state_only_split(
-        federal, costs, fcep, pregnancy_match, state_rule
+        federal, costs, fcep, pregnant_match, state_rule
     )
     check_moved_statuses(status, moved + unfunded_federal + unfunded_state)
 

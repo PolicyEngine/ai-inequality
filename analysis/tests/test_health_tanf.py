@@ -39,6 +39,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from analysis import compare_shift_sweeps as cmp
 from analysis import health_tanf
 from analysis.fiscal import (
     HEALTH_TANF_KEYS,
@@ -258,7 +259,7 @@ def test_health_spending_is_conserved(frame):
         atol=1e-6,
     )
     # Neither government's line pays for the unfunded coverage, and the
-    # state's line never falls below what it would pay without the move.
+    # state's line never falls below zero.
     assert (frame["state_health"] >= -1e-6).all()
     # A Massachusetts family that takes TANF up owes nothing beyond the copy in
     # its state's line, one that doesn't takes that copy back out, and every
@@ -596,6 +597,23 @@ STATE_LINES = (
 )
 
 
+#: Each health or TANF field of a state's row and the component it differences.
+#: The test writes them out so that it doesn't read the sweep's own table.
+STATE_ROW_COMPONENTS = {
+    "state_health_change_b": "state_health",
+    "federal_health_change_b": "federal_health",
+    "health_change_b": "health_total",
+    "state_only_coverage_change_b": "state_only_coverage",
+    "healthier_oregon_overlap_change_b": "healthier_oregon_overlap",
+    "unfunded_federal_coverage_change_b": "unfunded_federal",
+    "unfunded_state_coverage_change_b": "unfunded_state",
+    "excluded_health_programs_change_b": "excluded_health_programs",
+    "tanf_change_b": "tanf",
+    "tanf_state_charge_change_b": "tanf_charge",
+    "tanf_in_state_benefits_change_b": "tanf_in_state_benefits",
+}
+
+
 @st.composite
 def state_components(draw):
     codes = draw(st.lists(st.sampled_from(STATES + ["NY", "WA"]), min_size=1, max_size=6,
@@ -634,6 +652,11 @@ def test_state_rows_net_health_and_tanf(scenario, baseline):
         )
         assert row["tanf_state_charge_change_b"] == pytest.approx(change("tanf_charge"))
         assert row["state_health_change_b"] == pytest.approx(change("state_health"))
+        # Each row carries every field compare's checker reads, and each health
+        # or TANF field differences its own component.
+        assert set(cmp.STATE_FIELDS) <= set(row)
+        for field, key in STATE_ROW_COMPONENTS.items():
+            assert row[field] == pytest.approx(change(key), rel=1e-12, abs=1e-9), field
 
 
 def test_state_rows_refuse_components_without_health():
@@ -1045,6 +1068,9 @@ def test_two_level_sweep_rows_add_up():
     assert sum(row["state_health_change_b"] for row in states.values()) == pytest.approx(
         half["state_health_change_b"], abs=1e-12
     )
+    # The sweep's own rows carry every field compare's checker reads.
+    assert all(set(cmp.STATE_FIELDS) <= set(row) for row in states.values())
+    assert set(cmp.ROW_FIELDS) <= set(half)
 
 
 #: The 50 states and DC.

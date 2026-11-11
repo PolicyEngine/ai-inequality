@@ -64,7 +64,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from hypothesis import assume, given, settings
+from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 
 from analysis.california_shift import (
@@ -100,6 +100,7 @@ from analysis.health_tanf import (
     household_frame,
     state_only_accounting,
     state_only_coverage,
+    pregnancy_match,
     state_only_split,
     tanf_states_in_state_benefits,
 )
@@ -184,7 +185,11 @@ def test_groups_cover_the_unit_interval():
         assert hi == lo
 
 
-@settings(max_examples=200, deadline=None)
+@settings(
+    max_examples=200,
+    deadline=None,
+    suppress_health_check=[HealthCheck.data_too_large],
+)
 @given(household_pair())
 def test_group_rows_add_up_to_the_state_total(pair):
     base, scen = pair
@@ -198,7 +203,11 @@ def test_group_rows_add_up_to_the_state_total(pair):
     )
 
 
-@settings(max_examples=200, deadline=None)
+@settings(
+    max_examples=200,
+    deadline=None,
+    suppress_health_check=[HealthCheck.data_too_large],
+)
 @given(household_pair(), st.floats(-1e6, 1e6, allow_nan=False))
 def test_other_states_never_move_california(pair, shock):
     base, scen = pair
@@ -212,7 +221,11 @@ def test_other_states_never_move_california(pair, shock):
     assert groups2 == groups
 
 
-@settings(max_examples=200, deadline=None)
+@settings(
+    max_examples=200,
+    deadline=None,
+    suppress_health_check=[HealthCheck.data_too_large],
+)
 @given(household_pair())
 def test_baseline_shares_add_up_to_one(pair):
     base, _ = pair
@@ -1293,6 +1306,22 @@ def test_state_only_split_bounds(data):
     dropped_chip = blocked & ~fcep & ~state_rule
     np.testing.assert_allclose(unfunded_federal, np.where(dropped_chip, chip, 0.0) + np.where(blocked, msp, 0.0))
     np.testing.assert_allclose(unfunded_state, np.where(dropped_chip, chip_state, 0.0) + np.where(blocked, msp_state, 0.0))
+
+
+def test_pregnancy_match_examples():
+    # Under, at and just over a 200% limit; with no income; in a state without
+    # the option, whose limit policyengine-us stores as -inf; and not pregnant.
+    pregnant = [True, True, True, True, True, False]
+    income = [1.5, 2.0, 2.0001, 0.0, 0.0, 1.0]
+    limit = [2.0, 2.0, 2.0, 2.0, float("-inf"), 2.0]
+    assert pregnancy_match(pregnant, income, limit).tolist() == [
+        True,
+        True,
+        False,
+        True,
+        False,
+        False,
+    ]
 
 
 def test_state_only_coverage_keeps_fcep_match_federal():

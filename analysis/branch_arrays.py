@@ -126,12 +126,12 @@ in which case core has already made the ``baseline`` branch;
 before its branch computes anything. The sweep freezes its sources, so a write
 through a stored array would raise, whether the writer took its reference
 before a branch or read a key the parent filled after it. With frozen sources,
-policyengine-us's branch tree holds three arrays that carry the read-only flag
-but no mark: ``income_tax`` in ``itemizing`` and ``not_itemizing``, and
-``tax_unit_itemizes`` in ``no_salt``. In each, a formula stores an array that
-another simulation in the tree also holds, and none of the five writers reads
-them. Core refuses a write into an input that carries the read-only flag, and
-core completes the sweep, so the sweep never writes into one.
+in a policyengine-us household run, the branch tree holds three arrays that
+carry the read-only flag but no mark: ``income_tax`` in ``itemizing`` and
+``not_itemizing``, and ``tax_unit_itemizes`` in ``no_salt``. In each, a formula
+stores an array that another simulation in the tree also holds, and none of
+the five writers reads them. In the sweep, none of the five writes into an
+input either, so the sweep never writes into one.
 ``analysis.check_branch_arrays`` checks the whole sweep: it runs
 ``run_shift_sweep`` both ways on a subset of the microdata and compares every
 array in every branch, byte for byte.
