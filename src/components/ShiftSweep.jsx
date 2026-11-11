@@ -93,18 +93,31 @@ const OUTSIDE_CHART_TAXES_NOTE =
 
 const FEDERAL_LINE_NOTE_US = `The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band includes TANF. ${OUTSIDE_CHART_TAXES_NOTE}`;
 
-// REVENUE_DESCRIPTION_US_HEALTH_TANF, above the chart, names the taxes outside
-// the charts, so this note leaves them out.
+// revenueDescriptionUsHealthTanf, above the chart, names the taxes outside the
+// charts, so this note leaves them out.
 const FEDERAL_LINE_NOTE_US_HEALTH_TANF =
   "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes. The health band includes what the federal government spends on ACA premium tax credits, the Basic Health Program, and its matching share of Medicaid, CHIP and the Medicare Savings Programs. Congress sets each state's TANF block grant at a fixed amount, so we charge every change in TANF benefits to the states.";
 
-// Display names for the health programs a state runs on its own, keyed by the
-// policyengine-us variable that the sweep's metadata.health_tanf_programs.state
-// lists (analysis/health_tanf.py's STATE_HEALTH).
-const OWN_HEALTH_PROGRAM_NAMES = {
-  co_omnisalud: "OmniSalud",
-  or_healthier_oregon_cost: "Healthier Oregon",
+// Display names for the health programs a state runs on its own, and the state
+// that runs each, keyed by the policyengine-us variable that the sweep's
+// metadata.health_tanf_programs.state lists (analysis/health_tanf.py's
+// STATE_HEALTH).
+const OWN_HEALTH_PROGRAMS = {
+  co_omnisalud: { name: "OmniSalud", state: "Colorado" },
+  or_healthier_oregon_cost: { name: "Healthier Oregon", state: "Oregon" },
 };
+
+// Why we leave out each program that metadata.health_tanf_programs.excluded
+// lists (analysis/health_tanf.py's EXCLUDED_HEALTH).
+const EXCLUDED_HEALTH_PROGRAM_NOTES = {
+  co_omnisalud:
+    "We don't yet model Colorado's OmniSalud program for the people it covers, so we leave it out.",
+};
+
+function joinWithAnd(items) {
+  if (items.length < 2) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
 
 // The state a state health program belongs to: each variable starts with its
 // state's code, after the "assigned_" that some later releases put in front.
@@ -120,7 +133,7 @@ export function stateLineNoteHealthTanf(stateCode, statePrograms = []) {
     (variable) => healthProgramState(variable) === stateCode,
   );
   const named = own
-    .map((variable) => OWN_HEALTH_PROGRAM_NAMES[variable])
+    .map((variable) => OWN_HEALTH_PROGRAMS[variable]?.name)
     .filter(Boolean);
   let ownClause = "";
   if (own.length > 0 && named.length === own.length) {
@@ -130,7 +143,7 @@ export function stateLineNoteHealthTanf(stateCode, statePrograms = []) {
   } else if (own.length > 0) {
     ownClause = ", and on health programs it runs on its own";
   }
-  return `The health band includes what the state spends on its matching share of Medicaid, CHIP and the Medicare Savings Programs${ownClause}. Where the state covers people whose immigration status bars federal matching, we charge it the federal share as well. The federal government still matches their emergency care, so we likely overstate the state's cost. In states that cover unborn children through CHIP, the federal government also matches a pregnant woman's coverage, so we leave her federal share in place. Congress sets each state's TANF block grant at a fixed amount, so we charge the state every change in its TANF benefits.`;
+  return `The health band includes what the state spends on its matching share of Medicaid, CHIP and the Medicare Savings Programs${ownClause}. Where the state covers people whose immigration status bars federal matching, we charge it the federal share as well. Congress sets each state's TANF block grant at a fixed amount, so we charge the state every change in its TANF benefits.`;
 }
 
 function federalBuckets(countryId, withHealthTanf = false) {
@@ -265,8 +278,43 @@ const CONCEPTS = {
 const REVENUE_DESCRIPTION_US =
   "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. We leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.";
 
-const REVENUE_DESCRIPTION_US_HEALTH_TANF =
-  "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits + health coverage), across federal, state and local governments. We count what governments spend on Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax credits, the Basic Health Program and state programs such as Healthier Oregon. We don't yet model Colorado's OmniSalud program for the people it covers, so we leave it out. We price each new Medicaid enrollee at the baseline cost of an enrollee in their state with the same ACA benchmark premium. The federal and state charts add up to the total, apart from three groups of taxes. We count workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations only in the total. We put New York City's and Maryland's local income taxes in those states' charts instead.";
+const REVENUE_DESCRIPTION_US_HEALTH_TANF_REST =
+  "We price each new Medicaid enrollee at the baseline cost of an enrollee in their state with the same ACA benchmark premium. The federal and state charts add up to the total, apart from three groups of taxes. We count workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations only in the total. We put New York City's and Maryland's local income taxes in those states' charts instead.";
+
+// The revenue description once health coverage and TANF count, naming the
+// state health programs the run's metadata.health_tanf_programs counts and
+// leaves out.
+export function revenueDescriptionUsHealthTanf(programs) {
+  const { state = [], excluded = [] } = programs ?? {};
+  const own = state.map((variable) => OWN_HEALTH_PROGRAMS[variable]);
+  const counted = [
+    "Medicaid",
+    "CHIP",
+    "the Medicare Savings Programs",
+    "ACA premium tax credits",
+    "the Basic Health Program",
+    ...own
+      .filter(Boolean)
+      .map(({ name, state }) => `${state}'s ${name} program`),
+  ];
+  if (own.some((program) => !program)) {
+    counted.push("other health programs that states run on their own");
+  }
+  const notes = excluded
+    .map((variable) => EXCLUDED_HEALTH_PROGRAM_NOTES[variable])
+    .filter(Boolean);
+  if (notes.length < excluded.length) {
+    notes.push(
+      "We leave out other state health programs that we don't yet model.",
+    );
+  }
+  return [
+    "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits + health coverage), across federal, state and local governments.",
+    `We count what governments spend on ${joinWithAnd(counted)}.`,
+    ...notes,
+    REVENUE_DESCRIPTION_US_HEALTH_TANF_REST,
+  ].join(" ");
+}
 
 function measuresForMetadata(metadata, withHealthTanf = false) {
   const currencySymbol = metadata.currency_symbol ?? "$";
@@ -337,7 +385,7 @@ function measuresForMetadata(metadata, withHealthTanf = false) {
       description:
         metadata.revenue_description ??
         (withHealthTanf
-          ? REVENUE_DESCRIPTION_US_HEALTH_TANF
+          ? revenueDescriptionUsHealthTanf(metadata.health_tanf_programs)
           : REVENUE_DESCRIPTION_US),
     },
   };
@@ -1172,8 +1220,8 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
             share as well. The federal government still matches their emergency
             care, so we likely overstate the state&apos;s cost. In states that
             cover unborn children through CHIP, the federal government also
-            matches a pregnant woman&apos;s coverage, so we leave her federal
-            share in place.
+            matches a pregnant woman&apos;s prenatal care whatever her
+            immigration status, so we leave her federal share in place.
           </>
         ) : (
           <>

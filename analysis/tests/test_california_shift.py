@@ -1407,6 +1407,55 @@ def test_state_only_accounting_sorts_chip_by_the_state_rule():
         assert accounting["unfunded_state"].tolist() == pytest.approx(dropped_state), state
 
 
+def _limit_reform(parameter, value):
+    from policyengine_core.reforms import Reform
+
+    return Reform.from_dict({parameter: {"2026-01-01.2100-12-31": value}}, country_id="us")
+
+
+def test_state_only_accounting_charges_california_for_chip_its_own_rule_covers():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    # policyengine-us 1.764.6 offers California CHIP only through the
+    # unborn-child option, so California's own rule moves no CHIP share.
+    # Give California a children's CHIP limit, and a DACA child whose family
+    # income exceeds Medi-Cal's limit lands on CHIP. California's own rule
+    # covers DACA residents, so California pays the child's federal share.
+    people = {"parent": _person(40, income=60_000), "child": _person(10, "DACA")}
+    reform = _limit_reform("gov.hhs.chip.child.income_limit.CA", 3.5)
+    sim = Simulation(situation=_situation("CA", people), reform=reform)
+    assert _person_values(sim, "is_ca_medicaid_immigration_status_eligible").tolist() == [0, 1]
+    chip = _person_values(sim, "chip_federal_cost")[1]
+    assert chip > 0, "the DACA child should be on CHIP"
+    accounting = state_only_accounting(sim, 2026)
+    assert accounting["state_only_coverage"].tolist() == pytest.approx([chip])
+    assert accounting["unfunded_federal"].tolist() == pytest.approx([0.0])
+    assert accounting["unfunded_state"].tolist() == pytest.approx([0.0])
+
+
+def test_state_only_accounting_moves_a_pregnant_enrollee_over_the_unborn_child_limit():
+    pytest.importorskip("policyengine_us")
+    from policyengine_us import Simulation
+
+    # At policyengine-us 1.764.6, Medicaid's pregnancy limit doesn't exceed
+    # the unborn-child option's limit in any state that covers people whose
+    # status bars federal matching. Lower New York's option limit to 100% of
+    # the poverty line, and an undocumented pregnant woman at 116% stays on
+    # Medicaid under New York's rule. Federal CHIP funds don't match her
+    # prenatal care, so New York pays her federal share. Under a 200% limit,
+    # her share stays federal.
+    people = {"mother": _person(28, "UNDOCUMENTED", 25_000, is_pregnant=True)}
+    for limit, moves in ((1.0, True), (2.0, False)):
+        reform = _limit_reform("gov.hhs.chip.fcep.income_limit.NY", limit)
+        sim = Simulation(situation=_situation("NY", people), reform=reform)
+        medicaid = _person_values(sim, "medicaid_federal_cost")[0]
+        assert medicaid > 0, "New York's rule should enroll her in Medicaid"
+        moved = [medicaid] if moves else [0.0]
+        accounting = state_only_accounting(sim, 2026)
+        assert accounting["state_only_coverage"].tolist() == pytest.approx(moved), limit
+
+
 def test_state_only_accounting_drops_medicare_savings_for_an_undocumented_senior():
     pytest.importorskip("policyengine_us")
     from policyengine_us import Simulation

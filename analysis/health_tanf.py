@@ -26,20 +26,22 @@ the household's state:
   books a federal share for them anyway. ``state_only_accounting`` sorts those
   shares by whether a state rule in policyengine-us covers the enrollee:
 
-  - We charge the state the federal share of Medicaid, and of CHIP in a state
-    whose ``undocumented_immigrant`` rule covers people without satisfactory
-    status, since the state pays for that coverage alone. Federal funds still
-    match these enrollees' emergency care, labor and delivery included (42 USC
-    1396b(v)(3)), so the charge likely overstates the state's cost.
+  - We charge the state the federal share of Medicaid, and of CHIP where a
+    state rule covers the person (the state's ``undocumented_immigrant`` rule
+    or California's own), since the state pays for that coverage alone.
+    Federal funds still match these enrollees' emergency care, labor and
+    delivery included (42 USC 1396b(v)(3)), so we likely overstate the
+    state's cost.
   - We keep the federal share for a pregnant enrollee in a state that takes
-    CHIP's unborn-child option, with income under that option's limit: federal
-    CHIP funds match her prenatal care whatever her status, and Medicaid
-    matches her delivery as emergency care. CHIP coverage through the option
-    itself keeps its federal match too. 42 CFR 457.10 counts an unborn child as
-    a child, and CMS read it to cover unborn children whatever the parent's
-    status (67 FR 61956, 61965-66); 42 USC 1397ll(f)(1)(A) preserves the option.
-  - We leave out CHIP that policyengine-us books in a state with no such rule,
-    and the Medicare Savings Programs for these enrollees, from both
+    CHIP's unborn-child option, with income at or under that option's limit.
+    Federal CHIP funds match her prenatal care whatever her status, and
+    Medicaid matches her delivery as emergency care. CHIP coverage through the
+    option itself keeps its federal match too. 42 CFR 457.10 counts an unborn
+    child as a child, and CMS read it to cover unborn children whatever the
+    parent's status (67 FR 61956, 61965-66); 42 USC 1397ll(f)(1)(A) preserves
+    the option.
+  - We leave out CHIP that policyengine-us books where no such rule covers the
+    person, and the Medicare Savings Programs for these enrollees, from both
     governments' lines: no government pays for that coverage.
     policyengine-us 1.764.6 bars only an ``UNDOCUMENTED`` label from CHIP and
     tests no status for the Medicare Savings Programs.
@@ -55,10 +57,10 @@ the household's state:
   coverage, so it never prices the people OmniSalud covers.
 
 Congress fixes each state's TANF block grant (42 USC 603(a)(1)), so we charge
-every TANF change to the states, and each TANF dollar counts once. A needy
-state can also draw on a contingency fund that Congress caps at $608 million
-a year (42 USC 603(b)), so the charge can overstate the states' share by up to
-that amount.
+every TANF change to the states, and we count each TANF dollar once. Needy
+states can also draw on a TANF contingency fund that Congress funded at up to
+$608 million for fiscal 2018 (42 USC 603(b)(2)). We can overstate the states'
+share by about that much.
 
 policyengine-us spreads each state's fixed Medicaid spending over the
 enrollees in each simulation (``medicaid_slcsp_state_denominator``). Left to
@@ -124,6 +126,10 @@ STATE_SHARE_COSTS = ("medicaid_state_cost", "chip_state_cost", "msp_state_cost")
 HEALTHIER_OREGON = "or_healthier_oregon_cost"
 HEALTHIER_OREGON_ALSO_PRICED = ("medicaid_enrolled", "chip_enrolled")
 MEDICAID_TAKE_UP = "takes_up_medicaid_if_eligible"
+#: California's own rule for Medi-Cal regardless of immigration status, which
+#: policyengine-us's ``is_medicaid_immigration_status_eligible`` adds to the
+#: states' ``undocumented_immigrant`` rule.
+CA_STATE_RULE = "is_ca_medicaid_immigration_status_eligible"
 #: Whether CHIP's From-Conception-to-End-of-Pregnancy option covers a pregnant
 #: person. The unborn child is the beneficiary, so federal CHIP funds match the
 #: coverage whatever the parent's immigration status.
@@ -280,8 +286,9 @@ def programs_metadata(sim, year):
         "excluded": list(excluded),
         "unfunded": (
             "CHIP policyengine-us books for people whose immigration status fails "
-            "the federal test, in states with no undocumented_immigrant rule, apart "
-            "from the unborn-child option; and Medicare Savings Program benefits "
+            "the federal test, where no state rule covers them (the state's "
+            "undocumented_immigrant rule or California's own), apart from the "
+            "unborn-child option; and Medicare Savings Program benefits "
             "for people whose status fails the federal test"
         ),
         "tanf_programs_in_state_benefits": tanf_programs_in_state_benefits(
@@ -361,9 +368,10 @@ def state_only_split(federal, costs, fcep, pregnancy_match, state_rule):
     ``FEDERAL_SHARE_COSTS`` and ``STATE_SHARE_COSTS`` to the share
     policyengine-us books for each person. ``fcep`` says whether CHIP's
     unborn-child (FCEP) option covers the person, ``pregnancy_match`` whether
-    she is pregnant in a state that takes that option, with income under its
-    limit, and ``state_rule`` whether the person's state covers people without
-    satisfactory status under its ``undocumented_immigrant`` rule.
+    she is pregnant in a state that takes that option, with income at or under
+    its limit, and ``state_rule`` whether a state rule covers the person
+    whatever their status (``state_only_accounting`` reads the state's
+    ``undocumented_immigrant`` rule and California's own).
 
     For people federal matching can't cover, returns ``(moved, unfunded_federal,
     unfunded_state)``:
@@ -412,7 +420,7 @@ def check_moved_statuses(status, moved):
     others = sorted(set(reached.tolist()) - set(STATE_ONLY_STATUSES))
     if others:
         raise ValueError(
-            "state_only_accounting would move or leave out federal shares for people "
+            "state_only_accounting would move or leave out shares for people "
             f"with {', '.join(others)} status. A state that took the election in "
             "42 USC 1396b(v)(4)(A) gets federal matching for lawfully residing "
             "children and pregnant women, so apply the election to the federal "
@@ -437,12 +445,18 @@ def state_only_accounting(sim, year):
     (``undocumented_immigrant``, California's own rule, its foster youth rule
     and Illinois's HBI programs), such as California's Medi-Cal for
     undocumented and DACA residents. It also books CHIP for a DACA child in
-    any state, since its CHIP test bars only an ``UNDOCUMENTED`` label, and the
-    Medicare Savings Programs, which it gives no status test.
-    ``state_only_split`` sorts each share. The state spending totals that
+    any state with a children's CHIP limit, since its CHIP test bars only an
+    ``UNDOCUMENTED`` label, and it gives the Medicare Savings Programs no
+    status test.
+    ``state_only_split`` sorts each share. For CHIP, ``state_rule`` reads the
+    state's ``undocumented_immigrant`` rule and California's own
+    (``CA_STATE_RULE``), as policyengine-us's
+    ``is_medicaid_immigration_status_eligible`` does. At policyengine-us
+    1.764.6, California offers CHIP only through the unborn-child option, so
+    its rule moves no CHIP share yet. The state spending totals that
     ``medicaid_cost`` spreads likely count the federally matched emergency
-    care, so the move likely overstates the state's cost by the federal share
-    of that care, which this accounting can't measure.
+    care. If they do, we overstate the state's cost by a federal share of that
+    care we can't measure here.
 
     The split depends on the immigration status labels the data assign.
     Microcosm treats anyone who reports Medicaid coverage in the prior year
@@ -484,7 +498,9 @@ def state_only_accounting(sim, year):
         & (fcep_limit > 0)
         & (np.asarray(sim.calculate("medicaid_income_level", period=year), dtype=float) <= fcep_limit)
     )
-    state_rule = _by_state(p.undocumented_immigrant, state) > 0
+    state_rule = (_by_state(p.undocumented_immigrant, state) > 0) | np.asarray(
+        sim.calculate(CA_STATE_RULE, period=year), dtype=bool
+    )
     moved, unfunded_federal, unfunded_state = state_only_split(
         federal, costs, fcep, pregnancy_match, state_rule
     )

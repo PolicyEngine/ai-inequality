@@ -40,19 +40,20 @@ records:
   ``gov.household.household_state_benefits`` also lists (Massachusetts's
   TAFDC in policyengine-us 2.2.1, which later releases drop from that list).
   That list holds the program at its full amount for every eligible family,
-  and ``tanf`` adds it again for families that take TANF up. These fields
-  charge each state its share of Medicaid, CHIP and Medicare Savings Program
-  costs under federal matching rules (``state_benefit_cost``, from
-  ``gov.hhs.medicaid.cost_share``), the federal share policyengine-us books
-  for people whose immigration status rules out federal matching where a
-  state rule covers them (``health_tanf.state_only_accounting``; federal funds
-  still match their emergency care, so this likely overstates the state's
-  cost), its own health subsidies, and its TANF change beyond the copy its
-  line holds, because federal law fixes each state's TANF block grant. The
-  all-government total adds every program in ``healthcare_benefit_value``
-  apart from the coverage ``health_tanf`` leaves out, and counts TANF once, as
-  ``tanf`` pays it; federal net revenue is again what the states and
-  localities leave.
+  and ``tanf`` adds it again for families that take TANF up. In these fields,
+  we charge each state its share of Medicaid, CHIP and Medicare Savings
+  Program costs under federal matching rules (``state_benefit_cost``, from
+  ``gov.hhs.medicaid.cost_share``) and its own health subsidies. Federal law
+  fixes each state's TANF block grant, so we also charge the state its TANF
+  change beyond the copy its line holds. Where a state rule covers people
+  whose immigration status rules out federal matching, we also charge the
+  state the federal share policyengine-us books for them
+  (``health_tanf.state_only_accounting``). Federal funds still match their
+  emergency care, so we likely overstate the state's cost. We add every
+  program in ``healthcare_benefit_value`` to the all-government total, apart
+  from the coverage ``health_tanf`` leaves out, and count TANF once, as
+  ``tanf`` pays it. We again book what the states and localities leave as
+  federal net revenue.
 * Medicaid at the baseline's cost per enrollee. policyengine-us spreads each
   state's fixed Medicaid spending over the enrollees in each simulation
   (``medicaid_slcsp_state_denominator``), so on its own a shifted branch that
@@ -146,28 +147,32 @@ RUN_DESCRIPTION = (
     "less the states). Each shifted branch prices Medicaid enrollees at the "
     "baseline's cost per enrollee (the baseline's "
     "medicaid_slcsp_state_denominator), so state Medicaid totals move with "
-    "enrollment. The *_with_health_tanf fields "
-    "also charge each state its share of Medicaid, CHIP and Medicare "
-    "Savings Program costs under federal matching rules (state_benefit_cost), "
-    "and the federal share policyengine-us books for people whose immigration "
-    "status rules out federal matching, where a state rule covers them: "
-    "Medicaid, and CHIP in states whose undocumented_immigrant rule covers "
-    "people without satisfactory status. Pregnant enrollees in states that "
-    "take CHIP's unborn-child option keep their federal share, as does CHIP "
-    "coverage through that option. CHIP that policyengine-us books for such "
-    "people elsewhere, and their Medicare Savings Program benefits, count on "
-    "neither line, since no government pays for them. The fields also charge "
-    "each state its own health programs that healthcare_benefit_value prices "
-    "(California's Covered California premium subsidy from policyengine-us "
-    "2.x, which 1.764.6 doesn't model; Healthier Oregon only for people "
-    "policyengine-us prices in neither Medicaid nor CHIP and who take Medicaid "
-    "up; not Colorado's OmniSalud, which policyengine-us prices as the "
-    "benchmark premium of members who can buy Marketplace coverage) and the "
-    "TANF change its line doesn't already hold (CalWORKs for California; "
-    "Massachusetts's TAFDC already sits in its state benefits), since the "
-    "federal TANF block grant is fixed. The all-government total adds every "
-    "program in healthcare_benefit_value apart from that coverage and counts "
-    "TANF once. "
+    "enrollment. In the *_with_health_tanf fields, we also charge each state "
+    "its share of Medicaid, CHIP and Medicare Savings Program costs under "
+    "federal matching rules (state_benefit_cost). For people whose "
+    "immigration status rules out federal matching, we charge the state the "
+    "federal share policyengine-us books for their Medicaid. Where a state "
+    "rule covers them (the state's undocumented_immigrant rule or "
+    "California's own), we charge it their CHIP's federal share too. We keep "
+    "the federal share of CHIP coverage "
+    "through CHIP's unborn-child option. We also keep it for a pregnant "
+    "enrollee's Medicaid in a state that takes the option, if her income "
+    "doesn't exceed the option's limit. We leave CHIP that policyengine-us "
+    "books for such people where no state rule covers them, and their "
+    "Medicare Savings Program benefits, off both lines, since no government "
+    "pays for them. We also charge each state its own health programs that "
+    "healthcare_benefit_value prices: California's Covered California premium "
+    "subsidy from policyengine-us 2.x (1.764.6 doesn't model it), and "
+    "Healthier Oregon for people policyengine-us prices in neither Medicaid "
+    "nor CHIP and who take Medicaid up. We leave out Colorado's OmniSalud, "
+    "since policyengine-us prices it as the benchmark premium of members who "
+    "can buy Marketplace coverage. Congress fixes each state's TANF block "
+    "grant, so we charge each state the TANF change its line doesn't already "
+    "hold (CalWORKs for California; Massachusetts's TAFDC already sits in its "
+    "state benefits). We add every program in "
+    "healthcare_benefit_value to the all-government total, apart from the "
+    "Healthier Oregon overlap, OmniSalud and the coverage no government pays "
+    "for, and count TANF once. "
     "The shift sets employment_income and self_employment_income and their "
     "stored *_before_lsr inputs, so the TANF and SNAP formulas that read the "
     "stored inputs see the wage cut. "

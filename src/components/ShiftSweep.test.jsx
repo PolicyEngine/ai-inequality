@@ -6,6 +6,7 @@ import sweepData from "../data/shiftSweepData.json";
 import ukSweepData from "../data/ukShiftSweepData.json";
 import ShiftSweep, {
   healthProgramState,
+  revenueDescriptionUsHealthTanf,
   stateLineNoteHealthTanf,
 } from "./ShiftSweep";
 
@@ -239,7 +240,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   expect(document.body).not.toHaveTextContent(/capital-gains tax and niit/i);
   // The state ranking charges each state the federal share it moves.
   expect(document.body).toHaveTextContent(
-    /where a state covers people whose immigration status bars federal matching, we charge it the federal share as well\. the federal government still matches their emergency care, so we likely overstate the state's cost\. in states that cover unborn children through chip, the federal government also matches a pregnant woman's coverage, so we leave her federal share in place\./i,
+    /where a state covers people whose immigration status bars federal matching, we charge it the federal share as well\. the federal government still matches their emergency care, so we likely overstate the state's cost\. in states that cover unborn children through chip, the federal government also matches a pregnant woman's prenatal care whatever her immigration status, so we leave her federal share in place\./i,
   );
   expect(document.body).not.toHaveTextContent(/the whole cost/i);
 
@@ -250,8 +251,15 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     screen.getByRole("heading", { name: /ca state revenue decomposition/i }),
   ).toBeInTheDocument();
   expect(document.body).toHaveTextContent(
-    /medicare savings programs\. where the state covers people whose immigration status bars federal matching, we charge it the federal share as well\. the federal government still matches their emergency care, so we likely overstate the state's cost\./i,
+    /medicare savings programs\. where the state covers people whose immigration status bars federal matching, we charge it the federal share as well\. congress sets each state's tanf block grant/i,
   );
+  // The ranking below carries the caveats, so a state view shows each once.
+  for (const caveat of [
+    "still matches their emergency care",
+    "cover unborn children through CHIP",
+  ]) {
+    expect(document.body.textContent.split(caveat)).toHaveLength(2);
+  }
   expect(document.body).toHaveTextContent(
     /congress sets each state's tanf block grant at a fixed amount, so we charge the state every change in its tanf benefits\./i,
   );
@@ -348,6 +356,32 @@ test("a state's health note names only the programs that state runs", () => {
   }
   expect(stateLineNoteHealthTanf("TX", STATE_HEALTH)).toMatch(
     /Medicare Savings Programs\. Where the state covers/,
+  );
+});
+
+test("the revenue description names the state programs the run counts and leaves out", () => {
+  // At policyengine-us 1.764.6, the sweep counts Healthier Oregon, the only
+  // state program it counts, and leaves out OmniSalud.
+  const published = revenueDescriptionUsHealthTanf(
+    sweepData.metadata.health_tanf_programs,
+  );
+  expect(published).toMatch(
+    /We count what governments spend on Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax credits, the Basic Health Program and Oregon's Healthier Oregon program\. We don't yet model Colorado's OmniSalud program for the people it covers, so we leave it out\. We price each new Medicaid enrollee/,
+  );
+  expect(published).not.toMatch(/state programs such as/);
+  // A later release's premium subsidies have no display name yet.
+  expect(
+    revenueDescriptionUsHealthTanf({ state: STATE_HEALTH, excluded: [] }),
+  ).toMatch(
+    /the Basic Health Program, Oregon's Healthier Oregon program and other health programs that states run on their own\. We price/,
+  );
+  expect(
+    revenueDescriptionUsHealthTanf({ state: [], excluded: ["xx_program"] }),
+  ).toMatch(
+    /ACA premium tax credits and the Basic Health Program\. We leave out other state health programs that we don't yet model\. We price/,
+  );
+  expect(revenueDescriptionUsHealthTanf(undefined)).toMatch(
+    /ACA premium tax credits and the Basic Health Program\. We price/,
   );
 });
 
