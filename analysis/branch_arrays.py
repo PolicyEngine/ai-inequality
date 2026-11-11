@@ -24,20 +24,29 @@ calculated from the input it replaces. So the pinned runtime keeps 3.30.3, and
 That gap: under #556, code that writes in place into one of a parent's cached
 arrays after branching changes the value a branch reads, if the branch hasn't
 read that array yet. So here the parent copies too: making a branch marks each
-array it shares in both simulations, and each simulation copies a marked array
-the first time it reads it, so neither reads the other's writes. Making a
+key whose array it shares in both simulations, and each copies a marked key's
+array the first time it reads it. A write into that read then stays in the
+simulation that made it. The mark belongs to the key, so an array stored again
+under another key after the branch carries none (see below). Making a
 branch also drops each of the parent's fast-cache entries
 (``Simulation._fast_cache``) that shares a base array with an array the branch
 shares, so the parent's reads reach its storage, which copies. (For a formula
 that returns a 0-dim array, the fast cache holds that array and the storage a
 reshaped view of it.) With ``freeze_sources`` (the sweep's setting), making a
-branch also marks every array it shares read-only, so a formula that writes
-through a stored array, by a reference it took before the branch, raises
-``ValueError`` instead of changing a result.
+branch also sets the read-only flag on every array object it shares, so a
+write through that object raises ``ValueError`` instead of changing a result.
+The flag belongs to the object, not the simulation, and it stays after
+``uninstall``. It covers a formula's reference from before the branch, a key
+the parent later stores that object under, the caller's own input array and
+any other simulation holding the same object. If ``Simulation.clone`` raises
+inside ``get_branch``, the storages it reached keep their marks and the
+parent's fast cache keeps serving their arrays. With ``freeze_sources``, those
+arrays also keep their read-only flag, so a write into the parent's next read
+raises where core writes.
 
 With ``freeze_sources``, writes can still make a run read values that copying
 every array up front wouldn't give, but only in-place writes after a branch,
-in one of two ways:
+in one of three ways:
 
 - through another array over a shared array's memory, held from before the
   branch: a view of the shared array, or the array it views, such as the 0-dim
@@ -46,29 +55,41 @@ in one of two ways:
 - into the parent's copy of an array while something else still holds the
   array that copy replaced: a formula's reference from before the branch, or a
   second storage key that core filled with the same object. Under core the
-  write lands in the one array every holder sees; here the other holder keeps
-  the old values.
+  write lands in the one array every holder sees (or raises, if that array
+  carries the read-only flag), and here the other holder keeps the old values;
+- into the parent's copy of an array that carried the read-only flag before
+  the branch, such as an input a pandas 3 data frame handed core. Core refuses
+  the write, and here the parent's copy takes it.
 
-Without ``freeze_sources``, a write through a stored array, by a reference
-from before the branch, also reaches a branch that hasn't read the array.
+Without ``freeze_sources``, a write through a stored array also reaches a
+branch that hasn't read the array. The writer may hold a reference from before
+the branch, or it may read the array later from a key the parent filled with
+it after the branch. A formula that reads a variable, makes a branch and
+returns what it read fills such a key, and so does ``set_input`` with an array
+read before the branch.
 
 Making a branch drops the parent's fast-cache entries for the arrays the
 branch shares, so after a branch the parent reads those arrays through
 ``Simulation._calculate``. Core's ``Simulation.calculate`` serves them from the
 fast cache, so wherever the two paths disagree, the parent gets
 ``_calculate``'s answer and core gets the cached one, with no write at all. We
-know three such cases:
+know four such cases:
 
 - A formula's 0-dim result reads as the ``(1,)`` view the storage holds, where
   core returns the 0-dim array.
-- If the parent's own system neutralizes a variable after the parent caches
-  it, the parent reads the variable's default, where core returns the cached
-  values. ``_calculate`` checks neutralization before it reads the storage.
+- If the parent's own system neutralizes a variable, or switches on the
+  variable's ``gov.abolitions`` parameter, after the parent caches it, the
+  parent reads the variable's default, where core returns the cached values.
+  ``_calculate`` checks both before it reads the storage.
 - After a delete that leaves the fast cache alone, the parent computes the
   value again and stores it, where core returns the deleted value and leaves
   the storage empty. ``Holder.delete_arrays`` never touches the fast cache,
   and ``Simulation.delete_arrays`` with a period drops only that period's
   entry, so deleting a year leaves its months' entries in place.
+- With an entry waiting in ``invalidated_caches``, the parent's next read of
+  an array the branch shares runs ``calculate``'s purge, and the purge deletes
+  the entry's array. Core's fast-cache hit skips that purge, so core keeps the
+  entry's values where the parent computes them again.
 
 None of this happens in the sweep. policyengine-us#9739's scan finds five
 formulas in policyengine-us 1.764.6 that write in place into arrays they read
@@ -91,21 +112,36 @@ sweep's own code writes only into the accumulators and dicts it builds. Every
 population in the sweep holds thousands of members, so no stored array views
 a formula's 0-dim result. policyengine-us 1.764.6 neutralizes variables only
 in the systems of branches it makes with ``clone_system=True``, so no parent's
-system changes under its cache. The sweep's own code deletes no arrays.
-policyengine-us 1.764.6 calls ``Simulation.delete_arrays`` only without a
-period. It calls ``Holder.delete_arrays`` only while it builds a simulation,
-before the simulation has any branch, and in ``BranchedSimulation``, a class it
-imports but never uses. And the sweep freezes its sources, so a write through a
-stored array by a reference from before a branch would raise.
+system changes under its cache. It changes parameters only through the reforms
+it applies while it builds a system or a simulation, and core's
+``apply_reform`` empties the fast cache. The sweep's own code deletes no
+arrays. policyengine-us 1.764.6 calls ``Simulation.delete_arrays`` only without
+a period. It calls ``Holder.delete_arrays`` only while it builds a simulation
+and in ``BranchedSimulation``, a class it imports but never uses. The
+simulation has no branch at that point unless its caller passed ``reform=``,
+in which case core has already made the ``baseline`` branch;
+``managed_us_microsimulation`` refuses ``reform=``. Core adds to
+``invalidated_caches`` only on a spiral and empties it when that top-level
+``calculate`` ends, and the sweep reads a shift simulation's parent only
+before its branch computes anything. The sweep freezes its sources, so a write
+through a stored array would raise, whether the writer took its reference
+before a branch or read a key the parent filled after it. With frozen sources,
+policyengine-us's branch tree holds three arrays that carry the read-only flag
+but no mark: ``income_tax`` in ``itemizing`` and ``not_itemizing``, and
+``tax_unit_itemizes`` in ``no_salt``. In each, a formula stores an array that
+another simulation in the tree also holds, and none of the five writers reads
+them. Core refuses a write into an input that carries the read-only flag, and
+core completes the sweep, so the sweep never writes into one.
 ``analysis.check_branch_arrays`` checks the whole sweep: it runs
 ``run_shift_sweep`` both ways on a subset of the microdata and compares every
 array in every branch, byte for byte.
 
 ``Simulation.clone()`` called directly, as ``Simulation.derivative`` does, still
 copies every array straight away. After ``uninstall``, a storage that still
-shares an array goes on copying it on first read. ``Holder.get_memory_usage``
-counts an array a branch still shares for both simulations, though memory
-holds it once.
+shares an array goes on copying it on first read in this process. A process
+that unpickles such a storage without running ``install`` gets errors from its
+methods. ``Holder.get_memory_usage`` counts an array a branch still shares for
+both simulations, though memory holds it once.
 """
 
 from __future__ import annotations
@@ -359,7 +395,9 @@ def _keep_copying() -> None:
     Each method is a ``functools.partial`` of a module-level function, so
     ``pickle`` and ``copy.deepcopy`` rebuild it around the copied storage. A
     bound method would pickle as a lookup of its function's name on the
-    storage, and the storage has no attribute by that name.
+    storage, and the storage has no attribute by that name. The rebuilt
+    methods work only in a process that has run ``install``, because
+    elsewhere ``_core`` holds no methods and ``_periods`` holds None.
     """
     for storage in list(_marked):
         if storage.__dict__.get("_shared"):
@@ -371,9 +409,10 @@ def _keep_copying() -> None:
 def uninstall() -> None:
     """Put back policyengine-core's own methods.
 
-    Storages that still share arrays keep copying on first read (see
-    ``_keep_copying``), so a simulation made before reads what it would
-    have.
+    Storages that still share arrays keep copying on first read in this
+    process (see ``_keep_copying``), so a simulation made before reads what it
+    would have. A process that unpickles such a storage without running
+    ``install`` gets errors from its methods.
     """
     for name, owner, attribute, _ in _targets():
         if name in _original:
@@ -384,10 +423,15 @@ def uninstall() -> None:
 
 @contextlib.contextmanager
 def shared_branch_arrays(freeze_sources: bool = True):
-    """``install`` for the length of a ``with`` block, then restore.
+    """``install`` while a ``with`` block runs, then put core's methods back.
 
-    A simulation made inside the block can be used after it: its storages
-    keep copying on first read (see ``uninstall``).
+    If the port already ran when the block opened, the block puts back the
+    earlier ``freeze_sources`` instead. Arrays a branch froze keep their
+    read-only flag after the block. Code can go on using a simulation made
+    inside the block after it closes: its storages keep copying on first read
+    (see ``uninstall``). Look up ``get_branch`` and ``clone`` on it again after
+    the block, though: a method bound inside the block raises ``KeyError``
+    after it.
     """
     was_installed = installed()
     previous = _settings["freeze_sources"]

@@ -15,7 +15,7 @@ the pinned core 3.30.3):
   branch was made shares memory between them, and nothing can write through
   either simulation's copy.
 
-Isolation and the differential fail only after an in-place write, in three
+Isolation and the differential fail only after an in-place write, in five
 cases, each intended and pinned below:
 
 - a write through a stored array by a reference from before the branch (with
@@ -24,19 +24,27 @@ cases, each intended and pinned below:
   branch, such as a view or the 0-dim array a formula returned;
 - a write into the parent's copy of an array that something else still holds:
   a reference from before the branch, or another variable or month core stored
-  the same array under.
+  the same array under;
+- a write into a read of a key that the parent filled, after the branch, with
+  an array the branch shares (with frozen sources, it raises instead);
+- a write into the parent's copy of an array that carried the read-only flag
+  before the branch, where core refuses the write.
 
-The first two reach a branch; the third changes only what the parent reads.
+The first two and the fourth reach a branch; the third and fifth change only
+what the parent reads.
 
 After a branch, the parent reads each array the branch shares through
 ``Simulation._calculate``, where core serves it from the fast cache. The
 differential also fails wherever the two paths disagree with no write at all.
-We know three such reads, each intended and pinned below. A formula's 0-dim
+We know four such reads, each intended and pinned below. A formula's 0-dim
 result comes back with shape (1,) rather than (). A variable that the parent's
-own system neutralized after the parent cached it reads as its default rather
-than the cached values. And after a delete of the month's year, or one through
-its holder, core's fast cache serves the deleted month, while the parent
-computes the month again and stores it.
+own system neutralized, or abolished through ``gov.abolitions``, after the
+parent cached it reads as its default rather than the cached values. After a
+delete of the month's year, or one through its holder, core's fast cache
+serves the deleted month, while the parent computes the month again and stores
+it. And with an entry waiting in ``invalidated_caches``, the parent's read of
+a shared array runs the purge that core's fast-cache hit skips. So the parent
+computes the entry's variable again, where core keeps the stored values.
 
 Every test here but the first needs policyengine-core 3.30.3, and the last
 needs policyengine-us; CI installs neither, so they skip there.
@@ -265,6 +273,141 @@ def test_the_parent_s_first_read_after_branching_splits_an_array_core_shares(
     np.testing.assert_array_equal(port["alias"], port["expected"])
 
 
+def _add_in_place(array, amount):
+    """Add ``amount`` into ``array`` in place: ``"written"``, or ``"raised"``
+    if the array carries the read-only flag."""
+    try:
+        array += amount
+    except ValueError as error:
+        if "read-only" not in str(error):
+            raise
+        return "raised"
+    return "written"
+
+
+def _tax_copy_variable():
+    """An input with no formula, for the caller to fill with ``income_tax``'s
+    own array."""
+    pytest.importorskip("policyengine_core")
+    from policyengine_core.country_template.entities import Person
+    from policyengine_core.periods import MONTH
+    from policyengine_core.variables import Variable
+
+    class income_tax_copy(Variable):
+        value_type = float
+        entity = Person
+        definition_period = MONTH
+        label = "An input the caller fills with income_tax's array"
+
+    return income_tax_copy
+
+
+def _tax_read_before_a_branch_variable():
+    """A variable whose formula reads ``income_tax``, makes a branch, then
+    returns what it read. policyengine-us's ``tax_liability_if_itemizing``
+    also makes a branch inside a formula."""
+    pytest.importorskip("policyengine_core")
+    from policyengine_core.country_template.entities import Person
+    from policyengine_core.periods import MONTH
+    from policyengine_core.variables import Variable
+
+    class tax_read_before_a_branch(Variable):
+        value_type = float
+        entity = Person
+        definition_period = MONTH
+        label = "income_tax, read before a branch the formula makes"
+
+        def formula(person, period, parameters):
+            tax = person("income_tax", period)
+            person.simulation.get_branch("inside")
+            return tax
+
+    return tax_read_before_a_branch
+
+
+def _write_into_a_key_filled_after_branching(form):
+    """After a branch, the parent stores the array the branch shares for
+    ``income_tax`` under a second variable: through ``set_input``
+    (``"set_input"``), or as the result of the formula that made the branch
+    (``"formula"``). Then the parent subtracts 5 from a fresh read of that
+    variable: what the write gives, and the branch's ``income_tax`` after
+    it."""
+    if form == "set_input":
+        sim = _template_with(_tax_copy_variable())
+        held = sim.calculate("income_tax", "2022-01")
+        branch = sim.get_branch("raise")
+        sim.set_input("income_tax_copy", "2022-01", held)
+        fresh = sim.calculate("income_tax_copy", "2022-01")
+    else:
+        sim = _template_with(_tax_read_before_a_branch_variable())
+        sim.calculate("tax_read_before_a_branch", "2022-01")
+        branch = sim.branches["inside"]
+        fresh = sim.calculate("tax_read_before_a_branch", "2022-01")
+    write = _add_in_place(fresh, -5)
+    return write, branch.calculate("income_tax", "2022-01").tolist()
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+@pytest.mark.parametrize("form", ["set_input", "formula"])
+def test_a_key_the_parent_fills_with_a_shared_array_after_branching_has_no_mark(
+    form, freeze_sources
+):
+    # Intended: the mark belongs to the key, so the parent's read of a key it
+    # filled after the branch returns the array the branch shares. Frozen, a
+    # write into that read raises where core writes; not frozen, it reaches
+    # the branch. With frozen sources, policyengine-us 1.764.6 leaves three
+    # such arrays, and none of its five in-place writers reads them.
+    tax = [600.0, 375.0]
+    assert _write_into_a_key_filled_after_branching(form) == ("written", tax)
+    port = _ported(freeze_sources, _write_into_a_key_filled_after_branching, form)
+    if freeze_sources:
+        assert port == ("raised", tax)
+    else:
+        assert port == ("written", [595.0, 370.0])
+
+
+def _write_into_a_read_only_input_after_branching():
+    """The parent sets March's salaries from an array that carries the
+    read-only flag, branches, and adds 1 to a fresh read of them. It reports
+    what the write gives, the parent's salaries and income tax, and the
+    branch's salaries."""
+    sim = _template()
+    salaries = np.array([4000.0, 2500.0], dtype=np.float32)
+    salaries.flags.writeable = False
+    sim.set_input("salary", "2022-03", salaries)
+    branch = sim.get_branch("raise")
+    write = _add_in_place(sim.calculate("salary", "2022-03"), 1)
+    return (
+        write,
+        sim.calculate("salary", "2022-03").tolist(),
+        sim.calculate("income_tax", "2022-03").tolist(),
+        branch.calculate("salary", "2022-03").tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_the_parent_s_copy_of_a_read_only_input_takes_a_write_core_refuses(
+    freeze_sources,
+):
+    # Intended: core hands the parent the read-only input itself, so the write
+    # raises. Here the parent's first read after the branch copies the input,
+    # and the copy takes the write. A pandas 3 data frame hands core read-only
+    # inputs; core completes the sweep, so the sweep makes no such write.
+    salaries = [4000.0, 2500.0]
+    assert _write_into_a_read_only_input_after_branching() == (
+        "raised",
+        salaries,
+        [600.0, 375.0],
+        salaries,
+    )
+    assert _ported(freeze_sources, _write_into_a_read_only_input_after_branching) == (
+        "written",
+        [4001.0, 2501.0],
+        [600.1500244140625, 375.1500244140625],
+        salaries,
+    )
+
+
 def _zero_dim_variable():
     """A variable whose formula returns a 0-dim array. In a one-person
     simulation, core keeps that array in the fast cache and stores a reshaped
@@ -379,6 +522,46 @@ def test_a_variable_neutralized_after_the_parent_cached_it_reads_as_its_default(
     assert _ported(freeze_sources, _neutralize_after_caching) == (tax, zero, zero)
 
 
+def _abolish_after_caching():
+    """``income_tax`` before the parent's own system switches on
+    ``gov.abolitions.income_tax``, then the parent's and a new branch's reads
+    of it."""
+    sim = _template_with()  # its own system, so the change stays in this test
+    from policyengine_core.parameters import ParameterNode
+
+    system = sim.tax_benefit_system
+    # The template's parameters have no gov node, and add_abolition_parameters
+    # adds nothing without one.
+    system.parameters.add_child("gov", ParameterNode("gov", data={}))
+    system.add_abolition_parameters()
+    before = sim.calculate("income_tax", "2022-01").tolist()
+    system.parameters.gov.abolitions.income_tax.update(
+        period="year:2022:1", value=True
+    )
+    # TaxBenefitSystem.modify_parameters empties this cache the same way.
+    system._parameters_at_instant_cache = {}
+    branch = sim.get_branch("raise")
+    return (
+        before,
+        sim.calculate("income_tax", "2022-01").tolist(),
+        branch.calculate("income_tax", "2022-01").tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_variable_abolished_after_the_parent_cached_it_reads_as_its_default(
+    freeze_sources,
+):
+    # Intended, like the neutralized variable above: _calculate checks
+    # gov.abolitions before it reads the storage, and core's fast cache skips
+    # that check. policyengine-us 1.764.6 changes parameters only through the
+    # reforms it applies while it builds a system or a simulation.
+    tax, zero = [600.0, 375.0], [0.0, 0.0]
+    assert _abolish_after_caching() == (tax, tax, zero)
+    assert _ported(freeze_sources, _abolish_after_caching) == (tax, zero, zero)
+    assert "gov" not in _template().tax_benefit_system.parameters.children
+
+
 def _delete_after_branching(delete, new_salary):
     """January's ``income_tax``, then the parent's and a branch's reads of it
     after the parent runs ``delete``, and the periods the parent stores for it
@@ -441,6 +624,52 @@ def test_a_delete_that_drops_core_s_fast_cache_entry_reads_as_core_s(
     after = (OLD_TAX, NEW_TAX if new_salary else OLD_TAX, OLD_TAX, ["2022-01"])
     assert _delete_after_branching(steps, new_salary) == after
     assert _ported(freeze_sources, _delete_after_branching, steps, new_salary) == after
+
+
+def _read_with_an_entry_waiting_after_branching():
+    """The parent caches January's income tax and disposable income, adds the
+    tax to ``invalidated_caches``, branches, doubles January's salaries and
+    reads disposable income again. It reports the periods the parent stores
+    for the tax, and the parent's and the branch's reads of it."""
+    sim = _template()
+    from policyengine_core.periods import period
+
+    sim.calculate("income_tax", "2022-01")
+    sim.calculate("disposable_income", "2022-01")
+    sim.invalidate_cache_entry("income_tax", period("2022-01"))
+    branch = sim.get_branch("raise")
+    sim.set_input("salary", "2022-01", np.array([8000.0, 5000.0], dtype=np.float32))
+    sim.calculate("disposable_income", "2022-01")
+    stored = sorted(
+        str(known) for known in sim.get_holder("income_tax").get_known_periods()
+    )
+    return (
+        stored,
+        sim.calculate("income_tax", "2022-01").tolist(),
+        branch.calculate("income_tax", "2022-01").tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_read_with_an_entry_waiting_purges_where_core_s_fast_cache_does_not(
+    freeze_sources,
+):
+    # Intended: core's fast-cache hit on disposable income skips calculate's
+    # purge, so January's tax stays stored. Here that read misses the fast
+    # cache, the purge deletes the tax, and the parent computes it again from
+    # the doubled salaries. Core adds to invalidated_caches only on a spiral,
+    # and the sweep reads a shift simulation's parent only before its branch
+    # computes anything.
+    assert _read_with_an_entry_waiting_after_branching() == (
+        ["2022-01"],
+        OLD_TAX,
+        OLD_TAX,
+    )
+    assert _ported(freeze_sources, _read_with_an_entry_waiting_after_branching) == (
+        [],
+        NEW_TAX,
+        OLD_TAX,
+    )
 
 
 def _ported(freeze_sources, steps, *args):
@@ -848,6 +1077,138 @@ def test_a_storage_that_still_shares_after_the_block_survives_a_round_trip(
         assert back._arrays[key] is read
         assert key not in back._shared
         assert key in storage._shared
+
+
+# Fails if _storage_get copies on every read of a storage that still has a mark.
+def _an_input_set_over_one_of_two_marked_months():
+    """The parent caches two months, branches, then sets one month again. It
+    reports whether its first read returns the array it passed, its read after
+    a write into that array, and the branch's read of the month."""
+    sim = _template()
+    for period in ("2022-01", "2022-02"):
+        sim.calculate("income_tax", period)
+    branch = sim.get_branch("raise")
+    new = np.array([10.0, 20.0], dtype=np.float32)
+    sim.set_input("income_tax", "2022-01", new)
+    first = sim.calculate("income_tax", "2022-01")
+    new[0] = 99.0
+    return (
+        first is new,
+        sim.calculate("income_tax", "2022-01").tolist(),
+        branch.calculate("income_tax", "2022-01").tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_an_input_set_over_one_of_two_marked_months_reads_as_core_s(freeze_sources):
+    # The other month's mark keeps the storage on the port's path, so get has
+    # to return an unmarked key's array itself, as core does, not a copy.
+    core = _an_input_set_over_one_of_two_marked_months()
+    assert core == (True, [99.0, 20.0], [600.0, 375.0])
+    assert _ported(freeze_sources, _an_input_set_over_one_of_two_marked_months) == core
+
+
+# Fails if _storage_put drops the mark before core's put runs, since core's put
+# can raise.
+def _a_put_core_refuses_after_branching():
+    """The parent caches a month and branches, then sets an input that core's
+    put refuses (a month anchored mid-month, whose key is the month's own). It
+    reports the parent's and the branch's reads after a write into the
+    parent's next read."""
+    sim = _template()
+    from policyengine_core.periods import Instant, Period
+
+    sim.calculate("income_tax", "2022-01")
+    branch = sim.get_branch("raise")
+    mid_month = Period(("month", Instant((2022, 1, 15)), 1))
+    with pytest.raises(ValueError, match="anchored mid-month"):
+        sim.set_input(
+            "income_tax", mid_month, np.array([1.0, 2.0], dtype=np.float32)
+        )
+    again = sim.calculate("income_tax", "2022-01")
+    again -= 5
+    return (
+        sim.calculate("income_tax", "2022-01").tolist(),
+        branch.calculate("income_tax", "2022-01").tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_put_core_refuses_keeps_the_mark_of_the_key_it_would_replace(
+    freeze_sources,
+):
+    # Dropping the mark first leaves the parent reading the shared source:
+    # frozen, the write raises; not frozen, it reaches the branch.
+    core = _a_put_core_refuses_after_branching()
+    assert core == ([595.0, 370.0], [600.0, 375.0])
+    assert _ported(freeze_sources, _a_put_core_refuses_after_branching) == core
+
+
+# Fails if _simulation_clone empties the parent's whole fast cache.
+def _a_holder_input_under_a_cached_value():
+    """The parent caches a month, replaces it through the holder (which leaves
+    core's fast cache alone), then branches: the parent's and the branch's
+    reads of the month."""
+    sim = _template()
+    sim.calculate("income_tax", "2022-01")
+    sim.get_holder("income_tax").set_input(
+        "2022-01", np.array([1.0, 2.0], dtype=np.float32)
+    )
+    branch = sim.get_branch("raise")
+    return (
+        sim.calculate("income_tax", "2022-01").tolist(),
+        branch.calculate("income_tax", "2022-01").tolist(),
+    )
+
+
+@pytest.mark.parametrize("freeze_sources", [True, False])
+def test_a_branch_keeps_the_fast_cache_entries_of_arrays_it_does_not_share(
+    freeze_sources,
+):
+    # Core's fast cache goes on serving the value the holder replaced; the
+    # port drops only entries over an array the branch shares.
+    core = _a_holder_input_under_a_cached_value()
+    assert core == ([600.0, 375.0], [1.0, 2.0])
+    assert _ported(freeze_sources, _a_holder_input_under_a_cached_value) == core
+
+
+# Fails if _simulation_get_branch leaves its request set after it returns.
+@pytest.mark.parametrize("freeze_sources", [True, False])
+@pytest.mark.parametrize("existing", ["raise", "default"])
+def test_a_direct_clone_after_get_branch_made_no_clone_copies_every_array(
+    freeze_sources, existing
+):
+    # get_branch makes no clone for an existing branch or the simulation's own
+    # name; its request has to end with the call, or the next direct clone
+    # shares arrays.
+    sim = _template()
+    with branch_arrays.shared_branch_arrays(freeze_sources=freeze_sources):
+        sim.calculate("income_tax", "2022-01")
+        sim.get_branch("raise")
+        sim.get_branch(existing)
+        clone = sim.clone()
+        key = "default:2022-01"
+        held = _storage(clone, "income_tax")._arrays[key]
+        assert not _storage(clone, "income_tax").__dict__.get("_shared")
+        assert held.flags.writeable
+        assert not np.shares_memory(held, _storage(sim, "income_tax")._arrays[key])
+
+
+# Fails if _keep_copying gives instance methods to every marked storage,
+# sharing or not. That changes no read in one process. A process that never
+# ran install can't use those methods, though (see the module docstring), so
+# the module keeps core's methods on a storage that shares nothing.
+def test_a_storage_that_shares_nothing_after_the_block_keeps_core_s_methods():
+    sim = _template()
+    with branch_arrays.shared_branch_arrays(freeze_sources=True):
+        sim.calculate("income_tax", "2022-01")
+        branch = sim.get_branch("raise")
+        branch.calculate("income_tax", "2022-01")
+    storage = _storage(branch, "income_tax")
+    assert not storage.__dict__.get("_shared")
+    assert not {"get", "put", "delete"} & set(storage.__dict__)
+    # The parent hasn't read its shared array, so it keeps copying.
+    assert {"get", "put", "delete"} <= set(_storage(sim, "income_tax").__dict__)
 
 
 # Differential property test: the same steps on a tree of simulations, once
