@@ -54,11 +54,11 @@ const PROJECTS = {
   ],
   uk: [
     {
-      title: "Autumn Budget 2024 policy reform impacts",
+      title: "Combined impacts of Autumn Budget 2025 reforms",
       description:
         "PolicyEngine UK analysis of how major Budget measures affect household incomes across the distribution.",
       image: withBasePath("/images/ai-analysis.png"),
-      url: "https://policyengine.org/uk/research/autumn-budget-2024-policy-reform-impacts",
+      url: "https://policyengine.org/uk/research/uk-combined-reforms-autumn-budget-2025",
       type: "UK distributional impact",
     },
     {
