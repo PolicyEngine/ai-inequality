@@ -34,6 +34,11 @@ describe("microcosmBuildLabel", () => {
     ["populace-us-2024-buildp-abc1234-20260700T011454Z"],
     ["populace-us-2024-buildp-abc1234-20260231T011454Z"],
     ["populace-us-2024-buildp-abc1234-20270229T011454Z"],
+    // Stamps that name no time of day.
+    ["populace-us-2024-buildp-abc1234-20260728T241454Z"],
+    ["populace-us-2024-buildp-abc1234-20260728T016054Z"],
+    ["populace-us-2024-buildp-abc1234-20260728T011460Z"],
+    ["populace-us-2024-buildp-abc1234-20260728T0114Z"],
   ])("returns null for %s", (buildId) => {
     expect(microcosmBuildLabel(buildId)).toBeNull();
   });
@@ -42,6 +47,18 @@ describe("microcosmBuildLabel", () => {
     expect(
       microcosmBuildLabel("microcosm-us-2027-buildq-abc1234-20280229T120000Z"),
     ).toBe("Microcosm US 2027 (build q, 29 February 2028)");
+  });
+
+  test("keeps a year below 100 as written", () => {
+    expect(
+      microcosmBuildLabel("microcosm-us-2024-buildp-abc1234-00500101T235959Z"),
+    ).toBe("Microcosm US 2024 (build p, 1 January 50)");
+    expect(
+      microcosmBuildLabel("microcosm-us-2024-buildp-abc1234-00000229T000000Z"),
+    ).toBe("Microcosm US 2024 (build p, 29 February 0)");
+    expect(
+      microcosmBuildLabel("microcosm-us-2024-buildp-abc1234-01000229T000000Z"),
+    ).toBeNull();
   });
 });
 

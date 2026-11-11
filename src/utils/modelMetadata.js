@@ -7,7 +7,7 @@ export function policyEngineLabel(metadata) {
 }
 
 const MICROCOSM_US_BUILD_ID =
-  /^(?:microcosm|populace)-us-(\d{4})-build([a-z0-9]+)-.+-(\d{4})(\d{2})(\d{2})T\d{6}Z$/;
+  /^(?:microcosm|populace)-us-(\d{4})-build([a-z0-9]+)-.+-(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/;
 
 const MONTH_NAMES = [
   "January",
@@ -26,17 +26,25 @@ const MONTH_NAMES = [
 
 // Published release ids keep Microcosm's pre-August spelling, so pages show
 // this label and never the id. Returns null for anything other than a
-// Microcosm US build stamped with a real calendar date.
+// Microcosm US build stamped with a real UTC date and time.
 export function microcosmBuildLabel(buildId) {
   const match = MICROCOSM_US_BUILD_ID.exec(buildId ?? "");
   if (!match) return null;
   const [, dataYear, build] = match;
-  const [year, month, day] = match.slice(3).map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
+  const [year, month, day, hours, minutes, seconds] = match
+    .slice(3)
+    .map(Number);
+  // setUTCFullYear keeps years 0 to 99 as written, where Date.UTC would read
+  // them as 1900 to 1999.
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
   if (
     date.getUTCFullYear() !== year ||
     date.getUTCMonth() !== month - 1 ||
-    date.getUTCDate() !== day
+    date.getUTCDate() !== day ||
+    hours > 23 ||
+    minutes > 59 ||
+    seconds > 59
   ) {
     return null;
   }
