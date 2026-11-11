@@ -1,9 +1,11 @@
 import snapshot from "../data/policyengineUsSnapshot.json";
 
 // The uprating table describes one PolicyEngine-US release, so each source
-// link opens the file at that release's commit. There the path exists and the
-// file shows the uprating its row reports, whatever the repository moves or
-// changes later.
+// link opens the row's file at that release's commit, where the path exists
+// whatever the repository moves or changes later. The file need not show the
+// row's uprating: a variable that takes the default names none, the build
+// grows a variable that names a national total with that total per person,
+// and formulas in uprating_extensions.py grow some parameters.
 export const POLICYENGINE_US_SNAPSHOT = snapshot;
 
 const SOURCE_ROOTS = {
