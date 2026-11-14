@@ -1,14 +1,18 @@
 """analysis.diagnose_sweep_change: the steps from the published sweep to the
 rerun add up to the change, the published configuration prices Medicaid over
-each branch's own enrollees as the published code did, the reproduction check catches any published value
-the published configuration misses, and the configuration check catches a run
-whose patches didn't take.
+each branch's own enrollees as the published code did, the reproduction check
+catches any published value the published configuration misses, and the
+configuration check catches a run whose patches didn't take.
 
-The ``run`` command needs policyengine-us and the pinned microdata, so only
-the report's arithmetic runs here.
+A real ``run`` needs policyengine-us and the pinned microdata. Here ``run``
+gets a stand-in sweep, and the configurations get a stand-in for
+``labor_capital_shift``, which imports policyengine-us, so CI checks them too.
 """
 
 import copy
+import json
+import sys
+import types
 
 import pytest
 from hypothesis import given
@@ -78,11 +82,22 @@ def _new_state(health=0.4):
     }
 
 
+#: How each configuration prices a shifted branch's Medicaid enrollees.
+PRICING = {"published": "own_enrollees", "medicaid_at_baseline": "baseline", "head_start_excluded": "baseline"}
+
+
+def _pricing_calls(kind, count=1):
+    return {"baseline": 0, "own_enrollees": 0, kind: count}
+
+
 def _new_run(name, total, benefits, gini, health_gini, poverty, deciles, tanf=0.2, health=66.2):
     excluded = [] if name in ("published", "medicaid_at_baseline") else ["early_head_start", "head_start"]
+    configuration = {"name": name}
+    if name in PRICING:
+        configuration["medicaid_pricing_calls"] = _pricing_calls(PRICING[name])
     return {
         "metadata": {
-            "diagnose_configuration": {"name": name},
+            "diagnose_configuration": configuration,
             "policyengine_bundle": {"net_income_excluded_benefits": excluded},
             "baseline_facts": _deciles(deciles),
         },
@@ -242,13 +257,51 @@ def test_a_configuration_that_did_not_take_is_reported():
         "the published run left ['head_start'] out of net income, not []"
     ]
     assert diagnose.configuration_problems((published_run, published_run, head_start_run)) == [
-        "the medicaid_at_baseline run records configuration 'published'"
+        "the medicaid_at_baseline run records configuration 'published'",
+        "the medicaid_at_baseline run records Medicaid pricing calls "
+        "{'baseline': 0, 'own_enrollees': 1}, not {'baseline': 1, 'own_enrollees': 0}",
     ]
     assert diagnose.configuration_problems((published_run, medicaid_run, published_run)) == [
         "the head_start_excluded run records configuration 'published'",
+        "the head_start_excluded run records Medicaid pricing calls "
+        "{'baseline': 0, 'own_enrollees': 1}, not {'baseline': 1, 'own_enrollees': 0}",
         "the head_start_excluded run left [] out of net income, not "
         "['early_head_start', 'head_start']",
     ]
+
+
+def test_a_run_whose_medicaid_pricing_did_not_take_is_reported():
+    # Named and excluded right, but it priced its branch over its own enrollees.
+    _, runs, _ = _runs()
+    runs[1]["metadata"]["diagnose_configuration"]["medicaid_pricing_calls"] = _pricing_calls("own_enrollees")
+    assert diagnose.configuration_problems(runs) == [
+        "the medicaid_at_baseline run records Medicaid pricing calls "
+        "{'baseline': 0, 'own_enrollees': 1}, not {'baseline': 1, 'own_enrollees': 0}"
+    ]
+    # A run that records no count, such as one from before the count existed.
+    del runs[1]["metadata"]["diagnose_configuration"]["medicaid_pricing_calls"]
+    assert diagnose.configuration_problems(runs) == [
+        "the medicaid_at_baseline run records Medicaid pricing calls None, "
+        "not {'baseline': 1, 'own_enrollees': 0}"
+    ]
+    # The sweep never reached the pricing step.
+    runs[1]["metadata"]["diagnose_configuration"]["medicaid_pricing_calls"] = _pricing_calls("baseline", 0)
+    assert len(diagnose.configuration_problems(runs)) == 1
+
+
+def test_a_missing_run_is_reported():
+    _, runs, _ = _runs()
+    assert diagnose.configuration_problems(runs[:2]) == [
+        "2 runs given, not 3: published, medicaid_at_baseline, head_start_excluded"
+    ]
+
+
+def test_field_steps_skip_a_field_a_run_lacks():
+    _, runs, rerun = _runs()
+    del rerun["scenarios"][1]["benefits_change_b"]
+    fields = [row["field"] for row in diagnose.field_steps(runs, rerun)]
+    assert "benefits_change_b" not in fields
+    assert "net_gini" in fields
 
 
 def test_field_steps_list_only_fields_a_step_moves():
@@ -296,38 +349,134 @@ def test_the_report_names_each_step():
     assert "| -135.30 | +0.00 | +5.30 | +0.80 | +0.20 | -66.20 | -195.20 |" in text
     assert "The steps leave $+0.0000B unexplained." in text
     assert "| Net Gini with health benefits | 0.4520 | -0.0018 | +0.0036 | -0.0001 | 0.4537 |" in text
-    assert "| Decile | Published | Tie-breaking | Medicaid priced at baseline |" in text
+    assert (
+        "| Field | Published configuration | Medicaid priced at baseline | Head Start left out "
+        "| Stored labor inputs | Rerun |\n|---|---:|---:|---:|---:|---:|"
+    ) in text
+    assert text.count(
+        "| Measure | Published | Medicaid priced at baseline | Head Start left out "
+        "| Stored labor inputs | Rerun |\n|---|---:|---:|---:|---:|---:|"
+    ) == 2
+    assert (
+        "| Decile | Published | Tie-breaking | Medicaid priced at baseline | Head Start left out "
+        "| Stored labor inputs | Rerun |\n|---:|---:|---:|---:|---:|---:|---:|"
+    ) in text
     published, runs, rerun = _runs()
     runs[0]["scenarios"][1]["benefits_change_b"] = 20.0
     assert "misses 1 of the published values" in diagnose.report(published, runs, rerun)
 
 
-def test_the_configurations_put_back_what_the_published_code_did(monkeypatch):
+def _stand_in(monkeypatch, module, **attributes):
+    """Put a stand-in module at ``analysis.<module>`` for the test."""
+    import analysis
+
+    fake = types.ModuleType(f"analysis.{module}")
+    for name, value in attributes.items():
+        setattr(fake, name, value)
+    monkeypatch.setitem(sys.modules, f"analysis.{module}", fake)
+    monkeypatch.setattr(analysis, module, fake, raising=False)
+    return fake
+
+
+class Untouchable:
+    def __getattr__(self, name):
+        raise AssertionError(f"the published pricing read branch.{name}")
+
+
+def test_each_configuration_prices_medicaid_as_its_code_did():
+    assert {name: s["medicaid_at_baseline"] for name, s in diagnose.CONFIGURATIONS.items()} == {
+        name: kind == "baseline" for name, kind in PRICING.items()
+    }
+
+
+def test_the_configurations_route_and_count_medicaid_pricing(monkeypatch):
+    from analysis import health_tanf, policyengine_runtime
+
+    shift = _stand_in(monkeypatch, "labor_capital_shift", set_labor_income=object())
+    setter, excluded = shift.set_labor_income, policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS
+    priced = []
+    def baseline_pricing(branch, denominator, year):
+        priced.append((branch, year))
+
+    monkeypatch.setattr(health_tanf, "price_medicaid_at_baseline", baseline_pricing)
+    with diagnose.configuration("published") as record:
+        assert health_tanf.price_medicaid_at_baseline(Untouchable(), [1.0], 2026) is None
+        assert record["medicaid_pricing_calls"] == _pricing_calls("own_enrollees")
+        assert policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS == ()
+        assert shift.set_labor_income is diagnose._set_built_labor_income_only
+    assert priced == []
+    for name in ("medicaid_at_baseline", "head_start_excluded"):
+        with diagnose.configuration(name) as record:
+            health_tanf.price_medicaid_at_baseline("branch", [1.0], 2026)
+            health_tanf.price_medicaid_at_baseline("branch", [1.0], 2026)
+            assert record["medicaid_pricing_calls"] == _pricing_calls("baseline", 2)
+            assert shift.set_labor_income is diagnose._set_built_labor_income_only
+            assert policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS == (
+                () if name == "medicaid_at_baseline" else excluded
+            )
+    assert priced == [("branch", 2026)] * 4
+    assert health_tanf.price_medicaid_at_baseline is baseline_pricing
+    assert policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS == excluded
+    assert shift.set_labor_income is setter
+
+
+def test_run_records_how_the_sweep_priced_medicaid(monkeypatch, tmp_path):
+    from analysis import health_tanf
+
+    _stand_in(monkeypatch, "labor_capital_shift", set_labor_income=object())
+    monkeypatch.setattr(health_tanf, "price_medicaid_at_baseline", lambda branch, denominator, year: None)
+
+    def run_shift_sweep(shift_levels, microdata_output_dir):
+        # The real sweep prices each shifted branch once, through the module attribute.
+        for pct in shift_levels:
+            if pct:
+                health_tanf.price_medicaid_at_baseline("branch", [1.0], 2026)
+        return {"metadata": {}, "scenarios": [{"shift_pct": 0}, {"shift_pct": 10}]}
+
+    _stand_in(monkeypatch, "compute_shift_sweep", run_shift_sweep=run_shift_sweep)
+    _stand_in(monkeypatch, "compute_decile_impacts", decile_impacts=lambda folder: {"scenarios": []})
+    for name in diagnose.RUNS:
+        out = tmp_path / f"{name}.json"
+        result = diagnose.run(name, out)
+        recorded = result["metadata"]["diagnose_configuration"]
+        assert recorded == {"name": name, **diagnose.CONFIGURATIONS[name], "medicaid_pricing_calls": _pricing_calls(PRICING[name])}
+        assert json.loads(out.read_text()) == result
+        assert not [p for p in diagnose.configuration_problems([result] * 3) if p.startswith(f"the {name} run records Medicaid")]
+
+
+def test_main_exits_on_the_published_run_and_the_runs_order(monkeypatch, tmp_path, capsys):
+    published, runs, rerun = _runs()
+    monkeypatch.setattr(diagnose, "_load_old", lambda path, ref: published)
+    paths = []
+    for name, payload in zip(("rerun", *diagnose.RUNS), (rerun, *runs)):
+        path = tmp_path / f"{name}.json"
+        path.write_text(json.dumps(payload))
+        paths.append(str(path))
+    # The medicaid_at_baseline run misses the Gini with health, as it should;
+    # only the published run has to reproduce the published values.
+    assert diagnose.main(["report", *paths]) == 0
+    assert "reproduces every published value" in capsys.readouterr().out
+    assert diagnose.main(["report", paths[0], paths[2], paths[1], paths[3]]) == 1
+    assert "Configuration problems:" in capsys.readouterr().out
+    runs[0]["scenarios"][1]["net_gini"] += 0.01
+    (tmp_path / "published.json").write_text(json.dumps(runs[0]))
+    assert diagnose.main(["report", *paths]) == 1
+
+
+def test_the_configurations_put_back_what_the_published_code_did():
     pytest.importorskip("policyengine_core")
     from analysis import health_tanf, labor_capital_shift, policyengine_runtime
 
     pricing = health_tanf.price_medicaid_at_baseline
     excluded, setter = policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS, labor_capital_shift.set_labor_income
-    with diagnose.configuration("published"):
-        assert health_tanf.price_medicaid_at_baseline is diagnose._price_medicaid_over_own_enrollees
-        assert policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS == ()
-        assert labor_capital_shift.set_labor_income is diagnose._set_built_labor_income_only
-    with diagnose.configuration("medicaid_at_baseline"):
-        assert health_tanf.price_medicaid_at_baseline is pricing
-        assert policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS == ()
-        assert labor_capital_shift.set_labor_income is diagnose._set_built_labor_income_only
-    with diagnose.configuration("head_start_excluded"):
-        assert health_tanf.price_medicaid_at_baseline is pricing
-        assert policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS == excluded
-        assert labor_capital_shift.set_labor_income is diagnose._set_built_labor_income_only
+    for name in diagnose.RUNS:
+        with diagnose.configuration(name):
+            assert health_tanf.price_medicaid_at_baseline is not pricing
+            assert labor_capital_shift.set_labor_income is diagnose._set_built_labor_income_only
     assert health_tanf.price_medicaid_at_baseline is pricing
     assert policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS == excluded
     assert labor_capital_shift.set_labor_income is setter
 
 
 def test_the_published_pricing_leaves_the_branch_alone():
-    class Untouchable:
-        def __getattr__(self, name):
-            raise AssertionError(f"the published pricing read branch.{name}")
-
     assert diagnose._price_medicaid_over_own_enrollees(Untouchable(), [1.0], 2026) is None

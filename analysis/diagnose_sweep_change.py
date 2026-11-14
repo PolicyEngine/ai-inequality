@@ -26,13 +26,15 @@ From the repository root, on the pinned runtime:
 code put back: ``published`` puts back all three differences,
 ``medicaid_at_baseline`` the last two and ``head_start_excluded`` only the
 shift's. It saves the result with its decile impacts under
-``metadata.baseline_facts``, where the sweep file keeps them. ``report``
-checks that the ``published`` run reproduces the published sweep, then splits
-each measure's change at those shifts into steps that add up to it, in this
-order: pricing Medicaid at the baseline's cost per enrollee, excluding Head
-Start, setting the stored labor inputs, counting TANF once and counting health
-coverage. The deciles get one more
-step first, for the published deciles' older tie-breaking.
+``metadata.baseline_facts``, where the sweep file keeps them, and counts under
+``metadata.diagnose_configuration`` the shifted branches it priced each way.
+``report`` checks from each run's metadata that its configuration took, and
+that the ``published`` run reproduces the published sweep. It then splits each
+measure's change at those shifts into steps that add up to it, in this order:
+pricing Medicaid at the baseline's cost per enrollee, excluding Head Start,
+setting the stored labor inputs, counting TANF once and counting health
+coverage. The deciles get one more step first, for the published deciles'
+older tie-breaking.
 """
 
 from __future__ import annotations
@@ -98,7 +100,12 @@ def _set_built_labor_income_only(baseline, branch, variable, year, values):
 
 @contextlib.contextmanager
 def configuration(name):
-    """Put back the published code that ``name`` calls for while the block runs."""
+    """Put back the published code that ``name`` calls for while the block runs.
+
+    It yields the configuration's settings with ``medicaid_pricing_calls``,
+    which counts the shifted branches the sweep prices at the baseline's cost
+    and over their own enrollees while the block runs.
+    """
     from . import health_tanf, labor_capital_shift, policyengine_runtime
 
     settings = CONFIGURATIONS[name]
@@ -107,14 +114,21 @@ def configuration(name):
         policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS,
         labor_capital_shift.set_labor_income,
     )
+    calls = {"baseline": 0, "own_enrollees": 0}
+    kind = "baseline" if settings["medicaid_at_baseline"] else "own_enrollees"
+    pricing = saved[0] if settings["medicaid_at_baseline"] else _price_medicaid_over_own_enrollees
+
+    def counted_pricing(branch, denominator, year):
+        calls[kind] += 1
+        return pricing(branch, denominator, year)
+
     try:
-        if not settings["medicaid_at_baseline"]:
-            health_tanf.price_medicaid_at_baseline = _price_medicaid_over_own_enrollees
+        health_tanf.price_medicaid_at_baseline = counted_pricing
         if settings["count_head_start"]:
             policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS = ()
         if not settings["stored_labor_inputs"]:
             labor_capital_shift.set_labor_income = _set_built_labor_income_only
-        yield settings
+        yield {**settings, "medicaid_pricing_calls": calls}
     finally:
         (
             health_tanf.price_medicaid_at_baseline,
@@ -196,18 +210,30 @@ def reproduction_gaps(published, published_run, shift_pcts=(0, 10)):
     return gaps
 
 
+def _expected_pricing_calls(name, payload):
+    """The pricing calls a run in configuration ``name`` makes: one per shifted branch."""
+    shifted = sum(1 for row in payload["scenarios"] if row["shift_pct"])
+    kind = "baseline" if CONFIGURATIONS[name]["medicaid_at_baseline"] else "own_enrollees"
+    return {"baseline": 0, "own_enrollees": 0, kind: shifted}
+
+
 def configuration_problems(runs):
     """Ways the runs' metadata show a configuration that didn't take.
 
     ``runs`` holds one run per name in ``RUNS``, in that order.
     """
     problems = []
+    if len(runs) != len(RUNS):
+        problems.append(f"{len(runs)} runs given, not {len(RUNS)}: {', '.join(RUNS)}")
     for payload, name in zip(runs, RUNS):
         excluded = [] if CONFIGURATIONS[name]["count_head_start"] else HEAD_START
         metadata = payload["metadata"]
-        recorded = (metadata.get("diagnose_configuration") or {}).get("name")
-        if recorded != name:
-            problems.append(f"the {name} run records configuration {recorded!r}")
+        recorded = metadata.get("diagnose_configuration") or {}
+        if recorded.get("name") != name:
+            problems.append(f"the {name} run records configuration {recorded.get('name')!r}")
+        calls, expected = recorded.get("medicaid_pricing_calls"), _expected_pricing_calls(name, payload)
+        if calls != expected:
+            problems.append(f"the {name} run records Medicaid pricing calls {calls}, not {expected}")
         bundle = metadata.get("policyengine_bundle") or {}
         if bundle.get("net_income_excluded_benefits") != excluded:
             problems.append(
