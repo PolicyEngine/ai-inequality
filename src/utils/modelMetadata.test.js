@@ -1,6 +1,66 @@
 import usShiftSweepData from "../data/shiftSweepData.json";
 import ukShiftSweepData from "../data/ukShiftSweepData.json";
-import { predatesHeadStartCorrection } from "./modelMetadata";
+import {
+  microcosmBuildLabel,
+  predatesHeadStartCorrection,
+} from "./modelMetadata";
+
+describe("microcosmBuildLabel", () => {
+  test("names the build and its date without the release id", () => {
+    expect(
+      microcosmBuildLabel(
+        "populace-us-2024-buildp-sparse-rmloss100-cae8640-20260728T011454Z",
+      ),
+    ).toBe("Microcosm US 2024 (build p, 28 July 2026)");
+  });
+
+  test("accepts the migrated spelling and an unpadded day", () => {
+    expect(
+      microcosmBuildLabel("microcosm-us-2025-buildab-abc1234-20270103T000000Z"),
+    ).toBe("Microcosm US 2025 (build ab, 3 January 2027)");
+  });
+
+  test.each([
+    [undefined],
+    [null],
+    [""],
+    ["policyengine-us-data-1.113.1"],
+    // UK releases and SPM refreshes carry other id shapes.
+    ["populace-uk-2023-buildp-abc1234-20260728T011454Z"],
+    ["populace-us-2024-spm-20260915"],
+    // Stamps that name no calendar date.
+    ["populace-us-2024-buildp-abc1234-20261328T011454Z"],
+    ["populace-us-2024-buildp-abc1234-20260732T011454Z"],
+    ["populace-us-2024-buildp-abc1234-20260700T011454Z"],
+    ["populace-us-2024-buildp-abc1234-20260231T011454Z"],
+    ["populace-us-2024-buildp-abc1234-20270229T011454Z"],
+    // Stamps that name no time of day.
+    ["populace-us-2024-buildp-abc1234-20260728T241454Z"],
+    ["populace-us-2024-buildp-abc1234-20260728T016054Z"],
+    ["populace-us-2024-buildp-abc1234-20260728T011460Z"],
+    ["populace-us-2024-buildp-abc1234-20260728T0114Z"],
+  ])("returns null for %s", (buildId) => {
+    expect(microcosmBuildLabel(buildId)).toBeNull();
+  });
+
+  test("accepts a leap day", () => {
+    expect(
+      microcosmBuildLabel("microcosm-us-2027-buildq-abc1234-20280229T120000Z"),
+    ).toBe("Microcosm US 2027 (build q, 29 February 2028)");
+  });
+
+  test("keeps a year below 100 as written", () => {
+    expect(
+      microcosmBuildLabel("microcosm-us-2024-buildp-abc1234-00500101T235959Z"),
+    ).toBe("Microcosm US 2024 (build p, 1 January 50)");
+    expect(
+      microcosmBuildLabel("microcosm-us-2024-buildp-abc1234-00000229T000000Z"),
+    ).toBe("Microcosm US 2024 (build p, 29 February 0)");
+    expect(
+      microcosmBuildLabel("microcosm-us-2024-buildp-abc1234-01000229T000000Z"),
+    ).toBeNull();
+  });
+});
 
 describe("predatesHeadStartCorrection", () => {
   test("does not flag the committed US sweep, which reran after the correction", () => {

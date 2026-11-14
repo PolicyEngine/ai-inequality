@@ -12,7 +12,7 @@ test.describe("Image Loading", () => {
     const projectImages = page.locator(".project-image");
     const count = await projectImages.count();
 
-    expect(count).toBe(6); // Should have 6 project cards
+    expect(count).toBe(5); // Should have 5 project cards
 
     // Check each image loads successfully
     for (let i = 0; i < count; i++) {

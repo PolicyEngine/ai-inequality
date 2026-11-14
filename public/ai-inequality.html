@@ -1750,51 +1750,7 @@
                 <h2>Now let&rsquo;s look at the data</h2>
                 <p style="font-size: 0.78em; margin-top: 12px;">The second ingredient: representative households</p>
                 <aside class="notes">
-                    That's the rules side. Now let's look at the data — the second ingredient. How do we build a representative picture of every household in the country?
-                </aside>
-            </section>
-
-            <section>
-                <div class="slide-header">
-                    <div class="slide-tag">Under the hood</div>
-                    <h2>Enhanced CPS microdata</h2>
-                    <div class="accent-bar"></div>
-                </div>
-                <div class="slide-body">
-                    <p>ML-powered data fusion creates the most detailed open-source tax-benefit microdata in the US.</p>
-                    <div class="stats-row">
-                        <div class="stat-card">
-                            <div class="number">146K</div>
-                            <div class="desc">people across 89K households from Census CPS</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="number">208K</div>
-                            <div class="desc">IRS tax records fused via quantile regression forests</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="number">9,168</div>
-                            <div class="desc">calibration targets from IRS, Census, CBO, and JCT</div>
-                        </div>
-                    </div>
-                    <div class="grid c2 mt-sm">
-                        <div class="content-card">
-                            <h4>Five data sources fused</h4>
-                            <p>CPS ASEC + IRS Public Use File + SIPP + Survey of Consumer Finances + American Community Survey. Gradient descent reweighting matches all 9,168 administrative totals.</p>
-                        </div>
-                        <div class="content-card">
-                            <h4>Validated against gold standards</h4>
-                            <p>Cross-validated with NBER TAXSIM for federal and state income taxes. Benchmarked against CBO, JCT, and Tax Policy Center estimates.</p>
-                        </div>
-                    </div>
-                    <div class="badges">
-                        <span class="badge">Open source</span>
-                        <span class="badge">Hugging Face</span>
-                        <span class="badge">50 states + DC</span>
-                        <span class="badge">PyTorch reweighting</span>
-                    </div>
-                </div>
-                <aside class="notes">
-                    Our Enhanced CPS is the most detailed open-source tax-benefit microdata in the US. We fuse 146,000 people from the Census CPS with 208,000 IRS tax records using quantile regression forests. Then we calibrate to 9,168 administrative targets using gradient descent. Validated against NBER TAXSIM, CBO, and JCT. All open source on Hugging Face.
+                    That's the rules side. Now let's look at the data — the second ingredient: representative households.
                 </aside>
             </section>
 

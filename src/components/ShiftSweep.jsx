@@ -1343,7 +1343,8 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
   const [selectedJurisdiction, setSelectedJurisdiction] = useState("federal");
   const [selectedUnit, setSelectedUnit] = useState("dollars");
   const metadata = useMemo(() => sweepData.metadata ?? {}, [sweepData]);
-  const docsUrl = metadata.model_url ?? "https://www.policyengine.org/us/model";
+  const docsUrl =
+    metadata.model_url ?? "https://policyengine.github.io/policyengine-us/";
   const modelLabel = policyEngineLabel(metadata);
   const laborTerm = metadata.labor_label ?? "labor";
   const laborTitle = metadata.labor_title ?? "Labor";
