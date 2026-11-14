@@ -2,9 +2,13 @@
 
 The published sweep (``src/data/shiftSweepData.json`` on main) ran on the
 runtime and microdata the rerun pins: policyengine 5.0.1, policyengine-us
-1.764.6 and build p. Its code differed from the rerun's in two ways that move
+1.764.6 and build p. Its code differed from the rerun's in three ways that move
 results, before this branch counted TANF once and counted health coverage:
 
+- each shifted branch spread its state's fixed Medicaid spending over that
+  branch's own enrollees (``medicaid_slcsp_state_denominator``), where
+  ``health_tanf.price_medicaid_at_baseline`` now gives every branch the
+  baseline's cost per enrollee;
 - it counted Head Start and Early Head Start in household net income, which
   ``policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS`` now leaves out;
 - its shift set only the built labor variables, ``employment_income`` and
@@ -14,17 +18,20 @@ results, before this branch counted TANF once and counted health coverage:
 From the repository root, on the pinned runtime:
 
     python -m analysis.diagnose_sweep_change run published OUT.json
+    python -m analysis.diagnose_sweep_change run medicaid_at_baseline OUT.json
     python -m analysis.diagnose_sweep_change run head_start_excluded OUT.json
-    python -m analysis.diagnose_sweep_change report RERUN.json PUBLISHED_RUN.json HEAD_START_RUN.json [--published-ref REF]
+    python -m analysis.diagnose_sweep_change report RERUN.json PUBLISHED_RUN.json MEDICAID_AT_BASELINE_RUN.json HEAD_START_EXCLUDED_RUN.json [--published-ref REF]
 
 ``run`` runs ``run_shift_sweep`` at shifts of 0 and 10% with the published
-code put back: ``published`` puts back both differences, and
-``head_start_excluded`` only the shift's. It saves the result with its decile
-impacts under ``metadata.baseline_facts``, where the sweep file keeps them.
-``report`` checks that the ``published`` run reproduces the published sweep,
-then splits each measure's change at those shifts into steps that add up to
-it, in this order: excluding Head Start, setting the stored labor inputs,
-counting TANF once and counting health coverage. The deciles get one more
+code put back: ``published`` puts back all three differences,
+``medicaid_at_baseline`` the last two and ``head_start_excluded`` only the
+shift's. It saves the result with its decile impacts under
+``metadata.baseline_facts``, where the sweep file keeps them. ``report``
+checks that the ``published`` run reproduces the published sweep, then splits
+each measure's change at those shifts into steps that add up to it, in this
+order: pricing Medicaid at the baseline's cost per enrollee, excluding Head
+Start, setting the stored labor inputs, counting TANF once and counting health
+coverage. The deciles get one more
 step first, for the published deciles' older tie-breaking.
 """
 
@@ -41,9 +48,19 @@ from .compare_shift_sweeps import _deciles_at, _load_old, earlier_state_total, e
 
 SHIFT_LEVELS = (0.0, 0.1)
 CONFIGURATIONS = {
-    "published": {"count_head_start": True, "stored_labor_inputs": False},
-    "head_start_excluded": {"count_head_start": False, "stored_labor_inputs": False},
+    "published": {"medicaid_at_baseline": False, "count_head_start": True, "stored_labor_inputs": False},
+    "medicaid_at_baseline": {"medicaid_at_baseline": True, "count_head_start": True, "stored_labor_inputs": False},
+    "head_start_excluded": {"medicaid_at_baseline": True, "count_head_start": False, "stored_labor_inputs": False},
 }
+#: The runs in order. Each code step is the change from one run to the next,
+#: and the last step is the change from the last run to the rerun.
+RUNS = ("published", "medicaid_at_baseline", "head_start_excluded")
+CODE_STEPS = (
+    ("medicaid_at_baseline", "Medicaid priced at baseline"),
+    ("head_start", "Head Start left out"),
+    ("labor_inputs", "Stored labor inputs"),
+)
+HEAD_START = ["early_head_start", "head_start"]
 #: A field moves in a step when it changes by more than this: $0.05B for
 #: fields in $B, and 0.0001 for rates, shares and Gini coefficients.
 SHOWN = {"b": 0.05, "rate": 1e-4}
@@ -66,6 +83,11 @@ DISTRIBUTION = (
 )
 
 
+def _price_medicaid_over_own_enrollees(branch, denominator, year):
+    """The published sweep's pricing: a branch spreads its state's spending over its own enrollees."""
+    return None
+
+
 def _set_built_labor_income_only(baseline, branch, variable, year, values):
     """The published shift's step: set the built labor variable alone."""
     import numpy as np
@@ -77,14 +99,17 @@ def _set_built_labor_income_only(baseline, branch, variable, year, values):
 @contextlib.contextmanager
 def configuration(name):
     """Put back the published code that ``name`` calls for while the block runs."""
-    from . import labor_capital_shift, policyengine_runtime
+    from . import health_tanf, labor_capital_shift, policyengine_runtime
 
     settings = CONFIGURATIONS[name]
     saved = (
+        health_tanf.price_medicaid_at_baseline,
         policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS,
         labor_capital_shift.set_labor_income,
     )
     try:
+        if not settings["medicaid_at_baseline"]:
+            health_tanf.price_medicaid_at_baseline = _price_medicaid_over_own_enrollees
         if settings["count_head_start"]:
             policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS = ()
         if not settings["stored_labor_inputs"]:
@@ -92,6 +117,7 @@ def configuration(name):
         yield settings
     finally:
         (
+            health_tanf.price_medicaid_at_baseline,
             policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS,
             labor_capital_shift.set_labor_income,
         ) = saved
@@ -170,13 +196,14 @@ def reproduction_gaps(published, published_run, shift_pcts=(0, 10)):
     return gaps
 
 
-def configuration_problems(published_run, head_start_run):
-    """Ways the two runs' metadata show a configuration that didn't take."""
+def configuration_problems(runs):
+    """Ways the runs' metadata show a configuration that didn't take.
+
+    ``runs`` holds one run per name in ``RUNS``, in that order.
+    """
     problems = []
-    for payload, name, excluded in (
-        (published_run, "published", []),
-        (head_start_run, "head_start_excluded", ["early_head_start", "head_start"]),
-    ):
+    for payload, name in zip(runs, RUNS):
+        excluded = [] if CONFIGURATIONS[name]["count_head_start"] else HEAD_START
         metadata = payload["metadata"]
         recorded = (metadata.get("diagnose_configuration") or {}).get("name")
         if recorded != name:
@@ -190,84 +217,76 @@ def configuration_problems(published_run, head_start_run):
     return problems
 
 
-def total_steps(published, published_run, head_start_run, rerun, shift_pct=10):
+def _code_steps(values):
+    """Each code step's change, from one run's value to the next's."""
+    return {key: after - before for (key, _), before, after in zip(CODE_STEPS, values, values[1:])}
+
+
+def total_steps(published, runs, rerun, shift_pct=10):
     """The net revenue change at ``shift_pct``, in $B, from the published sweep to the rerun."""
-    reproduced = earlier_total(_row(published_run, shift_pct))
-    head_start = earlier_total(_row(head_start_run, shift_pct))
+    totals = [earlier_total(_row(payload, shift_pct)) for payload in (*runs, rerun)]
     row = _row(rerun, shift_pct)
     steps = {
         "published": earlier_total(_row(published, shift_pct)),
-        "reproduced": reproduced,
-        "head_start": head_start - reproduced,
-        "labor_inputs": earlier_total(row) - head_start,
+        "reproduced": totals[0],
+        **_code_steps(totals),
         "tanf_counted_once": row["tanf_in_state_benefits_change_b"],
         "health": -row["health_change_b"],
         "rerun": row["total_rev_change_b"],
     }
+    explained = [key for key, _ in CODE_STEPS] + ["tanf_counted_once", "health"]
     steps["unexplained"] = steps["rerun"] - (
-        steps["reproduced"]
-        + sum(steps[name] for name in ("head_start", "labor_inputs", "tanf_counted_once", "health"))
+        steps["reproduced"] + sum(steps[name] for name in explained)
     )
     return steps
 
 
-def field_steps(published_run, head_start_run, rerun, shift_pct=10):
-    """Every field the Head Start or labor-input step moves at ``shift_pct``."""
-    first = _numbers(_row(published_run, shift_pct))
-    second = _numbers(_row(head_start_run, shift_pct))
-    third = _numbers(_row(rerun, shift_pct))
+def field_steps(runs, rerun, shift_pct=10):
+    """Every field a code step moves at ``shift_pct``."""
+    numbers = [_numbers(_row(payload, shift_pct)) for payload in (*runs, rerun)]
     out = []
-    for field in sorted(first.keys() & second.keys() & third.keys()):
-        head_start, labor = second[field] - first[field], third[field] - second[field]
-        if max(abs(head_start), abs(labor)) > SHOWN[_kind(field)]:
-            out.append(
-                {
-                    "field": field,
-                    "reproduced": first[field],
-                    "head_start": head_start,
-                    "labor_inputs": labor,
-                    "rerun": third[field],
-                }
-            )
+    for field in sorted(set.intersection(*(set(n) for n in numbers))):
+        values = [n[field] for n in numbers]
+        steps = _code_steps(values)
+        if max(abs(change) for change in steps.values()) > SHOWN[_kind(field)]:
+            out.append({"field": field, "reproduced": values[0], **steps, "rerun": values[-1]})
     return out
 
 
-def distribution_steps(published, published_run, head_start_run, rerun, shift_pct):
+def distribution_steps(published, runs, rerun, shift_pct):
     """Each distribution measure at ``shift_pct``, step by step."""
-    rows = [_row(payload, shift_pct) for payload in (published, published_run, head_start_run, rerun)]
+    rows = [_row(payload, shift_pct) for payload in (published, *runs, rerun)]
     out = []
     for field, label in DISTRIBUTION:
         if any(row.get(field) is None for row in rows):
             continue
-        before, again, head_start, after = (row[field] for row in rows)
+        values = [row[field] for row in rows]
         out.append(
             {
                 "field": field,
                 "label": label,
-                "published": before,
-                "reproduced": again,
-                "head_start": head_start - again,
-                "labor_inputs": after - head_start,
-                "rerun": after,
+                "published": values[0],
+                "reproduced": values[1],
+                **_code_steps(values[1:]),
+                "rerun": values[-1],
             }
         )
     return out
 
 
-def decile_steps(published, published_run, head_start_run, rerun, shift_pct=10):
+def decile_steps(published, runs, rerun, shift_pct=10):
     """Each decile's change in mean net income at ``shift_pct``, in percent, step by step."""
-    deciles = [_deciles_at(payload, shift_pct) for payload in (published, published_run, head_start_run, rerun)]
+    deciles = [_deciles_at(payload, shift_pct) for payload in (published, *runs, rerun)]
     out = []
     for decile in sorted(set.intersection(*(set(d) for d in deciles))):
-        before, again, head_start, after = (d[decile]["pct_change"] for d in deciles)
+        values = [d[decile]["pct_change"] for d in deciles]
         out.append(
             {
                 "decile": decile,
-                "published": before,
-                "ties": again - before,
-                "head_start": head_start - again,
-                "labor_inputs": after - head_start,
-                "rerun": after,
+                "published": values[0],
+                "ties": values[1] - values[0],
+                **_code_steps(values[1:]),
+                "rerun": values[-1],
             }
         )
     return out
@@ -279,11 +298,19 @@ def _signed(value, spec):
     return f"{round(value, digits) + 0.0:+{spec}}"
 
 
-def report(published, published_run, head_start_run, rerun):
+def _header(names, label_column=True):
+    """A table's header and alignment rows; numbers align right, a label column left."""
+    align = ["---" if label_column and i == 0 else "---:" for i in range(len(names))]
+    return ["| " + " | ".join(names) + " |", "|" + "|".join(align) + "|"]
+
+
+def report(published, runs, rerun):
     """Markdown for the pull request."""
+    labels = [label for _, label in CODE_STEPS]
+    keys = [key for key, _ in CODE_STEPS]
     lines = []
-    problems = configuration_problems(published_run, head_start_run)
-    gaps = reproduction_gaps(published, published_run)
+    problems = configuration_problems(runs)
+    gaps = reproduction_gaps(published, runs[0])
     if problems:
         lines += ["Configuration problems:", ""] + [f"- {problem}" for problem in problems] + [""]
     if gaps:
@@ -297,58 +324,49 @@ def report(published, published_run, head_start_run, rerun):
             "The published configuration reproduces every published value at 0% and 10% "
             "(within $1,000, or 1e-9 for rates)."
         )
-    steps = total_steps(published, published_run, head_start_run, rerun)
-    lines += [
-        "",
-        "Net revenue change at a 10% shift ($B, 2026):",
-        "",
-        "| Published | Head Start left out | Stored labor inputs | TANF counted once | Health coverage | Rerun |",
-        "|---:|---:|---:|---:|---:|---:|",
+    steps = total_steps(published, runs, rerun)
+    lines += ["", "Net revenue change at a 10% shift ($B, 2026):", ""]
+    lines += _header(["Published", *labels, "TANF counted once", "Health coverage", "Rerun"], False)
+    lines.append(
         "| "
         + " | ".join(
             [f"{steps['published']:,.2f}"]
-            + [_signed(steps[name], ",.2f") for name in ("head_start", "labor_inputs", "tanf_counted_once", "health")]
+            + [_signed(steps[name], ",.2f") for name in keys + ["tanf_counted_once", "health"]]
             + [f"{steps['rerun']:,.2f}"]
         )
-        + " |",
+        + " |"
+    )
+    lines += [
         "",
         f"The steps leave ${_signed(steps['unexplained'], '.4f')}B unexplained.",
         "",
-        "Fields the first two steps move by more than $0.05B (or 0.0001) at 10%:",
+        f"Fields the first {len(CODE_STEPS)} steps move by more than $0.05B (or 0.0001) at 10%:",
         "",
-        "| Field | Published configuration | Head Start left out | Stored labor inputs | Rerun |",
-        "|---|---:|---:|---:|---:|",
     ]
-    for row in field_steps(published_run, head_start_run, rerun):
+    lines += _header(["Field", "Published configuration", *labels, "Rerun"])
+    for row in field_steps(runs, rerun):
         spec = ",.2f" if _kind(row["field"]) == "b" else ".4f"
         lines.append(
-            f"| `{row['field']}` | {row['reproduced']:{spec}} | {_signed(row['head_start'], spec)} "
-            f"| {_signed(row['labor_inputs'], spec)} | {row['rerun']:{spec}} |"
+            f"| `{row['field']}` | {row['reproduced']:{spec}} | "
+            + " | ".join(_signed(row[key], spec) for key in keys)
+            + f" | {row['rerun']:{spec}} |"
         )
     for shift_pct in (0, 10):
-        lines += [
-            "",
-            f"Distribution at a {shift_pct}% shift:",
-            "",
-            "| Measure | Published | Head Start left out | Stored labor inputs | Rerun |",
-            "|---|---:|---:|---:|---:|",
-        ]
-        for row in distribution_steps(published, published_run, head_start_run, rerun, shift_pct):
+        lines += ["", f"Distribution at a {shift_pct}% shift:", ""]
+        lines += _header(["Measure", "Published", *labels, "Rerun"])
+        for row in distribution_steps(published, runs, rerun, shift_pct):
             lines.append(
-                f"| {row['label']} | {row['published']:.4f} | {_signed(row['head_start'], '.4f')} "
-                f"| {_signed(row['labor_inputs'], '.4f')} | {row['rerun']:.4f} |"
+                f"| {row['label']} | {row['published']:.4f} | "
+                + " | ".join(_signed(row[key], ".4f") for key in keys)
+                + f" | {row['rerun']:.4f} |"
             )
-    lines += [
-        "",
-        "Change in mean net income by decile at a 10% shift (%):",
-        "",
-        "| Decile | Published | Tie-breaking | Head Start left out | Stored labor inputs | Rerun |",
-        "|---:|---:|---:|---:|---:|---:|",
-    ]
-    for row in decile_steps(published, published_run, head_start_run, rerun):
+    lines += ["", "Change in mean net income by decile at a 10% shift (%):", ""]
+    lines += _header(["Decile", "Published", "Tie-breaking", *labels, "Rerun"], False)
+    for row in decile_steps(published, runs, rerun):
         lines.append(
-            f"| {row['decile']} | {row['published']:+.2f} | {_signed(row['ties'], '.2f')} "
-            f"| {_signed(row['head_start'], '.2f')} | {_signed(row['labor_inputs'], '.2f')} | {row['rerun']:+.2f} |"
+            f"| {row['decile']} | {row['published']:+.2f} | {_signed(row['ties'], '.2f')} | "
+            + " | ".join(_signed(row[key], ".2f") for key in keys)
+            + f" | {row['rerun']:+.2f} |"
         )
     return "\n".join(lines)
 
@@ -361,8 +379,8 @@ def main(argv=None):
     run_parser.add_argument("out")
     report_parser = commands.add_parser("report", help="split the rerun's change into its sources")
     report_parser.add_argument("rerun")
-    report_parser.add_argument("published_run")
-    report_parser.add_argument("head_start_run")
+    for name in RUNS:
+        report_parser.add_argument(f"{name}_run", help=f"the {name} run's output")
     report_parser.add_argument(
         "--published-ref", default="origin/main", help="git ref whose site data hold the published sweep"
     )
@@ -371,13 +389,13 @@ def main(argv=None):
         run(args.configuration, args.out)
         return 0
     payloads = []
-    for path in (args.rerun, args.published_run, args.head_start_run):
+    for path in [args.rerun] + [getattr(args, f"{name}_run") for name in RUNS]:
         with open(path) as f:
             payloads.append(json.load(f))
-    rerun, published_run, head_start_run = payloads
+    rerun, runs = payloads[0], payloads[1:]
     published = _load_old(None, args.published_ref)
-    print(report(published, published_run, head_start_run, rerun))
-    if configuration_problems(published_run, head_start_run) or reproduction_gaps(published, published_run):
+    print(report(published, runs, rerun))
+    if configuration_problems(runs) or reproduction_gaps(published, runs[0]):
         return 1
     return 0
 
