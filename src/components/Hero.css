@@ -125,7 +125,7 @@
   animation: heroFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards;
 }
 
-a.stat-box {
+a.hero-stat {
   background: white;
   border-radius: var(--radius-lg);
   padding: var(--space-6);
@@ -139,12 +139,12 @@ a.stat-box {
   color: inherit;
 }
 
-.stat-box:hover {
+.hero-stat:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
-.stat-value {
+.hero-stat-value {
   font-size: 2rem;
   font-weight: 800;
   color: var(--pe-gray-900);
@@ -153,21 +153,21 @@ a.stat-box {
   margin-bottom: var(--space-2);
 }
 
-.stat-label {
+.hero-stat-label {
   font-size: 0.9rem;
   color: var(--pe-gray-600);
   line-height: 1.4;
   margin-bottom: var(--space-2);
 }
 
-.stat-source {
+.hero-stat-source {
   font-size: 0.75rem;
   color: var(--pe-teal-600);
   font-weight: 500;
   transition: color var(--transition-fast);
 }
 
-a.stat-box:hover .stat-source {
+a.hero-stat:hover .hero-stat-source {
   color: var(--pe-teal-500);
 }
 
@@ -208,7 +208,7 @@ a.stat-box:hover .stat-source {
     max-width: 400px;
   }
 
-  .stat-value {
+  .hero-stat-value {
     font-size: 1.75rem;
   }
 }
@@ -234,11 +234,11 @@ a.stat-box:hover .stat-source {
     padding: var(--space-3) var(--space-5);
   }
 
-  .stat-box {
+  .hero-stat {
     padding: var(--space-5);
   }
 
-  .stat-value {
+  .hero-stat-value {
     font-size: 1.5rem;
   }
 }
