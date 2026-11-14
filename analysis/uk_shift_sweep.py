@@ -421,7 +421,7 @@ def _metadata(baseline, baseline_metrics):
             "household benefits."
         ),
         "revenue_summary_note": (
-            "We estimate Income Tax and Capital Gains Tax receipts, taken "
+            "We estimate that Income Tax and Capital Gains Tax receipts, taken "
             "together, climb at the top of the sweep, while National Insurance "
             "receipts keep falling and household benefits keep rising."
         ),

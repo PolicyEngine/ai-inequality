@@ -1308,10 +1308,19 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
   );
 }
 
-const UNIT_OPTIONS = [
-  { key: "dollars", label: "$ billions" },
-  { key: "share", label: "% of income + payroll tax revenue" },
-];
+// The unit toggle's options, in the run's currency and its country's tax names.
+// The UK file keeps Income Tax with Capital Gains Tax under fed_income_tax and
+// National Insurance under the payroll keys federalBaseDenominator adds.
+function unitOptions(metadata) {
+  const taxes =
+    metadata.country_id === "uk"
+      ? "Income Tax, Capital Gains Tax and National Insurance revenue"
+      : "income + payroll tax revenue";
+  return [
+    { key: "dollars", label: `${metadata.currency_symbol ?? "$"} billions` },
+    { key: "share", label: `% of ${taxes}` },
+  ];
+}
 
 function federalBaseDenominator(totals) {
   if (!totals?.national) return null;
@@ -1538,7 +1547,7 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
                   role="radiogroup"
                   aria-label="Units"
                 >
-                  {UNIT_OPTIONS.map((option) => (
+                  {unitOptions(metadata).map((option) => (
                     <button
                       key={option.key}
                       type="button"

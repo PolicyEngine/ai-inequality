@@ -2,9 +2,10 @@
 
 Models AI-driven automation as a shift from positive labor income to capital income
 while keeping modeled household market income constant. For each shift level
-(e.g. 10%, 25%, 50%), we reduce positive labor income by that fraction and
-redistribute the lost labor income into capital income variables
-proportionally.
+(e.g. 10%, 25%, 50%), we reduce positive labor income by that fraction and add
+the same weighted total to positive capital income. We scale every positive
+capital amount by one common factor, so each person gains in proportion to the
+capital income they already receive.
 """
 
 import numpy as np
@@ -23,8 +24,8 @@ def _apply_shift(baseline, branch_name, shift_pct):
     """Create a branch with labor income shifted to capital income.
 
     Reduces positive employment_income and self_employment_income by shift_pct
-    and distributes the freed amount into positive capital income variables
-    proportionally.
+    and adds the freed amount to positive capital income, scaling every
+    positive amount of each capital income variable by one common factor.
 
     Redistributes only the positive labor income removed from wages and
     self-employment income. Negative self-employment income is left unchanged.

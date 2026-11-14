@@ -41,6 +41,9 @@ test("renders standalone income-shift page with overview navigation", () => {
   expect(document.body).toHaveTextContent(
     `${(positiveCapitalTop01 * 100).toFixed(1)}%`,
   );
+  expect(document.body).toHaveTextContent(
+    "We reduce positive employment and self-employment income by 0% to 100% in 10-point steps, then add the same weighted total to positive capital income. We scale every positive amount by one common factor, so each person gains in proportion to the capital income they already receive.",
+  );
 });
 
 test("renders UK income-shift data from the country selector", () => {

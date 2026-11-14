@@ -2,7 +2,7 @@ import React from "react";
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import AIScenarios, { realizationBreakeven } from "./AIScenarios";
+import AIScenarios, { realizationBreakeven, stateTaxMove } from "./AIScenarios";
 import scenariosData from "../data/aiScenariosData.json";
 import { microcosmBuildLabel } from "../utils/modelMetadata";
 
@@ -83,17 +83,38 @@ describe("AIScenarios", () => {
       </MemoryRouter>,
     );
     expect(document.body.textContent).toContain(
-      `Under rapid adoption with proportional wage changes, we estimate state income and use taxes before refundable credits ${stateTaxMoveOf("Rapid", "proportional")}.`,
+      `Under rapid adoption with proportional wage changes, we estimate that state income and use taxes before refundable credits ${stateTaxMoveOf("Rapid", "proportional")}.`,
     );
     fireEvent.click(screen.getByRole("radio", { name: "Wages spread" }));
     expect(document.body.textContent).toContain(
-      `Under rapid adoption with wages spreading, we estimate state income and use taxes before refundable credits ${stateTaxMoveOf("Rapid", "expansive")}.`,
+      `Under rapid adoption with wages spreading, we estimate that state income and use taxes before refundable credits ${stateTaxMoveOf("Rapid", "expansive")}.`,
     );
     expect(document.body.textContent).not.toMatch(/proportional wage changes/);
     fireEvent.click(screen.getByRole("radio", { name: "Slow" }));
     fireEvent.click(screen.getByRole("radio", { name: "Wages compress" }));
     expect(document.body.textContent).toContain(
-      `Under slow adoption with wages compressing, we estimate state income and use taxes before refundable credits ${stateTaxMoveOf("Slow", "compressive")}.`,
+      `Under slow adoption with wages compressing, we estimate that state income and use taxes before refundable credits ${stateTaxMoveOf("Slow", "compressive")}.`,
+    );
+  });
+
+  it("words a state tax change that rounds to $0B without a direction", () => {
+    expect(stateTaxMove(0.3)).toBe("change by less than $0.5B");
+    expect(stateTaxMove(-0.49)).toBe("change by less than $0.5B");
+    expect(stateTaxMove(0.6)).toBe("rise by $1B");
+    expect(stateTaxMove(-12.4)).toBe("fall by $12B");
+  });
+
+  it("defines net government revenue in the stat tile and its note", () => {
+    render(
+      <MemoryRouter>
+        <AIScenarios />
+      </MemoryRouter>,
+    );
+    expect(document.body.textContent).toContain(
+      "federal, state and local, net of transfers",
+    );
+    expect(document.body.textContent).toContain(
+      "Net government revenue = federal, state and local taxes − refundable credits such as the EITC and refundable CTC − benefits such as SNAP, SSI, TANF, WIC and school meals. We leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.",
     );
   });
 
