@@ -350,6 +350,13 @@ function CapitalScopeTable({ scenarios, scopeRows }) {
   );
 }
 
+// How the state tax note words a change in $B, so a change that rounds to $0B
+// doesn't read "rise by $0B".
+export function stateTaxMove(changeB) {
+  if (Math.abs(changeB) < 0.5) return "change by less than $0.5B";
+  return `${changeB >= 0 ? "rise" : "fall"} by $${Math.abs(changeB).toFixed(0)}B`;
+}
+
 function AIScenarios({ scenariosData = defaultScenariosData }) {
   const [scenarioName, setScenarioName] = useState("Rapid");
   const [variantKey, setVariantKey] = useState("proportional");
@@ -494,10 +501,8 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
           SSI, TANF, WIC and school meals. We leave out health coverage such as
           Medicaid, CHIP and ACA premium tax credits. Under{" "}
           {scenarioName.toLowerCase()} adoption with{" "}
-          {VARIANT_PHRASES[variantKey]}, we estimate state income and use taxes
-          before refundable credits{" "}
-          {selected.stateTaxChange >= 0 ? "rise" : "fall"} by $
-          {Math.abs(selected.stateTaxChange).toFixed(0)}B.
+          {VARIANT_PHRASES[variantKey]}, we estimate that state income and use
+          taxes before refundable credits {stateTaxMove(selected.stateTaxChange)}.
         </p>
 
         {crossover != null && (

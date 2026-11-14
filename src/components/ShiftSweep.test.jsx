@@ -102,8 +102,15 @@ test("the UK revenue view prices its deciles in pounds and names what moves its 
     "Bars show the total change in each decile's net income (£B).",
   );
   expect(document.body).not.toHaveTextContent(/dollar/i);
+  expect(document.body).not.toHaveTextContent("$");
+  expect(screen.getByRole("radio", { name: "£ billions" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("radio", {
+      name: "% of Income Tax, Capital Gains Tax and National Insurance revenue",
+    }),
+  ).toBeInTheDocument();
   expect(document.body).toHaveTextContent(
-    "We estimate Income Tax and Capital Gains Tax receipts, taken together, climb at the top of the sweep, while National Insurance receipts keep falling and household benefits keep rising.",
+    "We estimate that Income Tax and Capital Gains Tax receipts, taken together, climb at the top of the sweep, while National Insurance receipts keep falling and household benefits keep rising.",
   );
   // No decile has a baseline mean net income of zero or less, so the chart
   // drops none.

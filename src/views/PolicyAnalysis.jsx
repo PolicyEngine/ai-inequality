@@ -79,8 +79,10 @@ function PolicyAnalysis() {
                 to 100% in 10-point steps, then add the same weighted total to
                 positive capital income. We scale every positive amount by one
                 common factor, so each person gains in proportion to the capital
-                income they already receive. Total market income stays the same,
-                and we model no behavioral responses.
+                income they already receive.{" "}
+                {countryKey === "us"
+                  ? "Total market income stays the same, and we model no behavioral responses."
+                  : "We model no behavioural responses."}
               </p>
             </div>
             <div className="policy-analysis-brief-card">
