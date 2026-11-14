@@ -16,6 +16,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+try:
+    from analysis.emit_paper_values import sweep_net_revenue
+except ModuleNotFoundError:  # run as python analysis/paper_figures.py
+    from emit_paper_values import sweep_net_revenue
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "analysis", "outputs")
 FIG = os.path.join(ROOT, "paper", "figures")
@@ -76,7 +81,7 @@ def main():
     fig, ax = plt.subplots(figsize=(6.2, 3.4))
     ax.axhspan(0, 0, color=GRAY)
     ax.axhline(0, color=GRAY, lw=0.8, ls=(0, (4, 3)))
-    ax.plot(x, [r["total_rev_change_b"] for r in rows], color=TEAL, lw=2, label="Net government revenue")
+    ax.plot(x, [sweep_net_revenue(r) for r in rows], color=TEAL, lw=2, label="Net government revenue")
     ax.plot(x, [r["income_tax_change_b"] for r in rows], color=NAVY, lw=1.4, label="Federal income tax")
     ax.plot(x, [payroll(r) for r in rows], color=GRAY, lw=1.4, label="Payroll")
     ax.plot(

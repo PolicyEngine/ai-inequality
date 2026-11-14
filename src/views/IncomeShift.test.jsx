@@ -70,26 +70,19 @@ test("renders UK income-shift data from the country selector", () => {
   );
 });
 
-test("discloses that the US sweep predates the Head Start correction", () => {
+test("shows no Head Start note on the US sweep, which reran after the correction", () => {
   renderIncomeShift();
 
-  // Once in the Model card, once under the sweep chart, each linking to the
-  // correction note at the top of the memo page.
-  expect(
-    document.body.textContent.match(
-      /predates? the September 2026 Head Start correction/gi,
-    ),
-  ).toHaveLength(2);
-  const links = screen.getAllByRole("link", {
-    name: /September 2026 Head Start correction/i,
-  });
-  expect(links).toHaveLength(2);
-  for (const link of links) {
-    expect(link).toHaveAttribute("href", "/budget-lab");
-  }
-  expect(document.body).toHaveTextContent(
-    /still include Head Start and Early Head Start/i,
+  // IncomeShift.headStartNote.test.jsx checks that a sweep run before the
+  // correction still gets the note.
+  expect(document.body).not.toHaveTextContent(
+    /predates? the September 2026 Head Start correction/i,
   );
+  expect(
+    screen.queryAllByRole("link", {
+      name: /September 2026 Head Start correction/i,
+    }),
+  ).toHaveLength(0);
 });
 
 test("does not show the Head Start note on the UK sweep", () => {

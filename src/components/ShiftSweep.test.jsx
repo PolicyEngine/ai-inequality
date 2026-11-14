@@ -1,16 +1,80 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
+import stateHealthPrograms from "../../analysis/tests/fixtures/state_health_programs.json";
 import sweepData from "../data/shiftSweepData.json";
 import ukSweepData from "../data/ukShiftSweepData.json";
-import ShiftSweep from "./ShiftSweep";
+import ShiftSweep, {
+  healthProgramState,
+  revenueDescriptionUsHealthTanf,
+  stateLineNoteHealthTanf,
+} from "./ShiftSweep";
+
+// The site's sweep file as a run before d2671 wrote it: no health coverage or
+// TANF fields, so the page keeps the bands and copy it published with.
+function withoutHealthTanf(data) {
+  return {
+    ...data,
+    scenarios: data.scenarios.map((scenario) => {
+      const row = { ...scenario };
+      delete row.federal_health_change_b;
+      return row;
+    }),
+  };
+}
+
+// MOCK_HEALTH_TANF_PAYLOAD: made-up health and TANF amounts on the site's
+// sweep file, to test the copy and bands that a run counting them gets. Its
+// revenue falls at every step, so the summary takes its "falls to" form. None
+// of these numbers come from a simulation.
+const MOCK_HEALTH_TANF_PAYLOAD = {
+  ...sweepData,
+  metadata: {
+    ...sweepData.metadata,
+    health_tanf_programs: {
+      state: ["or_healthier_oregon_cost"],
+    },
+  },
+  scenarios: sweepData.scenarios.map((scenario) => ({
+    ...scenario,
+    revenue_change_b: -scenario.shift_pct,
+    total_rev_change_b: -scenario.shift_pct,
+    federal_health_change_b: scenario.shift_pct / 10,
+    state_health_change_b: scenario.shift_pct / 20,
+    tanf_change_b: scenario.shift_pct / 100,
+    state_deltas: Object.fromEntries(
+      Object.entries(scenario.state_deltas ?? {}).map(([code, delta]) => [
+        code,
+        {
+          ...delta,
+          state_health_change_b: scenario.shift_pct / 1000,
+          tanf_change_b: scenario.shift_pct / 10000,
+          tanf_in_state_benefits_change_b: 0,
+        },
+      ]),
+    ),
+  })),
+};
+
+function renderSweep(data) {
+  render(
+    <MemoryRouter>
+      <ShiftSweep sweepData={data} />
+    </MemoryRouter>,
+  );
+}
 
 test("switches the single sweep chart between inequality and revenue outcomes", () => {
+  const shift50 = sweepData.scenarios.find(
+    (scenario) => scenario.shift_pct === 50,
+  );
   const shift100 = sweepData.scenarios.find(
     (scenario) => scenario.shift_pct === 100,
   );
-  const formatBillions = (value) =>
-    `$${value >= 0 ? "+" : ""}${value.toFixed(0)}B`;
+  // The revenue summary's amounts: the verb carries the sign, and amounts of
+  // $10B or more print whole.
+  const proseBillions = (value) =>
+    `$${Math.abs(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}B`;
   const formatShare = (value) => {
     const pct = value * 100;
     if (Math.abs(pct) >= 10) {
@@ -22,11 +86,7 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
     return `${pct.toFixed(2)}%`;
   };
 
-  render(
-    <MemoryRouter>
-      <ShiftSweep />
-    </MemoryRouter>,
-  );
+  renderSweep(withoutHealthTanf(sweepData));
 
   expect(
     screen.getByRole("radio", { name: /gini coefficient/i }),
@@ -64,8 +124,10 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
   expect(
     screen.queryByRole("radiogroup", { name: /income concept/i }),
   ).not.toBeInTheDocument();
+  // The site's sweep falls at every step, so the summary names the 50% and
+  // 100% shifts and no low point before the end.
   expect(document.body).toHaveTextContent(
-    formatBillions(shift100.revenue_change_b),
+    `We estimate net government revenue falls by ${proseBillions(shift50.revenue_change_b)} at a 50% shift and by ${proseBillions(shift100.revenue_change_b)} at a 100% shift.`,
   );
   expect(document.body).toHaveTextContent(/capital-gains tax and niit/i);
   expect(document.body).toHaveTextContent(
@@ -129,5 +191,357 @@ test("the decile chart names each decile it leaves out", () => {
   );
   expect(document.body).toHaveTextContent(
     "We leave out D1 and D2, whose baseline mean net incomes don't exceed zero.",
+  );
+});
+
+test("a run that counts health coverage and TANF gets their bands and copy", () => {
+  renderSweep(MOCK_HEALTH_TANF_PAYLOAD);
+
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    /we count what governments spend on medicaid, chip, the medicare savings programs, aca premium tax credits/i,
+  );
+  expect(document.body).not.toHaveTextContent(
+    /leaves? out health coverage such as medicaid/i,
+  );
+  expect(document.body).toHaveTextContent(
+    /the health band includes what the federal government spends on aca premium tax credits/i,
+  );
+  expect(document.body).toHaveTextContent(
+    /congress sets each state's tanf block grant at a fixed amount, so we charge every change in tanf benefits to the states\./i,
+  );
+  // The description names the taxes outside the charts, since a state's view
+  // shows no list of them.
+  expect(document.body).toHaveTextContent(
+    /the federal and state charts add up to the total, apart from three groups of taxes\. we count workers' state payroll taxes such as california's sdi, the additional medicare tax, and local taxes on income and occupations only in the total\. we put new york city's and maryland's local income taxes in those states' charts instead\./i,
+  );
+  expect(document.body).toHaveTextContent(/the additional medicare tax/i);
+  // The federal note leaves that list to the description above the chart.
+  expect(document.body).not.toHaveTextContent(
+    /we count three groups of taxes only in the net government revenue total/i,
+  );
+  expect(document.body).not.toHaveTextContent(
+    /the benefits band includes tanf/i,
+  );
+  // The state ranking nets TANF and health spending.
+  expect(document.body).toHaveTextContent(
+    /− tanf − state health coverage spending\./i,
+  );
+  expect(document.body).not.toHaveTextContent(
+    /we leave medicaid, chip and tanf out/i,
+  );
+  // Revenue falls at every step of the mock, so the summary has no rebound,
+  // and its second sentence gives health spending rather than tax drivers.
+  expect(document.body).toHaveTextContent(
+    /we estimate net government revenue falls by \$50B at a 50% shift and by \$100B at a 100% shift\. at that shift, the federal government spends \$10B more on health coverage and the states \$5\.0B more\./i,
+  );
+  expect(document.body).not.toHaveTextContent(/capital-gains tax and niit/i);
+  // The state ranking charges each state the federal share it moves.
+  expect(document.body).toHaveTextContent(
+    /where a state covers people whose immigration status bars federal matching, we charge it the federal share as well\. the federal government still matches their emergency care, so we likely overstate the state's cost\. in states that cover unborn children through chip, the federal government also matches a pregnant woman's prenatal care whatever her immigration status, so we leave her federal share in place\./i,
+  );
+  expect(document.body).not.toHaveTextContent(/the whole cost/i);
+
+  fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
+    target: { value: "CA" },
+  });
+  expect(
+    screen.getByRole("heading", { name: /ca state revenue decomposition/i }),
+  ).toBeInTheDocument();
+  expect(document.body).toHaveTextContent(
+    /medicare savings programs\. where the state covers people whose immigration status bars federal matching, we charge it the federal share as well\. congress sets each state's tanf block grant/i,
+  );
+  // The ranking below carries the caveats, so a state view shows each once.
+  for (const caveat of [
+    "still matches their emergency care",
+    "cover unborn children through CHIP",
+  ]) {
+    expect(document.body.textContent.split(caveat)).toHaveLength(2);
+  }
+  expect(document.body).toHaveTextContent(
+    /congress sets each state's tanf block grant at a fixed amount, so we charge the state every change in its tanf benefits\./i,
+  );
+
+  fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
+    target: { value: "OR" },
+  });
+  expect(document.body).toHaveTextContent(
+    /medicare savings programs, and on its own healthier oregon program\./i,
+  );
+});
+
+test("the health sentence says when a government's health spending doesn't change", () => {
+  const run = {
+    ...MOCK_HEALTH_TANF_PAYLOAD,
+    scenarios: MOCK_HEALTH_TANF_PAYLOAD.scenarios.map((scenario) => ({
+      ...scenario,
+      federal_health_change_b: 0,
+    })),
+  };
+  renderSweep(run);
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    /at that shift, the federal government spends the same on health coverage and the states \$5\.0B more\./i,
+  );
+});
+
+test("after a low point, the health clause joins the sentence on the last shift", () => {
+  // MOCK_HEALTH_TANF_PAYLOAD with revenue that falls to $70B at 70% and
+  // narrows to $40B at 100%.
+  const run = {
+    ...MOCK_HEALTH_TANF_PAYLOAD,
+    scenarios: MOCK_HEALTH_TANF_PAYLOAD.scenarios.map((scenario) => {
+      const revenue = -Math.min(scenario.shift_pct, 140 - scenario.shift_pct);
+      return {
+        ...scenario,
+        revenue_change_b: revenue,
+        total_rev_change_b: revenue,
+      };
+    }),
+  };
+  renderSweep(run);
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    "We estimate net government revenue falls by $50B at a 50% shift and by $70B at a 70% shift, its low point. At a 100% shift, the fall narrows to $40B, and the federal government spends $10B more on health coverage and the states $5.0B more.",
+  );
+  expect(document.body).not.toHaveTextContent(/at that shift/i);
+});
+
+// Every state health program the sweep's metadata can list, across
+// policyengine-us releases. analysis/tests/test_health_tanf.py checks the
+// fixture against analysis/health_tanf.py's STATE_HEALTH.
+const STATE_HEALTH = stateHealthPrograms.programs.map(
+  ({ variable }) => variable,
+);
+
+test("each state health program maps to its state", () => {
+  expect(STATE_HEALTH.map(healthProgramState)).toEqual(
+    stateHealthPrograms.programs.map(({ state }) => state),
+  );
+});
+
+test("a state's health note names only the programs that state runs", () => {
+  // At policyengine-us 1.764.6, the sweep's metadata lists Healthier Oregon.
+  // A run that also counts OmniSalud lists it too, and the note names it.
+  const programs = ["co_omnisalud", "or_healthier_oregon_cost"];
+  expect(stateLineNoteHealthTanf("OR", programs)).toMatch(
+    /Medicare Savings Programs, and on its own Healthier Oregon program\./,
+  );
+  expect(stateLineNoteHealthTanf("CO", programs)).toMatch(
+    /Medicare Savings Programs, and on its own OmniSalud program\./,
+  );
+  expect(stateLineNoteHealthTanf("TX", programs)).toMatch(
+    /Medicare Savings Programs\. Where the state covers/,
+  );
+  expect(stateLineNoteHealthTanf("TX")).not.toMatch(/OmniSalud|Oregon/);
+  // Later releases add programs the page has no display name for.
+  expect(
+    stateLineNoteHealthTanf("CO", [...STATE_HEALTH, "co_omnisalud"]),
+  ).toMatch(
+    /Medicare Savings Programs, and on OmniSalud and other health programs it runs on its own\./,
+  );
+  expect(stateLineNoteHealthTanf("OR", STATE_HEALTH)).toMatch(
+    /Medicare Savings Programs, and on its own Healthier Oregon program\./,
+  );
+  for (const state of ["CA", "CO", "NM", "MD", "MA"]) {
+    expect(stateLineNoteHealthTanf(state, STATE_HEALTH)).toMatch(
+      /Medicare Savings Programs, and on health programs it runs on its own\./,
+    );
+  }
+  expect(stateLineNoteHealthTanf("TX", STATE_HEALTH)).toMatch(
+    /Medicare Savings Programs\. Where the state covers/,
+  );
+});
+
+test("the revenue description names the state programs the run counts and leaves out", () => {
+  // At policyengine-us 1.764.6, the sweep counts Healthier Oregon, the only
+  // state program it counts, and leaves out OmniSalud.
+  const published = revenueDescriptionUsHealthTanf(
+    sweepData.metadata.health_tanf_programs,
+  );
+  expect(published).toMatch(
+    /We count what governments spend on Medicaid, CHIP, the Medicare Savings Programs, ACA premium tax credits, the Basic Health Program and Oregon's Healthier Oregon program\. We don't yet model Colorado's OmniSalud program for the people it covers, so we leave it out\. We price each new Medicaid enrollee/,
+  );
+  expect(published).not.toMatch(/state programs such as/);
+  // A later release's premium subsidies have no display name yet.
+  expect(
+    revenueDescriptionUsHealthTanf({ state: STATE_HEALTH, excluded: [] }),
+  ).toMatch(
+    /the Basic Health Program, Oregon's Healthier Oregon program and other health programs that states run on their own\. We price/,
+  );
+  expect(
+    revenueDescriptionUsHealthTanf({ state: [], excluded: ["xx_program"] }),
+  ).toMatch(
+    /ACA premium tax credits and the Basic Health Program\. We leave out state health programs that we don't yet model\. We price/,
+  );
+  // "other" follows only a program the description has already named.
+  expect(
+    revenueDescriptionUsHealthTanf({
+      state: [],
+      excluded: ["co_omnisalud", "xx_program"],
+    }),
+  ).toMatch(
+    /so we leave it out\. We leave out other state health programs that we don't yet model\. We price/,
+  );
+  expect(revenueDescriptionUsHealthTanf(undefined)).toMatch(
+    /ACA premium tax credits and the Basic Health Program\. We price/,
+  );
+});
+
+// Baseline totals turn share mode on (src/data/ukShiftSweepData.json carries
+// them); these are made up.
+const MOCK_BASELINE_TOTALS = {
+  national: { fed_income_tax: 2.4e12, employer_payroll_tax: 1.3e12 },
+  per_state: {
+    CA: {
+      household_state_tax_before_refundable_credits: 1.5e11,
+      household_refundable_state_tax_credits: 5e9,
+      household_state_benefits: 1e10,
+    },
+  },
+};
+
+function withTotals(data) {
+  return {
+    ...data,
+    metadata: {
+      ...data.metadata,
+      baseline_facts: {
+        ...(data.metadata?.baseline_facts ?? {}),
+        totals: MOCK_BASELINE_TOTALS,
+      },
+    },
+  };
+}
+
+test("share mode shows only for runs that count no health coverage or TANF", () => {
+  renderSweep(withTotals(withoutHealthTanf(sweepData)));
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(
+    screen.getByRole("radiogroup", { name: /units/i }),
+  ).toBeInTheDocument();
+  cleanup();
+
+  renderSweep(withTotals(MOCK_HEALTH_TANF_PAYLOAD));
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(
+    screen.queryByRole("radiogroup", { name: /units/i }),
+  ).not.toBeInTheDocument();
+});
+
+function withRevenue(data, revenueAt) {
+  return {
+    ...data,
+    scenarios: data.scenarios.map((scenario) => ({
+      ...scenario,
+      revenue_change_b: revenueAt(scenario.shift_pct),
+      total_rev_change_b: revenueAt(scenario.shift_pct),
+    })),
+  };
+}
+
+test("the revenue summary handles a sweep that never falls or ends early", () => {
+  renderSweep(withRevenue(withoutHealthTanf(sweepData), (pct) => pct));
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    /we estimate net government revenue never falls below its baseline and rises by \$100B at a 100% shift\./i,
+  );
+  // The baseline is the lowest point, so the summary names no low point.
+  expect(document.body).not.toHaveTextContent(/its low point|at a 0% shift/i);
+  cleanup();
+
+  const toNinety = withRevenue(withoutHealthTanf(sweepData), (pct) => -pct);
+  toNinety.scenarios = toNinety.scenarios.filter(
+    (scenario) => scenario.shift_pct <= 90,
+  );
+  renderSweep(toNinety);
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    /we estimate net government revenue falls by \$50B at a 50% shift and by \$90B at a 90% shift\./i,
+  );
+});
+
+test("the revenue summary names its low point and where it ends", () => {
+  const summaries = [
+    // A fall that ends at 80%.
+    [
+      (pct) => -pct,
+      80,
+      /we estimate net government revenue falls by \$50B at a 50% shift and by \$80B at an 80% shift\./i,
+    ],
+    // A rebound after a low point past 50%, as in the UK sweep.
+    [
+      (pct) => (pct <= 70 ? -pct : pct - 140),
+      100,
+      /we estimate net government revenue falls by \$50B at a 50% shift and by \$70B at a 70% shift, its low point\. at a 100% shift, the fall narrows to \$40B\./i,
+    ],
+    // A recovery above baseline after an early low point.
+    [
+      (pct) => (pct <= 30 ? -pct : pct - 60),
+      100,
+      /we estimate net government revenue falls by \$30B at a 30% shift, its low point\. at a 100% shift, it exceeds its baseline by \$40B\./i,
+    ],
+    // A rise at 50% before a fall to the end.
+    [
+      (pct) => (pct <= 50 ? pct / 5 : 60 - pct),
+      100,
+      /we estimate net government revenue rises by \$10B at a 50% shift and falls by \$40B at a 100% shift\./i,
+    ],
+  ];
+  for (const [revenueAt, lastShift, summary] of summaries) {
+    const run = withRevenue(withoutHealthTanf(sweepData), revenueAt);
+    run.scenarios = run.scenarios.filter(
+      (scenario) => scenario.shift_pct <= lastShift,
+    );
+    renderSweep(run);
+    fireEvent.click(
+      screen.getByRole("radio", { name: /net government revenue change/i }),
+    );
+    expect(document.body).toHaveTextContent(summary);
+    cleanup();
+  }
+});
+
+test("the UK revenue summary names its low point and what moves its total", () => {
+  renderSweep(ukSweepData);
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(
+    "We estimate net government revenue falls by £115B at a 50% shift and by £130B at a 70% shift, its low point. At a 100% shift, the fall narrows to £79B. We estimate Income Tax and Capital Gains Tax receipts, taken together, climb at the top of the sweep, while National Insurance receipts keep falling and household benefits keep rising.",
+  );
+});
+
+test("the old copy survives on a run without health coverage and TANF", () => {
+  renderSweep(withoutHealthTanf(sweepData));
+
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  expect(document.body).toHaveTextContent(/the benefits band includes tanf\./i);
+  expect(document.body).toHaveTextContent(
+    /we leave medicaid, chip and tanf out of these figures, apart from massachusetts's tafdc\./i,
+  );
+  expect(document.body).not.toHaveTextContent(/the health band includes/i);
+
+  fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
+    target: { value: "CA" },
+  });
+  expect(document.body).not.toHaveTextContent(
+    /congress sets each state's tanf block grant/i,
   );
 });

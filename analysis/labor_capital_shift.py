@@ -13,6 +13,7 @@ from policyengine_core.reforms import Reform
 
 from .constants import YEAR, CAPITAL_INCOME_VARS
 from .fiscal import compute_ubi_amount, net_fiscal_impact, revenue_components
+from .labor_inputs import set_labor_income
 from .metrics import extract_results as _extract_results
 
 SHIFT_LEVELS = [0.10, 0.25, 0.50]
@@ -30,6 +31,13 @@ def _apply_shift(baseline, branch_name, shift_pct):
     Employer payroll tax effects remain fiscal
     effects in the model; they are not added back into household capital
     income.
+
+    Each labor variable's stored ``*_before_lsr`` input takes the shifted
+    values too (``labor_inputs.set_labor_income``), so formulas that read the
+    stored input, such as the default TANF earned-income list, see the cut.
+
+    Create the branch before calculating anything on ``baseline``: a branch
+    copies the values its parent has already calculated.
     """
     branch = baseline.get_branch(branch_name)
 
@@ -38,13 +46,17 @@ def _apply_shift(baseline, branch_name, shift_pct):
     emp_raw = np.asarray(emp_income, dtype=float)
     emp_weights = np.asarray(emp_income.weights, dtype=float)
     wage_reduction = np.where(emp_raw > 0, emp_raw * shift_pct, 0)
-    branch.set_input("employment_income", YEAR, emp_raw - wage_reduction)
+    set_labor_income(
+        baseline, branch, "employment_income", YEAR, emp_raw - wage_reduction
+    )
 
     se_income = baseline.calculate("self_employment_income", period=YEAR)
     se_raw = np.asarray(se_income, dtype=float)
     se_weights = np.asarray(se_income.weights, dtype=float)
     se_reduction = np.where(se_raw > 0, se_raw * shift_pct, 0)
-    branch.set_input("self_employment_income", YEAR, se_raw - se_reduction)
+    set_labor_income(
+        baseline, branch, "self_employment_income", YEAR, se_raw - se_reduction
+    )
 
     # Total labor income freed (weighted aggregate).
     total_freed = float(

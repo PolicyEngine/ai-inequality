@@ -1,0 +1,420 @@
+"""Tests for analysis/compare_shift_sweeps.py.
+
+Invariants:
+
+* a sweep built the way analysis/compute_shift_sweep.py builds one passes
+  check_sweep, and each identity check catches a row that breaks it, among
+  them health spending against healthcare_benefit_value less what the frame
+  leaves out;
+* decompose's parts add up to the change in the total for any pair of runs,
+  and decompose_state's to the change in a state's chart total;
+* comparing a run with itself leaves nothing in ``same_definition``;
+* distribution_changes and decile_changes report each measure both runs carry,
+  and nothing else;
+* once the site's sweep counts health coverage and TANF, it passes check_sweep.
+"""
+
+import copy
+import json
+import os
+import random
+
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
+
+from analysis import compare_shift_sweeps as cmp
+
+CODES = ("CA", "MA", "NY", "TX")
+
+
+def _state_row(draw, code):
+    # household_state_benefits holds Massachusetts's TAFDC at its full amount
+    # for every eligible family, and tanf holds it only for families that take
+    # TANF up, so the two move apart.
+    in_state_benefits = draw(1) if code == "MA" else 0.0
+    d = {
+        "state_tax_before_refundable_credits_change_b": draw(10),
+        "state_refundable_credits_change_b": draw(2),
+        "state_benefits_change_b": draw(2) + in_state_benefits,
+        "tanf_change_b": draw(1),
+        "tanf_in_state_benefits_change_b": in_state_benefits,
+        "state_health_change_b": draw(3),
+        "federal_health_change_b": draw(5),
+        "state_only_coverage_change_b": draw(0.5),
+        "healthier_oregon_overlap_change_b": draw(0.1),
+        "unfunded_federal_coverage_change_b": draw(0.1),
+        "unfunded_state_coverage_change_b": draw(0.05),
+        "excluded_health_programs_change_b": draw(0.05),
+    }
+    d["health_change_b"] = d["federal_health_change_b"] + d["state_health_change_b"]
+    d["tanf_state_charge_change_b"] = d["tanf_change_b"] - in_state_benefits
+    d["state_net_excluding_health_tanf_change_b"] = (
+        d["state_tax_before_refundable_credits_change_b"]
+        - d["state_refundable_credits_change_b"]
+        - d["state_benefits_change_b"]
+    )
+    d["state_net_change_b"] = (
+        d["state_net_excluding_health_tanf_change_b"]
+        - d["tanf_state_charge_change_b"]
+        - d["state_health_change_b"]
+    )
+    return d
+
+
+def synthetic_sweep(seed):
+    """A sweep built the way compute_shift_sweep builds one, from seeded draws."""
+    rng = random.Random(seed)
+    rows = []
+    for pct in cmp.SHIFT_GRID:
+        scale = pct / 100
+
+        def draw(size, scale=scale):
+            return scale * rng.uniform(-size, size)
+
+        states = {code: _state_row(draw, code) for code in CODES} if pct else {}
+        row = {"shift_pct": pct, "state_deltas": states}
+        for field in cmp.STATE_SUMS:
+            row[field] = sum(d[field] for d in states.values())
+        # healthcare_benefit_value prices every program, and the frame leaves
+        # out the overlap, the excluded programs and the unfunded coverage.
+        row["health_value_change_b"] = row["health_change_b"] + sum(
+            row[field]
+            for field in (
+                "healthier_oregon_overlap_change_b",
+                "excluded_health_programs_change_b",
+                "unfunded_federal_coverage_change_b",
+                "unfunded_state_coverage_change_b",
+            )
+        )
+        row["taxes_outside_charts_change_b"] = draw(1)
+        row["chart_identity_residual_b"] = draw(0.05)
+        row["total_rev_change_published_definition_b"] = draw(200)
+        row["total_rev_change_excluding_health_b"] = (
+            row["total_rev_change_published_definition_b"]
+            + row["tanf_in_state_benefits_change_b"]
+        )
+        row["total_rev_change_b"] = (
+            row["total_rev_change_excluding_health_b"] - row["health_change_b"]
+        )
+        row["revenue_change_b"] = row["total_rev_change_b"]
+        row.update(_distribution(rng, scale))
+        rows.append(row)
+    return {
+        "metadata": {
+            "code_commit": "9face79abc",
+            "policyengine_bundle": {
+                "model_version": "1.764.6",
+                "net_income_excluded_benefits": ["early_head_start", "head_start"],
+            },
+            "baseline_facts": {"decile_impacts": _decile_impacts(rng)},
+            "health_tanf_programs": {"medicaid": {}},
+        },
+        "scenarios": rows,
+    }
+
+
+def _distribution(rng, scale):
+    return {
+        "net_gini": 0.45 + 0.1 * scale + rng.uniform(-0.01, 0.01),
+        "market_gini": 0.6 + 0.2 * scale,
+        "net_top_10_share": 0.4 + 0.1 * scale,
+        "net_top_1_share": 0.15 + 0.1 * scale,
+        "spm_poverty_rate": 0.12 + 0.05 * scale,
+    }
+
+
+def _decile_impacts(rng):
+    return {
+        "scenarios": [
+            {
+                "shift_pct": pct,
+                "deciles": [
+                    {
+                        "decile": decile,
+                        "pct_change": -pct / 10 * rng.uniform(0, 1),
+                        "baseline_mean_net": 10_000 * decile,
+                    }
+                    for decile in range(1, 11)
+                ],
+            }
+            for pct in cmp.SHIFT_GRID
+        ]
+    }
+
+
+def earlier_sweep(seed):
+    """A run in the earlier format, which counted neither health coverage nor TANF once."""
+    rng = random.Random(seed)
+    rows = []
+    for pct in cmp.SHIFT_GRID:
+        scale = pct / 100
+        states = {}
+        for code in CODES if pct else ():
+            d = {
+                "state_tax_before_refundable_credits_change_b": scale
+                * rng.uniform(-10, 10),
+                "state_refundable_credits_change_b": scale * rng.uniform(-2, 2),
+                "state_benefits_change_b": scale * rng.uniform(-2, 2),
+            }
+            d["state_net_change_b"] = (
+                d["state_tax_before_refundable_credits_change_b"]
+                - d["state_refundable_credits_change_b"]
+                - d["state_benefits_change_b"]
+            )
+            states[code] = d
+        total = scale * rng.uniform(-200, 50)
+        rows.append(
+            {
+                "shift_pct": pct,
+                "revenue_change_b": total,
+                "total_rev_change_b": total,
+                "state_deltas": states,
+                **_distribution(rng, scale),
+            }
+        )
+    return {
+        "metadata": {
+            "policyengine_bundle": {"model_version": "1.764.6"},
+            "baseline_facts": {"decile_impacts": _decile_impacts(rng)},
+        },
+        "scenarios": rows,
+    }
+
+
+def test_a_well_built_sweep_passes():
+    assert cmp.check_sweep(synthetic_sweep(1)) == []
+    assert cmp.check_sweep(synthetic_sweep(1), expect_commit="9face79") == []
+
+
+def _row(sweep, pct):
+    return next(row for row in sweep["scenarios"] if row["shift_pct"] == pct)
+
+
+def _drop_health(s):
+    del _row(s, 50)["federal_health_change_b"]
+
+
+def _skew_national_federal_health(s):
+    _row(s, 50)["federal_health_change_b"] += 0.01
+
+
+def _skew_state_health_total(s):
+    _row(s, 50)["state_deltas"]["CA"]["health_change_b"] += 0.1
+
+
+def _skew_health_value(s):
+    _row(s, 50)["health_value_change_b"] += 0.5
+
+
+def _drop_state_federal_health(s):
+    del _row(s, 50)["state_deltas"]["MA"]["federal_health_change_b"]
+
+
+def _skew_state_net(s):
+    _row(s, 50)["state_deltas"]["CA"]["state_net_change_b"] += 0.5
+
+
+def _skew_national_state_tax(s):
+    _row(s, 50)["state_tax_before_refundable_credits_change_b"] += 0.01
+
+
+def _large_residual(s):
+    _row(s, 50)["chart_identity_residual_b"] = 0.2
+
+
+def _skew_total(s):
+    _row(s, 50)["total_rev_change_b"] += 1
+
+
+def _skew_tanf_charge(s):
+    _row(s, 50)["state_deltas"]["MA"]["tanf_state_charge_change_b"] += 0.1
+
+
+def _skew_left_out(field):
+    """Move one term the health identity subtracts, in a row and its states."""
+
+    def mutate(s):
+        row = _row(s, 50)
+        row[field] += 0.5
+        row["state_deltas"]["CA"][field] += 0.5
+
+    return mutate
+
+
+LEFT_OUT_HEALTH = (
+    "healthier_oregon_overlap_change_b",
+    "excluded_health_programs_change_b",
+    "unfunded_federal_coverage_change_b",
+    "unfunded_state_coverage_change_b",
+)
+
+
+def _drop_exclusion_record(s):
+    del s["metadata"]["policyengine_bundle"]["net_income_excluded_benefits"]
+
+
+def _drop_last_shift(s):
+    s["scenarios"].pop()
+
+
+def _nonzero_baseline(s):
+    _row(s, 0)["federal_health_change_b"] = 0.5
+
+
+def _drop_state_rows(s):
+    _row(s, 50)["state_deltas"] = {}
+
+
+def _drop_deciles(s):
+    s["metadata"]["baseline_facts"] = {}
+
+
+@pytest.mark.parametrize(
+    "mutate, expected",
+    [
+        (_drop_health, "no federal_health_change_b"),
+        (_skew_national_federal_health, "the states' federal_health_change_b"),
+        (_skew_state_health_total, "CA: health_change_b"),
+        (_skew_health_value, "differs from healthcare_benefit_value"),
+        (_drop_state_federal_health, "50% MA: no federal_health_change_b"),
+        (_skew_state_net, "CA: state_net_change_b"),
+        (
+            _skew_national_state_tax,
+            "the states' state_tax_before_refundable_credits_change_b",
+        ),
+        (_large_residual, "chart identity residual"),
+        (_skew_total, "total_rev_change_b"),
+        (_skew_tanf_charge, "MA: tanf_state_charge_change_b"),
+        (_drop_exclusion_record, "net_income_excluded_benefits"),
+        (_drop_last_shift, "shift grid"),
+        (_nonzero_baseline, "0%: nonzero federal_health_change_b"),
+        (_drop_state_rows, "50%: no state rows"),
+        (_drop_deciles, "decile_impacts"),
+    ]
+    + [
+        (_skew_left_out(field), "differs from healthcare_benefit_value")
+        for field in LEFT_OUT_HEALTH
+    ],
+)
+def test_each_identity_check_catches_a_row_that_breaks_it(mutate, expected):
+    sweep = synthetic_sweep(2)
+    mutate(sweep)
+    problems = cmp.check_sweep(sweep)
+    assert any(expected in problem for problem in problems), problems
+
+
+def test_a_mismatched_commit_fails():
+    problems = cmp.check_sweep(synthetic_sweep(3), expect_commit="0000000")
+    assert problems == ["metadata.code_commit 9face79abc doesn't match 0000000"]
+
+
+@settings(max_examples=60, deadline=None)
+@given(st.integers(0, 2**32 - 1), st.integers(0, 2**32 - 1))
+def test_the_parts_add_up_to_the_change(new_seed, old_seed):
+    new, old = synthetic_sweep(new_seed), earlier_sweep(old_seed)
+    for part in cmp.decompose(new, old):
+        assert abs(part["unexplained"]) < 1e-9
+        assert part["total"] - part["earlier_total"] == pytest.approx(
+            part["same_definition"] + part["tanf_counted_once"] + part["health"],
+            abs=1e-9,
+        )
+    parts = cmp.decompose_state(new, old, "MA")
+    assert [part["shift_pct"] for part in parts] == cmp.SHIFT_GRID[1:]
+    for part in parts:
+        assert abs(part["unexplained"]) < 1e-9
+
+
+@settings(max_examples=30, deadline=None)
+@given(st.integers(0, 2**32 - 1))
+def test_a_run_compared_with_itself_moves_nothing_on_the_same_definition(seed):
+    sweep = synthetic_sweep(seed)
+    for part in cmp.decompose(sweep, sweep):
+        assert part["same_definition"] == 0
+    for part in cmp.decompose_state(sweep, sweep, "CA"):
+        assert part["same_definition"] == 0
+
+
+def test_chart_totals_and_the_residual_rebuild_the_total():
+    for row in synthetic_sweep(4)["scenarios"]:
+        charts = cmp.chart_totals(row)
+        assert charts["federal"] + charts["states"] + charts["outside"] + row[
+            "chart_identity_residual_b"
+        ] == pytest.approx(row["total_rev_change_b"], abs=1e-9)
+
+
+def test_report_and_main_run_on_a_pair_of_files(tmp_path, capsys):
+    new_path, old_path = tmp_path / "new.json", tmp_path / "old.json"
+    new_path.write_text(json.dumps(synthetic_sweep(5)))
+    old_path.write_text(json.dumps(earlier_sweep(6)))
+    assert (
+        cmp.main([str(new_path), "--old", str(old_path), "--expect-commit", "9face79"])
+        == 0
+    )
+    out = capsys.readouterr().out
+    assert "Every identity holds." in out
+    assert "| 100% |" in out and "CA chart" in out
+    broken = synthetic_sweep(5)
+    _skew_total(broken)
+    new_path.write_text(json.dumps(broken))
+    assert cmp.main([str(new_path), "--old", str(old_path)]) == 1
+
+
+def test_distribution_and_decile_changes_cover_what_both_runs_carry():
+    new, old = synthetic_sweep(9), earlier_sweep(10)
+    changes = cmp.distribution_changes(new, old)
+    assert len(changes) == len(cmp.SHIFT_GRID) * len(cmp.DISTRIBUTION_FIELDS)
+    old_rows = {row["shift_pct"]: row for row in old["scenarios"]}
+    for c in changes:
+        assert c["earlier"] == old_rows[c["shift_pct"]][c["field"]]
+        assert c["change"] == pytest.approx(c["rerun"] - c["earlier"])
+    # A measure one run lacks drops out rather than reading as zero.
+    del old["scenarios"][3]["spm_poverty_rate"]
+    assert len(cmp.distribution_changes(new, old)) == len(changes) - 1
+    deciles = cmp.decile_changes(new, old, 10)
+    assert [d["decile"] for d in deciles] == list(range(1, 11))
+    assert cmp.decile_changes(new, old, 15) == []
+    del old["metadata"]["baseline_facts"]
+    assert cmp.decile_changes(new, old, 10) == []
+    text = cmp.report(synthetic_sweep(9), earlier_sweep(10))
+    assert (
+        "| Shift | Net Gini | Market Gini | Net top 10% | Net top 1% | SPM poverty |"
+        in text
+    )
+    assert "Decile impacts at a 10% shift" in text
+    assert "`baseline_deciles` now breaks those ties by row order" in text
+    # Two runs that both record health_tanf_programs sort ties and edges the
+    # same way, so the report leaves the note out.
+    text = cmp.report(synthetic_sweep(9), synthetic_sweep(10))
+    assert "Decile impacts at a 10% shift" in text
+    assert "NumPy's default sort" not in text
+    # compute_decile_impacts writes no pct_change for a decile without a
+    # positive baseline; the report says so rather than failing.
+    new, old = synthetic_sweep(9), earlier_sweep(10)
+    scenario = new["metadata"]["baseline_facts"]["decile_impacts"]["scenarios"][1]
+    assert scenario["shift_pct"] == 10
+    scenario["deciles"][0]["pct_change"] = None
+    [row] = [
+        line for line in cmp.report(new, old).splitlines() if line.startswith("| 1 | ")
+    ]
+    assert row.split(" | ")[2] == "n/a"
+
+
+def test_metadata_differences_name_what_changed():
+    new, old = synthetic_sweep(7), earlier_sweep(8)
+    keys = [key for key, _, _ in cmp.metadata_differences(new, old)]
+    assert "policyengine_bundle.net_income_excluded_benefits" in keys
+    assert "policyengine_bundle.model_version" not in keys
+
+
+SITE = os.path.join(cmp.ROOT, cmp.SITE_DATA)
+
+
+def test_the_site_sweep_passes_once_it_counts_health_and_tanf():
+    with open(SITE) as f:
+        payload = json.load(f)
+    if not any(
+        row.get("federal_health_change_b") is not None for row in payload["scenarios"]
+    ):
+        pytest.skip("the site's sweep predates health coverage and TANF")
+    assert cmp.check_sweep(copy.deepcopy(payload)) == []

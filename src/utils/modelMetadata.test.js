@@ -63,12 +63,16 @@ describe("microcosmBuildLabel", () => {
 });
 
 describe("predatesHeadStartCorrection", () => {
-  test("flags the committed US sweep, which ran before the correction", () => {
-    // If the sweep is rerun through managed_us_microsimulation its bundle
-    // records net_income_excluded_benefits, this flips to false, and the
-    // on-page note disappears with it.
+  test("does not flag the committed US sweep, which reran after the correction", () => {
+    // The sweep reran through managed_us_microsimulation on the same model
+    // version, so its bundle records the programs it keeps out of net income
+    // and the on-page note stays off.
     expect(usShiftSweepData.metadata.country_model_version).toBe("1.764.6");
-    expect(predatesHeadStartCorrection(usShiftSweepData.metadata)).toBe(true);
+    expect(
+      usShiftSweepData.metadata.policyengine_bundle
+        .net_income_excluded_benefits,
+    ).toEqual(["early_head_start", "head_start"]);
+    expect(predatesHeadStartCorrection(usShiftSweepData.metadata)).toBe(false);
   });
 
   test("does not flag the UK sweep", () => {
