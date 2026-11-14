@@ -182,7 +182,7 @@ def main():
     print("  - Capital allocation: SCF total wealth (theirs) vs realized capital")
     print("    income (ours); they note a narrower base is more top-concentrated.")
     print("  - Pass-through: their active/passive-aware split vs our single rule.")
-    print("  - Microdata: 2015 IRS PUF aged to 2030 vs populace-us survey build.")
+    print("  - Microdata: 2015 IRS PUF aged to 2030 vs Microcosm survey build.")
     print("  - Their capital base is not observable here; eta ~ 1 in their prose")
     print("    implies about $4.6T vs our $5.3T, but the wedge cannot confirm it.")
 

@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AIScenarios, { realizationBreakeven } from "./AIScenarios";
 import scenariosData from "../data/aiScenariosData.json";
+import { microcosmBuildLabel } from "../utils/modelMetadata";
 
 // Derive expected strings from the committed payload so a data-build refresh
 // changes the numbers without breaking the tests. This mirrors the
@@ -81,7 +82,15 @@ describe("AIScenarios", () => {
         <AIScenarios />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/populace_us_2024/)).toBeTruthy();
+    const { certifiedDataBuildId, countryModelVersion } =
+      scenariosData.metadata;
+    const label = microcosmBuildLabel(certifiedDataBuildId);
+    expect(label).toMatch(/^Microcosm US /);
+    const note = screen.getByText((text) => text.includes(label));
+    expect(note).toHaveTextContent(countryModelVersion);
+    expect(note.textContent).not.toContain(certifiedDataBuildId);
+    expect(note.textContent).not.toContain(scenariosData.metadata.datasetName);
+    expect(note.textContent).not.toContain(scenariosData.metadata.dataPackage);
   });
 });
 

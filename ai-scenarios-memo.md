@@ -306,32 +306,29 @@ computed on the identical threshold. Because the threshold is identical in
 baseline and scenario, those changes are close to unaffected by the level gap;
 the levels are context, the deltas are the result.
 
-**Stability across data builds.** These results were first computed on the
-prior populace build (build o, 22 July) and rerun on build p (28 July, with
-revised capital gains calibration) under the identical model version — a
-data-only change. Both runs predate the Head Start correction, so this
-comparison uses the net-income accounting they shared. No scenario's revenue
-estimate moved by more than $5.9B:
-Moderate and Rapid by at most 2.8%, and the Slow cells, whose revenue changes
-are as small as $3B, by up to 12%. No poverty change moved by more than 0.11pp,
-and no conclusion changed. The recalibration's
-visible effect is distributional: the baseline top-1% net income share rises
+**Stability across data builds.** We first computed these results on build o
+(22 July) of our Microcosm microdata, then reran them on build p (28 July). For
+the rerun we kept policyengine-us at 1.764.6 but moved policyengine.py from
+4.22.3 to 5.0.1, so we can't attribute the differences to the data alone. Both
+runs predate the Head Start correction, so we compare them on the net-income
+accounting they shared. No scenario's revenue estimate moved by as much as $6B:
+Moderate and Rapid estimates by at most 2.8%, and Slow estimates, which run as
+low as $3B, by up to 12%. No poverty change moved by more than 0.11pp, and no
+conclusion changed. The baseline top-1% net income share rose
 from 8.77% to 9.00% (9.06% after the correction), and New York's state take
-under Rapid rises from $3.8B to $5.8B as more of the gains land where they are
-taxed.
+under Rapid / proportional rose from $3.8B to $5.8B.
 
 **Diagnostics.** The net-income identity closes to $0.000B in every scenario,
 and the labor shock hits its target aggregate to within 2e-16.
 
 ## Reproducibility
 
-Everything above runs from open source against openly published microdata:
-policyengine-us 1.764.6, policyengine.py 5.0.1, populace-us `populace_us_2024`
-(certified build `populace-us-2024-buildp-sparse-rmloss100-cae8640`), with
-Head Start and Early Head Start kept out of household net income. The
-Budget Lab notes their PUF-based data cannot be released publicly, so this is a
-complement rather than a competitor: anyone can rerun these scenarios, or score
-a different reform against them.
+We computed these estimates with open-source code and openly published
+microdata: policyengine-us 1.764.6, policyengine.py 5.0.1 and Microcosm's US
+2024 build p (commit `cae8640`). We keep Head Start and Early Head Start out of
+household net income. The Budget Lab notes that it can't release its PUF-based
+data publicly. Anyone can rerun these scenarios on ours, or score a different
+reform against them.
 
 Code: `PolicyEngine/ai-inequality`, `analysis/ai_scenarios.py`.
 Method notes: `analysis/AI_SCENARIOS.md`.

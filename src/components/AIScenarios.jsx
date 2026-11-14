@@ -17,6 +17,7 @@ import {
 import { IconInfoCircle, IconTimeline } from "@tabler/icons-react";
 import defaultScenariosData from "../data/aiScenariosData.json";
 import { TOOLTIP_STYLE } from "../utils/chartStyles";
+import { microcosmBuildLabel } from "../utils/modelMetadata";
 import { useRovingRadioGroup } from "../utils/useRovingRadioGroup";
 
 const SCENARIO_NAMES = ["Slow", "Moderate", "Rapid"];
@@ -352,6 +353,7 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
   const scenarios = scenariosData?.scenarios ?? [];
   const baseline = scenariosData?.baseline ?? {};
   const metadata = scenariosData?.metadata ?? {};
+  const dataBuildLabel = microcosmBuildLabel(metadata.certifiedDataBuildId);
   const realizationRows = scenariosData?.sensitivities?.realization ?? [];
   const scopeRows =
     scenariosData?.sensitivities?.capital_scope_excluding_retirement ?? [];
@@ -544,8 +546,8 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
 
         <p className="analysis-metadata">
           {metadata.countryModelPackage} {metadata.countryModelVersion} ·{" "}
-          {metadata.dataPackage} {metadata.dataVersion} · {metadata.datasetName}{" "}
-          · <Link to="/budget-lab">read the full write-up</Link>
+          {dataBuildLabel && `${dataBuildLabel} · `}
+          <Link to="/budget-lab">read the full write-up</Link>
         </p>
       </div>
     </div>
