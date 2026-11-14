@@ -63,6 +63,12 @@ const NATIONAL_BUCKETS_UK = [
   },
 ];
 
+// What the US federal decomposition holds. It adds up its own bands rather
+// than taking the all-government total less the states, so some taxes that
+// the total counts sit in no chart's bands.
+const FEDERAL_LINE_NOTE_US =
+  "The payroll band includes employers' state unemployment insurance and other state and local payroll taxes, and the benefits band includes TANF. We count three groups of taxes only in the net government revenue total: workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations. We put New York City's and Maryland's local income taxes in those states' charts instead.";
+
 function federalBuckets(countryId) {
   return countryId === "uk" ? NATIONAL_BUCKETS_UK : FEDERAL_BUCKETS_US;
 }
@@ -224,7 +230,7 @@ function measuresForMetadata(metadata) {
           : "Share of people with household resources below the Supplemental Poverty Measure threshold.",
     },
     revenue: {
-      label: metadata.revenue_label ?? "Net federal revenue change",
+      label: metadata.revenue_label ?? "Net government revenue change",
       field: "Revenue",
       dataKey: "revenue",
       color: "#2C6496",
@@ -236,7 +242,7 @@ function measuresForMetadata(metadata) {
         billionFmt(value, { precision: 1, currencySymbol }),
       description:
         metadata.revenue_description ??
-        "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits). Reconciles to the household net-income identity.",
+        "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. We leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.",
     },
   };
 }
@@ -263,7 +269,8 @@ function buildFederalRow(scenario) {
     (scenario.employee_ss_tax_change_b ?? 0) +
     (scenario.employee_medicare_tax_change_b ?? 0) +
     (scenario.self_employment_tax_change_b ?? 0);
-  // Federal benefits = total household benefits − state-funded benefits.
+  // Federal benefits = total household benefits − household_state_benefits
+  // (the programs PolicyEngine counts as state-paid), so TANF stays here.
   const fedBenefitsChange =
     (scenario.benefits_change_b ?? 0) - (scenario.state_benefits_change_b ?? 0);
   const rev_fed_benefits = -fedBenefitsChange;
@@ -387,7 +394,7 @@ function summaryForMetric(measureKey, conceptKey, config, chartData, metadata) {
         {endValue.toFixed(3)} at a 100% shift.{" "}
         {conceptKey === "net"
           ? "Current law dampens the shock, but it does not come close to offsetting it."
-          : `This is the pre-tax, pre-transfer distributional effect of routing ${laborTerm} income through existing capital holdings.`}
+          : `We move ${laborTerm} income to people in proportion to the capital income they already receive.`}
       </>
     );
   }
@@ -408,9 +415,9 @@ function summaryForMetric(measureKey, conceptKey, config, chartData, metadata) {
     return (
       <>
         {config.label} {direction} from {config.valueFormatter(startValue)} at
-        baseline to {config.valueFormatter(endValue)} at a 100% shift. This
-        traces how the income distribution changes when {laborTerm} income is
-        rerouted through existing capital holdings.
+        baseline to {config.valueFormatter(endValue)} at a 100% shift. We move{" "}
+        {laborTerm} income to people in proportion to the capital income they
+        already receive.
       </>
     );
   }
@@ -441,6 +448,7 @@ function RevenueDecompositionChart({
   unit = "dollars",
   denominatorB = null, // denominator in $B, used when unit === "share"
   laborTerm = "labor",
+  note = null,
 }) {
   // Share mode scales each bucket value by 100 / denominatorB.
   const scale = unit === "share" && denominatorB ? 100 / denominatorB : 1;
@@ -556,6 +564,7 @@ function RevenueDecompositionChart({
           )}
         </ComposedChart>
       </ResponsiveContainer>
+      {note && <p className="shift-sweep-description">{note}</p>}
     </>
   );
 }
@@ -694,7 +703,11 @@ function FederalMtrChart({ sweepData, metric }) {
   );
 }
 
-function DecileImpactChart({ sweepData, unit = "dollars" }) {
+function DecileImpactChart({
+  sweepData,
+  unit = "dollars",
+  currencySymbol = "$",
+}) {
   const [selectedShift, setSelectedShift] = useState(50);
   const decileImpacts =
     sweepData?.metadata?.baseline_facts?.decile_impacts ?? null;
@@ -705,22 +718,32 @@ function DecileImpactChart({ sweepData, unit = "dollars" }) {
         .filter((pct) => pct > 0),
     [decileImpacts],
   );
-  const rows = useMemo(() => {
-    if (!decileImpacts) return [];
-    const scenario =
+  const scenario = useMemo(() => {
+    if (!decileImpacts) return null;
+    return (
       decileImpacts.scenarios.find((s) => s.shift_pct === selectedShift) ??
-      decileImpacts.scenarios[decileImpacts.scenarios.length - 1];
-    if (!scenario) return [];
-    return scenario.deciles
-      .filter((d) => Number.isFinite(d.pct_change))
-      .map((d) => ({
-        decile: `D${d.decile}`,
-        pct: d.pct_change,
-        dollars_b: (d.delta_mean_net * d.weight) / 1e9,
-        delta_mean: d.delta_mean_net,
-        baseline_mean: d.baseline_mean_net,
-      }));
+      decileImpacts.scenarios[decileImpacts.scenarios.length - 1] ??
+      null
+    );
   }, [decileImpacts, selectedShift]);
+  const rows = useMemo(
+    () =>
+      (scenario?.deciles ?? [])
+        .filter((d) => Number.isFinite(d.pct_change))
+        .map((d) => ({
+          decile: `D${d.decile}`,
+          pct: d.pct_change,
+          dollars_b: (d.delta_mean_net * d.weight) / 1e9,
+          delta_mean: d.delta_mean_net,
+          baseline_mean: d.baseline_mean_net,
+        })),
+    [scenario],
+  );
+  // compute_decile_impacts gives no percentage change for a decile whose
+  // baseline mean net income is zero or less, and the chart drops it.
+  const omitted = (scenario?.deciles ?? [])
+    .filter((d) => !Number.isFinite(d.pct_change))
+    .map((d) => `D${d.decile}`);
 
   if (!decileImpacts || rows.length === 0) {
     return null;
@@ -765,11 +788,13 @@ function DecileImpactChart({ sweepData, unit = "dollars" }) {
         </div>
       </div>
       <p className="shift-sweep-description">
-        Households are bucketed into deciles by weighted baseline market income;
-        decile membership is held fixed across scenarios.
+        We sort households into deciles by weighted baseline market income and
+        keep each household in its baseline decile in every scenario.
         {unit === "share"
-          ? " Bars show the change in each decile's mean household net income as % of its baseline mean. D1 is omitted because its baseline mean is negative (losses dominate)."
-          : " Bars show the aggregate dollar change in each decile's total net income ($B)."}
+          ? " Bars show the change in each decile's mean household net income, as a percentage of its baseline mean."
+          : ` Bars show the total change in each decile's net income (${currencySymbol}B).`}
+        {omitted.length > 0 &&
+          ` We leave out ${omitted.slice(0, -1).join(", ")}${omitted.length > 1 ? " and " : ""}${omitted[omitted.length - 1]}, whose baseline mean net ${omitted.length > 1 ? "incomes don't" : "income doesn't"} exceed zero.`}
       </p>
       <ResponsiveContainer width="100%" height={360}>
         <BarChart
@@ -793,14 +818,14 @@ function DecileImpactChart({ sweepData, unit = "dollars" }) {
             tickFormatter={(v) =>
               unit === "share"
                 ? `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`
-                : `$${v >= 0 ? "+" : ""}${v.toFixed(0)}B`
+                : billionFmt(v, { currencySymbol })
             }
             tick={{ fontSize: 12 }}
             label={{
               value:
                 unit === "share"
                   ? "Change in mean household net income (%)"
-                  : "Change in decile-total net income ($B)",
+                  : `Change in decile-total net income (${currencySymbol}B)`,
               angle: -90,
               position: "insideLeft",
               offset: -10,
@@ -813,7 +838,7 @@ function DecileImpactChart({ sweepData, unit = "dollars" }) {
             formatter={(value, name) => [
               unit === "share"
                 ? `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`
-                : `$${value >= 0 ? "+" : ""}${value.toFixed(1)}B`,
+                : billionFmt(value, { precision: 1, currencySymbol }),
               name,
             ]}
             labelFormatter={(label) => label}
@@ -930,10 +955,17 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
         </div>
       </div>
       <p className="shift-sweep-description">
-        All states with a state income tax, sorted descending by net change in
-        state revenue at the selected shift level. Net = state income tax before
-        refundable credits − refundable state credits − state-funded benefits.
-        Teal gains, orange loses.
+        The chart ranks every state by its net change in state revenue at the
+        selected shift level, largest first. Net = state income and use tax
+        before refundable credits − refundable state credits − state-paid
+        benefits. We count state SSI supplements, child care subsidies and other
+        programs, such as New Jersey&apos;s property tax relief, as state-paid.
+        We leave Medicaid, CHIP and TANF out of these figures, apart from
+        Massachusetts&apos;s TAFDC. New York&apos;s and Maryland&apos;s figures
+        include New York City&apos;s income tax and refundable credits,
+        Maryland&apos;s county income taxes and Montgomery County&apos;s earned
+        income credit. California&apos;s include San Francisco&apos;s Working
+        Families Tax Credit. Teal gains, orange loses.
         {unit === "share"
           ? " In share mode, each state's change is expressed as % of its own baseline net state revenue — states without income tax (FL, TX, etc.) are dropped."
           : ""}
@@ -1269,6 +1301,11 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
             unit={selectedUnit}
             denominatorB={decompositionDenominatorB}
             laborTerm={laborTerm}
+            note={
+              selectedJurisdiction === "federal" && metadata.country_id !== "uk"
+                ? FEDERAL_LINE_NOTE_US
+                : null
+            }
           />
         ) : (
           <>
@@ -1382,7 +1419,11 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
           )}
 
         {isRevenue && (
-          <DecileImpactChart sweepData={sweepData} unit={selectedUnit} />
+          <DecileImpactChart
+            sweepData={sweepData}
+            unit={selectedUnit}
+            currencySymbol={currencySymbol}
+          />
         )}
 
         {isRevenue && hasStateDeltas && (

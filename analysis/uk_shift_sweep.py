@@ -32,10 +32,13 @@ CAPITAL_INCOME_VARS = (
 )
 
 SHIFT_SWEEP_DESCRIPTION = (
-    "Positive employment and self-employment income are reduced by the selected "
-    "share, and the same weighted total is redistributed to positive capital "
-    "income in proportion to existing UK capital-income holdings. This is a "
-    "static current-law microsimulation; it is not a behavioural forecast."
+    "Positive employment and self-employment income fall by the selected "
+    "share, and the same weighted total goes to positive capital income: "
+    "savings and ISA interest, dividends, property income and capital gains. "
+    "We scale every positive amount by one common factor, so each person "
+    "gains in proportion to the capital income they already receive, and "
+    "losses stay as they are. We simulate current law with no behavioural "
+    "responses."
 )
 
 
@@ -413,12 +416,14 @@ def _metadata(baseline, baseline_metrics):
         "policyengine_bundle": bundle or None,
         "revenue_label": "Net government revenue change",
         "revenue_description": (
-            "UK government effect including Income Tax, National Insurance, "
-            "and modelled household benefit changes."
+            "Net government revenue change = taxes (Income Tax, Capital Gains "
+            "Tax, and workers' and employers' National Insurance) minus "
+            "household benefits."
         ),
         "revenue_summary_note": (
-            "Includes Income Tax and National Insurance receipts net of modelled "
-            "household benefit costs."
+            "We estimate Income Tax and Capital Gains Tax receipts, taken "
+            "together, climb at the top of the sweep, while National Insurance "
+            "receipts keep falling and household benefits keep rising."
         ),
         "baseline_facts": _baseline_facts(baseline, baseline_metrics),
     }

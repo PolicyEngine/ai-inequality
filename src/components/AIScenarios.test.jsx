@@ -19,6 +19,15 @@ function revenueOf(name, variant) {
   return fmtBillions(row.revenueChange);
 }
 
+// The state tax note's change, as the component words it.
+function stateTaxMoveOf(name, variant) {
+  const row = scenariosData.scenarios.find(
+    (r) => r.name === name && r.inequality === variant && !r.holdSharesFixed,
+  );
+  const verb = row.stateTaxChange >= 0 ? "rise" : "fall";
+  return `${verb} by $${Math.abs(row.stateTaxChange).toFixed(0)}B`;
+}
+
 describe("AIScenarios", () => {
   it("renders the section with scenario and variant controls", () => {
     render(
@@ -65,6 +74,27 @@ describe("AIScenarios", () => {
     expect(screen.queryByText(/workers earning below/i)).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: "Wages spread" }));
     expect(screen.getByText(/workers earning below/i)).toBeTruthy();
+  });
+
+  it("names the selected wage variant in the state tax note", () => {
+    render(
+      <MemoryRouter>
+        <AIScenarios />
+      </MemoryRouter>,
+    );
+    expect(document.body.textContent).toContain(
+      `Under rapid adoption with proportional wage changes, we estimate state income and use taxes before refundable credits ${stateTaxMoveOf("Rapid", "proportional")}.`,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Wages spread" }));
+    expect(document.body.textContent).toContain(
+      `Under rapid adoption with wages spreading, we estimate state income and use taxes before refundable credits ${stateTaxMoveOf("Rapid", "expansive")}.`,
+    );
+    expect(document.body.textContent).not.toMatch(/proportional wage changes/);
+    fireEvent.click(screen.getByRole("radio", { name: "Slow" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Wages compress" }));
+    expect(document.body.textContent).toContain(
+      `Under slow adoption with wages compressing, we estimate state income and use taxes before refundable credits ${stateTaxMoveOf("Slow", "compressive")}.`,
+    );
   });
 
   it("carries the corporate-tax scope note from the payload", () => {

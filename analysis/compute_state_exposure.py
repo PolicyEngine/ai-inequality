@@ -9,21 +9,33 @@ SCOPE, and it decides how the ranking may be read
 -------------------------------------------------
 `household_state_tax_before_refundable_credits` adds exactly two things at
 policyengine-us 1.764.6: `state_income_tax_before_refundable_credits` and
-`state_use_tax`. So the channel measured here is **state income tax** (plus a
-small use-tax component), net of refundable state credits and state-funded
-benefits.
+`state_use_tax`. So this script measures the **state income tax** channel
+(plus a small use-tax component), net of refundable state credits and the
+programs in `household_state_benefits`. New York's and Maryland's figures
+include New York City's income tax and refundable credits, Maryland's county
+income taxes and Montgomery County's earned income credit. California's
+include San Francisco's Working Families Tax Credit.
 
-It is *not* state own-source revenue in the budgetary sense. General sales
-tax, property tax, corporate income tax, severance taxes and fees are outside
-the model. Nationally those are roughly half of state and local own-source
-revenue, and they are exactly the bases that no-income-tax states rely on.
+`household_state_benefits` also lists three programs that policyengine-us
+1.764.6 computes only in Los Angeles County. One is the Los Angeles Department
+of Water and Power's EZ-SAVE program. The other two, the infant supplement and
+the expectant parent payment, are foster care payments that its own parameters
+credit to the California Department of Social Services. Build p carries no
+electricity bills (`pre_subsidy_electricity_expense`) and no foster care
+placements (`is_in_foster_care`), so all three pay nothing, and the scope note
+leaves them out.
 
-A state that scores near zero here is therefore making a statement about the
-**income-tax channel**, not about budgetary resilience: Texas and Florida
-collect through sales taxes this model does not carry, so their true exposure
-to an AI boom is unmeasured rather than absent. The one informative
-zero-income-tax case is Washington, whose capital-gains excise is modelled and
-so does register.
+It is *not* state own-source revenue in the budgetary sense. This script
+counts no general sales, property, corporate income or severance taxes, and
+no fees. Nationally those are roughly half of state and local own-source
+revenue, and they are the bases that no-income-tax states rely on.
+
+A score near zero here reflects the **income-tax channel**, not budgetary
+resilience. Texas and Florida collect through sales taxes, and this script
+counts none of them, so it misses their exposure to an AI boom through those
+taxes. The one informative zero-income-tax case is Washington: policyengine-us
+1.764.6 counts its capital gains excise as state income tax, so the ranking
+picks it up.
 
 Usage:
     python -m analysis.compute_state_exposure
@@ -64,10 +76,15 @@ VARIANTS = ["compressive", "proportional", "expansive"]
 CAPITAL_ONLY_INCOME_TAX_STATES = {"WA"}
 
 SCOPE_NOTE = (
-    "State income tax (plus use tax) net of refundable state credits and "
-    "state-funded benefits. Sales, property, corporate and severance taxes are "
-    "outside the model, so a low score means low exposure through the "
-    "income-tax channel, not budgetary resilience."
+    "Net = state income and use tax − refundable state credits − state-paid "
+    "benefits. We count state supplements to SSI, child care subsidies and "
+    "other programs, such as New Jersey's property tax relief, as state-paid. "
+    "New York's and Maryland's figures include New York City's income tax and "
+    "refundable credits, Maryland's county income taxes and Montgomery "
+    "County's earned income credit. California's include San Francisco's "
+    "Working Families Tax Credit. We leave out Medicaid, CHIP and TANF, apart "
+    "from Massachusetts's TAFDC. We count no sales, property, corporate or "
+    "severance taxes, so we measure no exposure through them."
 )
 
 
