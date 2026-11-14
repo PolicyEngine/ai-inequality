@@ -159,7 +159,7 @@ OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "outputs", "shift_sweep.js
 MICRODATA_OUTPUT_DIR = os.path.join(
     os.path.dirname(__file__), "outputs", "shift_sweep_microdata"
 )
-MODEL_URL = "https://www.policyengine.org/us/model"
+MODEL_URL = "https://policyengine.github.io/policyengine-us/"
 SHIFT_SWEEP_DESCRIPTION = (
     "Positive employment and self-employment income fall by the selected "
     "share, and the same weighted total goes to positive capital income: "

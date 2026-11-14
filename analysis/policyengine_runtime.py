@@ -9,8 +9,8 @@ import json
 #: Stored input columns that policyengine-us has since renamed, mapped to the
 #: live input. policyengine-us 1.777.0 replaced ``would_claim_wic`` with
 #: ``takes_up_wic_if_eligible`` (Person, MONTH, default True), and ``wic`` is
-#: ``defined_for`` the new flag. The certified US default
-#: populace-us-2024-spm-20260915 is build p plus one column, so it still stores
+#: ``defined_for`` the new flag. Microcosm's certified US default, its
+#: 15 September 2026 release, is build p plus one column, so it still stores
 #: the old name; the 2.x engine ignores it and every WIC-eligible person takes
 #: WIC up. Mapping the stored draw restores the seeded take-up. The rename is
 #: skipped on an engine that still knows the old name, and on data that already

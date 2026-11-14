@@ -1,9 +1,8 @@
 """Compare the published shift sweep against a freshly computed one.
 
-The site ships a sweep built on an older model and the archived
-policyengine-us-data package. Refreshing it on the current certified bundle
-changes the numbers; this prints by how much, so the change can be reviewed
-rather than silently republished.
+The site ships a sweep built on an older model and data build. Refreshing it
+on the current certified bundle changes the numbers; this prints by how much,
+so the change can be reviewed rather than silently republished.
 
 Usage:
     python analysis/compare_sweep_vintages.py [shipped.json] [refreshed.json]

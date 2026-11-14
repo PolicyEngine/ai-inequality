@@ -47,7 +47,7 @@ function Approach({ countryKey = "us" }) {
       description: (
         <>
           All models, data, and code are{" "}
-          <Source href="https://github.com/PolicyEngine">
+          <Source href="https://github.com/PolicyEngine/policyengine-core">
             open source (AGPL-3.0)
           </Source>
           . 10,000+ policy parameters encoded across country tax-benefit
@@ -75,7 +75,7 @@ function Approach({ countryKey = "us" }) {
       description: (
         <>
           PolicyEngine uses{" "}
-          <Source href="https://github.com/PolicyEngine/policyengine-us">
+          <Source href="https://policyengine.org/us/research/multi-agent-workflows-policy-research">
             multi-agent AI
           </Source>{" "}
           to encode policy rules at scale, enabling rapid model expansion for

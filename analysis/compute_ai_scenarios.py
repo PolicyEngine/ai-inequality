@@ -72,7 +72,7 @@ CHECKPOINT_PATH = os.path.join(
 
 BASELINE_KEY = "baseline"
 
-MODEL_URL = "https://www.policyengine.org/us/model"
+MODEL_URL = "https://policyengine.github.io/policyengine-us/"
 
 DESCRIPTION = (
     "AI scenarios calibrated to the Karger et al. (2026) forecaster survey as "

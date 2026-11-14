@@ -449,7 +449,7 @@ def main():
     V["ModelVersion"] = meta["country_model_version"]
     V["RunnerVersion"] = meta["policyengine_version"]
     V["DataBuild"] = meta["certified_data_build_id"]
-    # e.g. populace-us-2024-buildp-sparse-rmloss100-cae8640-20260728T011454Z
+    # Build ids end in <commit>-<UTC timestamp>: ...-cae8640-20260728T011454Z
     parts = V["DataBuild"].split("-")
     V["DataBuildShort"] = parts[-2]
     stamp = parts[-1]

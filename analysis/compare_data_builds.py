@@ -1,8 +1,10 @@
-"""Compare AI scenario results across two populace data builds.
+"""Compare AI scenario results across two Microcosm data builds.
 
-Both runs use the same policyengine-us version, so every difference here is
-attributable to the data build alone — the decomposition the o->p step makes
-possible that the vintage change from policyengine-us-data could not.
+By default this compares build o with the published build p results. Both ran
+on policyengine-us 1.764.6 and count Head Start in net income, while the
+policyengine.py runner moved from 4.22.3 to 5.0.1 between them. The header
+warns when a pair differs in country model version or in the benefits it keeps
+out of net income.
 
 Usage:
     python analysis/compare_data_builds.py [old.json] [new.json]
@@ -16,7 +18,11 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs")
 OLD = (
     sys.argv[1] if len(sys.argv) > 1 else os.path.join(OUT, "ai_scenarios_buildo.json")
 )
-NEW = sys.argv[2] if len(sys.argv) > 2 else os.path.join(OUT, "ai_scenarios.json")
+NEW = (
+    sys.argv[2]
+    if len(sys.argv) > 2
+    else os.path.join(OUT, "ai_scenarios_buildp_published.json")
+)
 
 
 def build_id(payload):
@@ -25,6 +31,21 @@ def build_id(payload):
 
 def model_version(payload):
     return (payload.get("metadata") or {}).get("country_model_version", "?")
+
+
+def runner_version(payload):
+    return (payload.get("metadata") or {}).get("policyengine_version", "?")
+
+
+def net_income_exclusions(payload):
+    """Benefits a run kept out of net income, or None for runs that predate the
+    Head Start correction and so record none."""
+    metadata = payload.get("metadata") or {}
+    bundle = metadata.get("policyengine_bundle") or {}
+    for record in (metadata, bundle):
+        if "net_income_excluded_benefits" in record:
+            return sorted(record["net_income_excluded_benefits"])
+    return None
 
 
 def by_label(payload):
@@ -38,11 +59,18 @@ def main():
         new = json.load(handle)
 
     print("=" * 96)
-    print("AI SCENARIOS ACROSS DATA BUILDS (same model version -> data-only diff)")
-    print(f"  old: {build_id(old)}  @ policyengine-us {model_version(old)}")
-    print(f"  new: {build_id(new)}  @ policyengine-us {model_version(new)}")
+    print("AI SCENARIOS ACROSS DATA BUILDS")
+    for name, payload in (("old", old), ("new", new)):
+        print(
+            f"  {name}: {build_id(payload)}  @ policyengine-us "
+            f"{model_version(payload)}, policyengine.py {runner_version(payload)}"
+        )
     if model_version(old) != model_version(new):
-        print("  WARNING: model versions differ; this is NOT a data-only diff.")
+        print("  WARNING: the country model versions differ, so model changes")
+        print("  mix into these differences.")
+    if net_income_exclusions(old) != net_income_exclusions(new):
+        print("  WARNING: the runs keep different benefits out of net income,")
+        print("  so that accounting change mixes into these differences.")
     print("=" * 96)
 
     old_base, new_base = old["baseline"], new["baseline"]
