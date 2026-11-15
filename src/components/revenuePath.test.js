@@ -249,7 +249,7 @@ test("every revenue path states only what its printed amounts show", () => {
     "never falls",
   ]);
   // 20,000 sweeps, each worded twice, take seconds on a loaded machine.
-}, 30_000);
+}, 120_000);
 
 test("the revenue path words the edge cases from what it prints", () => {
   const cases = [

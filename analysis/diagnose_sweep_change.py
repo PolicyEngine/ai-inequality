@@ -430,6 +430,12 @@ def report(published, runs, rerun):
     return "\n".join(lines)
 
 
+#: main just before this branch's sweep (a78aa97), whose site data hold the
+#: published sweep. A fixed commit, since main holds the rerun once the branch
+#: merges.
+PUBLISHED_REF = "a78aa979a05d5be3028324ff2cc8fe0fd72ed346"
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -441,7 +447,9 @@ def main(argv=None):
     for name in RUNS:
         report_parser.add_argument(f"{name}_run", help=f"the {name} run's output")
     report_parser.add_argument(
-        "--published-ref", default="origin/main", help="git ref whose site data hold the published sweep"
+        "--published-ref",
+        default=PUBLISHED_REF,
+        help="git ref whose site data hold the published sweep (default: main before this sweep, a78aa97)",
     )
     args = parser.parse_args(argv)
     if args.command == "run":

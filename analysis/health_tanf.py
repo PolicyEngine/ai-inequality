@@ -18,9 +18,10 @@ This module prices each household's coverage with policyengine-us's
 ``healthcare_benefit_value`` and splits it between the federal government and
 the household's state:
 
-* Medicaid, CHIP and the Medicare Savings Programs follow federal matching
-  rules (``federal_benefit_cost`` and ``state_benefit_cost``, which
-  policyengine-us builds from ``gov.hhs.medicaid.cost_share``). Federal law
+* Medicaid, CHIP and the Medicare Savings Programs follow the matching shares
+  policyengine-us builds from ``gov.hhs.medicaid.cost_share``
+  (``federal_benefit_cost`` and ``state_benefit_cost``), apart from the cases
+  below. Federal law
   bars federal matching, apart from emergency care, for enrollees whose
   immigration status fails its test (42 USC 1396b(v)), and policyengine-us
   books a federal share for them anyway. ``state_only_accounting`` sorts those
@@ -46,6 +47,15 @@ the household's state:
     governments' lines: no government pays for that coverage.
     policyengine-us 1.764.6 bars only an ``UNDOCUMENTED`` label from CHIP and
     tests no status for the Medicare Savings Programs.
+  - We overstate the state's share for children in Medicaid-expansion CHIP.
+    policyengine-us 1.764.6 matches every Medicaid child at Medicaid's
+    regular rate (``medicaid_federal_share``), and its ``per_capita_chip``
+    prices Medicaid-expansion CHIP children through Medicaid. Federal law
+    matches optional targeted low-income children, those a state covers
+    through Medicaid above its March 31, 1997 Medicaid income level, at CHIP's
+    enhanced rate (42 USC 1396d(b) and (u)(2)). The total doesn't change; the
+    federal line misses what the state line overstates. We haven't measured
+    how much.
 * The federal government pays ACA premium tax credits and the Basic Health
   Program.
 * The state pays its own health programs: Healthier Oregon at policyengine-us

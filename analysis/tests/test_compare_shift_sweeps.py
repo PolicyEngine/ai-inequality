@@ -16,6 +16,7 @@ Invariants:
 
 import copy
 import json
+import math
 import os
 import random
 
@@ -250,6 +251,43 @@ LEFT_OUT_HEALTH = (
 )
 
 
+#: The national fields compare checks against the states' rows, written out
+#: so a field dropped from ``cmp.STATE_SUMS`` fails here.
+SUMMED_FIELDS = (
+    "state_tax_before_refundable_credits_change_b",
+    "state_refundable_credits_change_b",
+    "state_benefits_change_b",
+    "tanf_change_b",
+    "tanf_state_charge_change_b",
+    "tanf_in_state_benefits_change_b",
+    "state_health_change_b",
+    "federal_health_change_b",
+    "health_change_b",
+    "state_only_coverage_change_b",
+    "healthier_oregon_overlap_change_b",
+    "unfunded_federal_coverage_change_b",
+    "unfunded_state_coverage_change_b",
+    "excluded_health_programs_change_b",
+)
+
+
+def test_compare_checks_every_summed_field():
+    assert cmp.STATE_SUMS == SUMMED_FIELDS
+
+
+def _skew_national(field):
+    """Move one national field away from the states' rows that add up to it."""
+
+    def mutate(s):
+        _row(s, 50)[field] += 0.01
+
+    return mutate
+
+
+def _skew_published_definition(s):
+    _row(s, 50)["total_rev_change_published_definition_b"] += 1
+
+
 def _drop_exclusion_record(s):
     del s["metadata"]["policyengine_bundle"]["net_income_excluded_benefits"]
 
@@ -285,6 +323,10 @@ def _drop_deciles(s):
         ),
         (_large_residual, "chart identity residual"),
         (_skew_total, "total_rev_change_b"),
+        (
+            _skew_published_definition,
+            "the earlier definition's total plus the TANF copy",
+        ),
         (_skew_tanf_charge, "MA: tanf_state_charge_change_b"),
         (_drop_exclusion_record, "net_income_excluded_benefits"),
         (_drop_last_shift, "shift grid"),
@@ -295,6 +337,10 @@ def _drop_deciles(s):
     + [
         (_skew_left_out(field), "differs from healthcare_benefit_value")
         for field in LEFT_OUT_HEALTH
+    ]
+    + [
+        (_skew_national(field), f"differs from the states' {field} added up")
+        for field in SUMMED_FIELDS
     ],
 )
 def test_each_identity_check_catches_a_row_that_breaks_it(mutate, expected):
@@ -335,12 +381,32 @@ def test_a_run_compared_with_itself_moves_nothing_on_the_same_definition(seed):
         assert part["same_definition"] == 0
 
 
-def test_chart_totals_and_the_residual_rebuild_the_total():
+def test_chart_totals_split_a_row_into_its_charts():
+    row = {
+        "state_deltas": {
+            "CA": {"state_net_change_b": 2.0},
+            "NY": {"state_net_change_b": -0.5},
+        },
+        "taxes_outside_charts_change_b": 0.25,
+        "chart_identity_residual_b": 0.01,
+        "total_rev_change_b": -10.0,
+    }
+    # The federal chart is what the total leaves: -10 - 1.5 - 0.25 - 0.01.
+    assert cmp.chart_totals(row) == pytest.approx(
+        {"federal": -11.76, "states": 1.5, "outside": 0.25}
+    )
+    # The 0% row has no state rows.
+    row["state_deltas"] = {}
+    assert cmp.chart_totals(row) == pytest.approx(
+        {"federal": -10.26, "states": 0.0, "outside": 0.25}
+    )
     for row in synthetic_sweep(4)["scenarios"]:
         charts = cmp.chart_totals(row)
-        assert charts["federal"] + charts["states"] + charts["outside"] + row[
-            "chart_identity_residual_b"
-        ] == pytest.approx(row["total_rev_change_b"], abs=1e-9)
+        states = math.fsum(
+            d["state_net_change_b"] for d in row["state_deltas"].values()
+        )
+        assert charts["states"] == pytest.approx(states, abs=1e-9)
+        assert charts["outside"] == row["taxes_outside_charts_change_b"]
 
 
 def test_report_and_main_run_on_a_pair_of_files(tmp_path, capsys):

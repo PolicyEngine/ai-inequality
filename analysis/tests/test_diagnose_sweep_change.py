@@ -11,6 +11,7 @@ gets a stand-in sweep, and the configurations get a stand-in for
 
 import copy
 import json
+import math
 import sys
 import types
 
@@ -404,6 +405,84 @@ def test_every_report_row_has_a_cell_for_each_column():
     # Revenue, field, two distribution and decile tables, each with an alignment row.
     assert tables == 5
     assert rows > 2 * tables
+
+
+def _report_tables(text):
+    """Each table in a report: its column names and its rows' cells."""
+    lines = text.splitlines()
+    tables = []
+    for i, line in enumerate(lines):
+        if line.startswith("|") and (i == 0 or not lines[i - 1].startswith("|")):
+            rows = []
+            for row in lines[i + 2 :]:
+                if not row.startswith("|"):
+                    break
+                rows.append([cell.strip() for cell in row.strip("|").split("|")])
+            tables.append(([cell.strip() for cell in line.strip("|").split("|")], rows))
+    return tables
+
+
+def test_every_report_row_adds_up_across_its_cells():
+    published, runs, rerun = _runs()
+    # A reproduction gap gives the distribution tables' second column something to add.
+    runs[0]["scenarios"][1]["net_gini_including_health_benefits"] += 0.001
+    tables = _report_tables(diagnose.report(published, runs, rerun))
+    assert [names[0] for names, _ in tables] == ["Published", "Field", "Measure", "Measure", "Decile"]
+    for names, rows in tables:
+        assert rows, names
+        for row in rows:
+            # Every column after a label column is a number; the last is the rerun.
+            cells = row[1:] if names[0] in ("Field", "Measure", "Decile") else row
+            values = [float(cell.replace(",", "")) for cell in cells]
+            digits = max(len(cell.rsplit(".", 1)[1]) for cell in cells)
+            # Each cell is rounded to ``digits`` places.
+            slack = len(cells) * 0.5 * 10**-digits + 1e-12
+            assert math.fsum(values[:-1]) == pytest.approx(values[-1], abs=slack), (names, row)
+
+
+def test_the_zero_shift_table_starts_from_the_published_zero_shift_values():
+    published, runs, rerun = _runs()
+    text = diagnose.report(published, runs, rerun)
+    zero_table = text.split("Distribution at a 0% shift:")[1].split("Distribution at a 10% shift:")[0]
+    ten_table = text.split("Distribution at a 10% shift:")[1]
+    zero, ten = published["scenarios"][0], published["scenarios"][1]
+    for field, label in diagnose.DISTRIBUTION:
+        if zero.get(field) is None:
+            continue
+        # The fixture gives each shift its own value, so a table that read the
+        # other shift's would show it.
+        assert zero[field] != ten[field]
+        assert f"| {label} | {zero[field]:.4f} |" in zero_table
+        assert f"| {label} | {ten[field]:.4f} |" in ten_table
+
+
+def test_the_published_shift_sets_the_built_labor_variable_alone():
+    calls = []
+
+    class Branch:
+        def set_input(self, variable, year, values):
+            calls.append((variable, year, values))
+
+    # The published code touched no baseline, so a stand-in with no attributes will do.
+    result = diagnose._set_built_labor_income_only(object(), Branch(), "employment_income", 2026, [1, 2.5])
+    assert result is None
+    [(variable, year, values)] = calls
+    assert (variable, year) == ("employment_income", 2026)
+    assert values.dtype == np.float64
+    assert values.tolist() == [1.0, 2.5]
+
+
+def test_the_report_reads_main_before_this_sweep_by_default(monkeypatch, tmp_path):
+    published, runs, rerun = _runs()
+    refs = []
+    monkeypatch.setattr(diagnose, "_load_old", lambda path, ref: refs.append(ref) or published)
+    paths = []
+    for name, payload in zip(("rerun", *diagnose.RUNS), (rerun, *runs)):
+        path = tmp_path / f"{name}.json"
+        path.write_text(json.dumps(payload))
+        paths.append(str(path))
+    diagnose.main(["report", *paths])
+    assert refs == ["a78aa979a05d5be3028324ff2cc8fe0fd72ed346"]
 
 
 def _stand_in(monkeypatch, module, **attributes):

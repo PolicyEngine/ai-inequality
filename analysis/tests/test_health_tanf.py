@@ -202,6 +202,10 @@ def test_health_programs_checks_the_refundable_credits(monkeypatch):
         health_tanf.health_programs(None, 2026)
     credits.refundable = ["eitc", "refundable_ctc"]
     assert health_tanf.health_programs(None, 2026) == _classify()
+    # So would a health program in the state benefit list.
+    household.household_state_benefits = ["chip"]
+    with pytest.raises(ValueError, match="chip"):
+        health_tanf.health_programs(None, 2026)
 
 
 # --- Household frames ---------------------------------------------------------

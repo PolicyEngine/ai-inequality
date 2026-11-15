@@ -119,6 +119,31 @@ def sweep_net_revenue(row):
     )
 
 
+def sweep_table(sw):
+    """The appendix's ``\\tabSweep``: the mechanism sweep every 10 points.
+
+    ``sw`` maps each shift to its sweep row. The revenue column reads
+    ``sweep_net_revenue``, so the table keeps the paper's definition of net
+    revenue.
+    """
+    T = [
+        r"\newcommand{\tabSweep}{%",
+        r"\begin{tabular}{rrrrr}",
+        r"\toprule",
+        r"Shift & Revenue & Income tax & Poverty & Net Gini \\",
+        r"\midrule",
+    ]
+    for pct in range(0, 101, 10):
+        r = sw[pct]
+        T.append(
+            f"{pct}\\% & {sweep_net_revenue(r):+.0f} & "
+            f"{r['income_tax_change_b']:+.0f} & "
+            f"{100 * r['spm_poverty_rate']:.1f}\\% & {r['net_gini']:.3f} \\\\"
+        )
+    T += [r"\bottomrule", r"\end{tabular}}"]
+    return T
+
+
 def main():
     with open(os.path.join(OUT, "ai_scenarios.json")) as fh:
         sc = json.load(fh)
@@ -704,20 +729,7 @@ def main():
     T.append(r"\end{tabular}}")
 
     # Sweep table (every 10 points).
-    T.append(r"\newcommand{\tabSweep}{%")
-    T.append(r"\begin{tabular}{rrrrr}")
-    T.append(r"\toprule")
-    T.append(r"Shift & Revenue & Income tax & Poverty & Net Gini \\")
-    T.append(r"\midrule")
-    for pct in range(0, 101, 10):
-        r = sw[pct]
-        T.append(
-            f"{pct}\\% & {r['total_rev_change_b']:+.0f} & "
-            f"{r['income_tax_change_b']:+.0f} & "
-            f"{100 * r['spm_poverty_rate']:.1f}\\% & {r['net_gini']:.3f} \\\\"
-        )
-    T.append(r"\bottomrule")
-    T.append(r"\end{tabular}}")
+    T.extend(sweep_table(sw))
 
     with open(os.path.join(PAPER, "tables_generated.tex"), "w") as fh:
         fh.write("\n".join(T) + "\n")

@@ -256,7 +256,8 @@ test.skipIf(!withHealthTanf)(
         0.1,
       );
       // The states' rows add up to the national state lines, so the page's
-      // charts leave the same residual the sweep computed, to the dollar.
+      // charts leave the same residual the sweep computed, to within $500
+      // (six decimal places of $B).
       expect(
         scenario.revenue_change_b - chartsTotal(scenario, true),
         label,

@@ -8,7 +8,7 @@ paper itself changes it.
 """
 
 from analysis.compare_sweep_vintages import revenue
-from analysis.emit_paper_values import sweep_net_revenue
+from analysis.emit_paper_values import sweep_net_revenue, sweep_table
 
 #: A sweep row from before the site counted health coverage and TANF.
 OLD_ROW = {"shift_pct": 10, "total_rev_change_b": -880.0, "revenue_change_b": -880.0}
@@ -25,6 +25,25 @@ NEW_ROW = {
 def test_sweep_net_revenue_keeps_the_papers_definition():
     assert sweep_net_revenue(OLD_ROW) == -880.0
     assert sweep_net_revenue(NEW_ROW) == -870.0
+
+
+def test_the_sweep_table_prints_the_papers_definition():
+    for row, revenue_cell in ((OLD_ROW, "-880"), (NEW_ROW, "-870")):
+        sw = {
+            pct: {
+                **row,
+                "shift_pct": pct,
+                "income_tax_change_b": 12.0,
+                "spm_poverty_rate": 0.125,
+                "net_gini": 0.4321,
+            }
+            for pct in range(0, 101, 10)
+        }
+        table = sweep_table(sw)
+        assert table[0] == r"\newcommand{\tabSweep}{%"
+        assert f"10\\% & {revenue_cell} & +12 & 12.5\\% & 0.432 \\\\" in table
+        # The redefined total, which counts health coverage, stays out.
+        assert not any("-1250" in line for line in table)
 
 
 def test_vintage_comparison_reads_the_same_measure():

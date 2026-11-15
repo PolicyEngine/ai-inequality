@@ -42,8 +42,10 @@ records:
   That list holds the program at its full amount for every eligible family,
   and ``tanf`` adds it again for families that take TANF up. In these fields,
   we charge each state its share of Medicaid, CHIP and Medicare Savings
-  Program costs under federal matching rules (``state_benefit_cost``, from
-  ``gov.hhs.medicaid.cost_share``) and its own health subsidies. Federal law
+  Program costs under the matching shares policyengine-us builds
+  (``state_benefit_cost``, from ``gov.hhs.medicaid.cost_share``; see
+  ``health_tanf`` for where they differ from federal law) and its own health
+  subsidies. Federal law
   fixes each state's TANF block grant, so we also charge the state its TANF
   change beyond the copy its line holds. Where a state rule covers people
   whose immigration status rules out federal matching, we also charge the

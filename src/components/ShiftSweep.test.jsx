@@ -214,7 +214,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     /leaves? out health coverage such as medicaid/i,
   );
   expect(document.body).toHaveTextContent(
-    /the health band includes what the federal government spends on aca premium tax credits/i,
+    /the health band includes what the federal government spends on aca premium tax credits, the basic health program, and its matching share of medicaid, chip and the medicare savings programs\./i,
   );
   expect(document.body).toHaveTextContent(
     /congress sets each state's tanf block grant at a fixed amount, so we charge every change in tanf benefits to the states\./i,
@@ -249,6 +249,9 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   expect(document.body).toHaveTextContent(
     /where a state covers people whose immigration status bars federal matching, we charge it the federal share as well\. the federal government still matches their emergency care, so we likely overstate the state's cost\. in states that cover unborn children through chip, the federal government also matches a pregnant woman's prenatal care whatever her immigration status, so we leave her federal share in place\./i,
   );
+  expect(document.body).toHaveTextContent(
+    /we match every child in medicaid at medicaid's regular rate, but federal law pays chip's higher rate for children a state covers through medicaid with chip funds, so we also overstate the state's cost for them\./i,
+  );
   expect(document.body).not.toHaveTextContent(/the whole cost/i);
 
   fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
@@ -258,12 +261,13 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     screen.getByRole("heading", { name: /ca state revenue decomposition/i }),
   ).toBeInTheDocument();
   expect(document.body).toHaveTextContent(
-    /medicare savings programs\. where the state covers people whose immigration status bars federal matching, we charge it the federal share as well\. congress sets each state's tanf block grant/i,
+    /the health band includes what the state spends on its matching share of medicaid, chip and the medicare savings programs\. where the state covers people whose immigration status bars federal matching, we charge it the federal share as well\. congress sets each state's tanf block grant/i,
   );
   // The ranking below carries the caveats, so a state view shows each once.
   for (const caveat of [
     "still matches their emergency care",
     "cover unborn children through CHIP",
+    "pays CHIP's higher rate",
   ]) {
     expect(document.body.textContent.split(caveat)).toHaveLength(2);
   }
