@@ -156,6 +156,7 @@ def test_the_runs_follow_the_configurations():
 def test_the_total_s_steps_add_up_to_the_rerun():
     steps = diagnose.total_steps(*_runs())
     assert steps["published"] == -135.3
+    assert steps["reproduction"] == 0.0
     assert steps["medicaid_at_baseline"] == 0.0
     assert steps["head_start"] == pytest.approx(5.3)
     assert steps["labor_inputs"] == pytest.approx(0.8)
@@ -180,6 +181,20 @@ def test_the_steps_explain_everything_when_the_rerun_s_identity_holds(
         total_rev_change_b=rerun_definition + tanf - health,
     )
     steps = diagnose.total_steps(published, runs, rerun)
+    assert steps["unexplained"] == pytest.approx(0.0, abs=1e-9)
+    # Every step together carries the published total to the rerun's.
+    named = ["reproduction", *(key for key, _ in diagnose.CODE_STEPS), "tanf_counted_once", "health"]
+    assert steps["published"] + sum(steps[key] for key in named) + steps["unexplained"] == pytest.approx(
+        steps["rerun"], abs=1e-6
+    )
+
+
+def test_a_published_total_the_published_run_misses_goes_to_the_reproduction_step():
+    published, runs, rerun = _runs()
+    runs[0]["scenarios"][1]["total_rev_change_published_definition_b"] += 1.0
+    steps = diagnose.total_steps(published, runs, rerun)
+    assert steps["reproduction"] == pytest.approx(1.0)
+    assert steps["medicaid_at_baseline"] == pytest.approx(-1.0)
     assert steps["unexplained"] == pytest.approx(0.0, abs=1e-9)
 
 
@@ -327,38 +342,43 @@ def _code_step_total(row):
 
 
 def test_distribution_and_decile_steps_add_up():
-    runs = _runs()
+    published, runs, rerun = _runs()
+    # The published run misses the published Gini with health benefits at 10%.
+    runs[0]["scenarios"][1]["net_gini_including_health_benefits"] += 0.001
     for shift_pct in (0, 10):
-        rows = diagnose.distribution_steps(*runs, shift_pct)
+        rows = diagnose.distribution_steps(published, runs, rerun, shift_pct)
         assert "net_gini_including_health_benefits" in [row["field"] for row in rows]
         for row in rows:
-            assert row["reproduced"] + _code_step_total(row) == pytest.approx(row["rerun"])
-    deciles = diagnose.decile_steps(*runs)
+            assert row["published"] + row["reproduction"] + _code_step_total(row) == pytest.approx(row["rerun"])
+    health = {row["field"]: row for row in diagnose.distribution_steps(published, runs, rerun, 10)}
+    assert health["net_gini_including_health_benefits"]["reproduction"] == pytest.approx(0.001)
+    deciles = diagnose.decile_steps(published, runs, rerun)
     assert [row["decile"] for row in deciles] == [1, 2]
     for row in deciles:
-        assert row["published"] + row["ties"] + _code_step_total(row) == pytest.approx(row["rerun"])
+        assert row["published"] + row["reproduction"] + _code_step_total(row) == pytest.approx(row["rerun"])
 
 
 def test_the_report_names_each_step():
     text = diagnose.report(*_runs())
     assert "reproduces every published value" in text
     assert (
-        "| Published | Medicaid priced at baseline | Head Start left out | Stored labor inputs "
-        "| TANF counted once | Health coverage | Rerun |\n|---:|---:|---:|---:|---:|---:|---:|"
+        "| Published | Reproduction gap | Medicaid priced at baseline | Head Start left out "
+        "| Stored labor inputs | TANF counted once | Health coverage | Rerun |\n"
+        "|---:|---:|---:|---:|---:|---:|---:|---:|"
     ) in text
-    assert "| -135.30 | +0.00 | +5.30 | +0.80 | +0.20 | -66.20 | -195.20 |" in text
+    assert "| -135.30 | +0.00 | +0.00 | +5.30 | +0.80 | +0.20 | -66.20 | -195.20 |" in text
     assert "The steps leave $+0.0000B unexplained." in text
-    assert "| Net Gini with health benefits | 0.4520 | -0.0018 | +0.0036 | -0.0001 | 0.4537 |" in text
+    assert "| Net Gini with health benefits | 0.4520 | +0.0000 | -0.0018 | +0.0036 | -0.0001 | 0.4537 |" in text
     assert (
         "| Field | Published configuration | Medicaid priced at baseline | Head Start left out "
         "| Stored labor inputs | Rerun |\n|---|---:|---:|---:|---:|---:|"
     ) in text
     assert text.count(
-        "| Measure | Published | Medicaid priced at baseline | Head Start left out "
-        "| Stored labor inputs | Rerun |\n|---|---:|---:|---:|---:|---:|"
+        "| Measure | Published | Reproduction gap | Medicaid priced at baseline | Head Start left out "
+        "| Stored labor inputs | Rerun |\n|---|---:|---:|---:|---:|---:|---:|"
     ) == 2
     assert (
-        "| Decile | Published | Tie-breaking | Medicaid priced at baseline | Head Start left out "
+        "| Decile | Published | Reproduction gap | Medicaid priced at baseline | Head Start left out "
         "| Stored labor inputs | Rerun |\n|---:|---:|---:|---:|---:|---:|---:|"
     ) in text
     published, runs, rerun = _runs()
@@ -383,6 +403,29 @@ class Untouchable:
         raise AssertionError(f"the published pricing read branch.{name}")
 
 
+class FakeBranch:
+    """A branch whose Medicaid denominator holder reports the periods pricing set."""
+
+    def __init__(self):
+        self.known = []
+
+    def get_holder(self, variable):
+        from analysis import health_tanf
+
+        assert variable == health_tanf.MEDICAID_DENOMINATOR
+        return types.SimpleNamespace(get_known_periods=lambda: list(self.known))
+
+
+def _baseline_pricing(priced):
+    """A stand-in for health_tanf.price_medicaid_at_baseline: it sets the denominator."""
+
+    def pricing(branch, denominator, year):
+        branch.known.append(year)
+        priced.append(year)
+
+    return pricing
+
+
 def test_each_configuration_prices_medicaid_as_its_code_did():
     assert {name: s["medicaid_at_baseline"] for name, s in diagnose.CONFIGURATIONS.items()} == {
         name: kind == "baseline" for name, kind in PRICING.items()
@@ -395,42 +438,54 @@ def test_the_configurations_route_and_count_medicaid_pricing(monkeypatch):
     shift = _stand_in(monkeypatch, "labor_capital_shift", set_labor_income=object())
     setter, excluded = shift.set_labor_income, policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS
     priced = []
-    def baseline_pricing(branch, denominator, year):
-        priced.append((branch, year))
-
+    baseline_pricing = _baseline_pricing(priced)
     monkeypatch.setattr(health_tanf, "price_medicaid_at_baseline", baseline_pricing)
     with diagnose.configuration("published") as record:
-        assert health_tanf.price_medicaid_at_baseline(Untouchable(), [1.0], 2026) is None
+        branch = FakeBranch()
+        assert health_tanf.price_medicaid_at_baseline(branch, [1.0], 2026) is None
+        assert branch.known == []
         assert record["medicaid_pricing_calls"] == _pricing_calls("own_enrollees")
         assert policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS == ()
         assert shift.set_labor_income is diagnose._set_built_labor_income_only
     assert priced == []
     for name in ("medicaid_at_baseline", "head_start_excluded"):
         with diagnose.configuration(name) as record:
-            health_tanf.price_medicaid_at_baseline("branch", [1.0], 2026)
-            health_tanf.price_medicaid_at_baseline("branch", [1.0], 2026)
+            health_tanf.price_medicaid_at_baseline(FakeBranch(), [1.0], 2026)
+            health_tanf.price_medicaid_at_baseline(FakeBranch(), [1.0], 2026)
             assert record["medicaid_pricing_calls"] == _pricing_calls("baseline", 2)
             assert shift.set_labor_income is diagnose._set_built_labor_income_only
             assert policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS == (
                 () if name == "medicaid_at_baseline" else excluded
             )
-    assert priced == [("branch", 2026)] * 4
+    assert priced == [2026] * 4
     assert health_tanf.price_medicaid_at_baseline is baseline_pricing
     assert policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS == excluded
     assert shift.set_labor_income is setter
+
+
+def test_a_baseline_pricing_that_sets_nothing_counts_as_own_enrollees(monkeypatch):
+    # The count reads the branch, not the configuration, so a baseline pricing
+    # that leaves the denominator unset shows up as the wrong kind of call.
+    from analysis import health_tanf
+
+    _stand_in(monkeypatch, "labor_capital_shift", set_labor_income=object())
+    monkeypatch.setattr(health_tanf, "price_medicaid_at_baseline", lambda branch, denominator, year: None)
+    with diagnose.configuration("medicaid_at_baseline") as record:
+        health_tanf.price_medicaid_at_baseline(FakeBranch(), [1.0], 2026)
+        assert record["medicaid_pricing_calls"] == _pricing_calls("own_enrollees")
 
 
 def test_run_records_how_the_sweep_priced_medicaid(monkeypatch, tmp_path):
     from analysis import health_tanf
 
     _stand_in(monkeypatch, "labor_capital_shift", set_labor_income=object())
-    monkeypatch.setattr(health_tanf, "price_medicaid_at_baseline", lambda branch, denominator, year: None)
+    monkeypatch.setattr(health_tanf, "price_medicaid_at_baseline", _baseline_pricing([]))
 
     def run_shift_sweep(shift_levels, microdata_output_dir):
         # The real sweep prices each shifted branch once, through the module attribute.
         for pct in shift_levels:
             if pct:
-                health_tanf.price_medicaid_at_baseline("branch", [1.0], 2026)
+                health_tanf.price_medicaid_at_baseline(FakeBranch(), [1.0], 2026)
         return {"metadata": {}, "scenarios": [{"shift_pct": 0}, {"shift_pct": 10}]}
 
     _stand_in(monkeypatch, "compute_shift_sweep", run_shift_sweep=run_shift_sweep)

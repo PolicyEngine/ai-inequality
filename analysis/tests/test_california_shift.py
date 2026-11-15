@@ -1118,6 +1118,31 @@ def test_check_health_split_refuses_gaps():
         check_health_split(negative)
 
 
+def test_check_health_split_allows_float32_rounding():
+    # Two blocked enrollees hold a household's whole federal share. policyengine-us
+    # sums that share in float32; we sum the move in float64 from the person
+    # amounts, so the move can exceed the share by a fraction of a cent.
+    people = np.asarray([12_345.67, 9_876.54], dtype=np.float32)
+    federal = float(people.sum(dtype=np.float32))
+    moved = float(people.astype(float).sum())
+    scen = _frame(
+        [STATE],
+        [1.0],
+        fmap_split_cost=[2 * federal],
+        federal_health_split=[federal],
+        state_health_split=[federal],
+        state_only_coverage=[moved + 0.01],
+        unfunded_state=[federal + 0.01],
+    )
+    check_health_split(scen)
+    overmoved = dict(scen, state_only_coverage=np.asarray([federal + 1.5]))
+    with pytest.raises(AssertionError, match="moves more"):
+        check_health_split(overmoved)
+    overdropped = dict(scen, unfunded_state=np.asarray([federal + 1.5]))
+    with pytest.raises(AssertionError, match="drops more"):
+        check_health_split(overdropped)
+
+
 def test_unfunded_coverage_leaves_every_line():
     # policyengine-us books $1,000 of Medicare Savings Program benefits for an
     # undocumented Texas senior who gains Medicare eligibility: $600 federal

@@ -176,6 +176,30 @@ def test_classification_refuses_what_it_would_get_wrong():
             _classify(benefits=BENEFITS + [netted])
 
 
+def test_health_programs_checks_the_refundable_credits(monkeypatch):
+    # A release that adds the premium tax credit to gov.irs.credits.refundable
+    # would count it in the refundable credits and again as assigned_aca_ptc.
+    household = types.SimpleNamespace(
+        household_health_benefits=LISTED_1764,
+        federal_benefit_cost=list(FEDERAL_SHARE_COSTS),
+        state_benefit_cost=list(STATE_SHARE_COSTS),
+        household_benefits=BENEFITS,
+        household_state_benefits=[],
+    )
+    credits = types.SimpleNamespace(refundable=["eitc", "premium_tax_credit"])
+    gov = types.SimpleNamespace(
+        household=household,
+        irs=types.SimpleNamespace(credits=credits),
+        simulation=types.SimpleNamespace(include_health_benefits_in_net_income=False),
+    )
+    monkeypatch.setattr(health_tanf, "_parameters", lambda sim, year: types.SimpleNamespace(gov=gov))
+    monkeypatch.setattr(health_tanf, "adds", lambda sim, variable, year: ADDS_1764)
+    with pytest.raises(ValueError, match="premium_tax_credit"):
+        health_tanf.health_programs(None, 2026)
+    credits.refundable = ["eitc", "refundable_ctc"]
+    assert health_tanf.health_programs(None, 2026) == _classify()
+
+
 # --- Household frames ---------------------------------------------------------
 
 STATES = ["CA", "MA", "OR", "TX"]

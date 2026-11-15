@@ -198,8 +198,9 @@ def classify_health_programs(
     ``gov.household.household_health_benefits``, ``federal_costs`` and
     ``state_costs`` the members of ``gov.household.federal_benefit_cost`` and
     ``gov.household.state_benefit_cost``, and ``benefit_lists`` the names in
-    ``gov.household.household_benefits`` and
-    ``gov.household.household_state_benefits``.
+    ``gov.household.household_benefits``,
+    ``gov.household.household_state_benefits`` and
+    ``gov.irs.credits.refundable``, which the revenue lines already net.
 
     Returns ``(fmap_split, federal, state, excluded)``, each in this module's
     order; ``excluded`` holds the programs in ``EXCLUDED_HEALTH`` that the model
@@ -209,7 +210,7 @@ def classify_health_programs(
     prices a health program this module doesn't classify, lists a health
     benefit ``healthcare_benefit_value`` doesn't price, splits other costs
     between federal and state, or lists a health program among the benefits
-    the revenue lines already net.
+    or refundable credits the revenue lines already net.
     """
     if health_in_net_income:
         raise ValueError(
@@ -248,7 +249,7 @@ def classify_health_programs(
     netted = (known | set(HEALTH_LIST_ALIASES)) & set(benefit_lists)
     if netted:
         raise ValueError(
-            f"household benefit lists include health programs {sorted(netted)}, "
+            f"the benefit and refundable credit lists include health programs {sorted(netted)}, "
             "which the health accounting would count twice"
         )
     return (
@@ -267,7 +268,9 @@ def health_programs(sim, year):
         list(gov.household.household_health_benefits),
         list(gov.household.federal_benefit_cost),
         list(gov.household.state_benefit_cost),
-        list(gov.household.household_benefits) + list(gov.household.household_state_benefits),
+        list(gov.household.household_benefits)
+        + list(gov.household.household_state_benefits)
+        + list(gov.irs.credits.refundable),
         bool(gov.simulation.include_health_benefits_in_net_income),
     )
 
@@ -602,6 +605,11 @@ def with_derived(frame):
 FLOAT32_TOLERANCE = 1e-6
 
 
+def _float32_allowance(scale):
+    """Each household's allowance for float32 rounding: $1 or a millionth of ``scale``."""
+    return np.maximum(1.0, FLOAT32_TOLERANCE * np.abs(np.asarray(scale, dtype=float)))
+
+
 def _refuse_gap(name, residual, weights, scale):
     """Refuse a residual beyond float32 rounding of the amounts it compares.
 
@@ -612,7 +620,7 @@ def _refuse_gap(name, residual, weights, scale):
     residual = np.asarray(residual, dtype=float)
     scale = np.abs(np.asarray(scale, dtype=float))
     weights = np.asarray(weights, dtype=float)
-    allowed = np.maximum(1.0, FLOAT32_TOLERANCE * scale)
+    allowed = _float32_allowance(scale)
     worst = float(np.abs(residual).max()) if residual.size else 0.0
     weighted = float((residual * weights).sum())
     weighted_allowed = max(1e6, FLOAT32_TOLERANCE * float((scale * np.abs(weights)).sum()))
@@ -628,8 +636,10 @@ def check_health_split(frame):
     policyengine-us's federal and state shares must add up to the Medicaid,
     CHIP and Medicare Savings Program costs they split. The state-only move and
     the unfunded federal share together can't exceed the federal share they
-    come from, nor the unfunded state share the state share, and none of them
-    can fall below zero.
+    come from, nor the unfunded state share the state share, beyond float32
+    rounding: policyengine-us sums the federal and state shares in float32, and
+    we sum the moved and unfunded shares from person-level values in float64.
+    None of them can fall below zero.
     """
     _refuse_gap(
         "federal_benefit_cost + state_benefit_cost differ from Medicaid, CHIP and MSP cost",
@@ -647,9 +657,11 @@ def check_health_split(frame):
         or (unfunded_state < -1e-6).any()
     ):
         raise AssertionError("the state-only accounting moves or drops a negative share")
-    if (moved + unfunded_federal > frame["federal_health_split"] + 1e-6).any():
+    federal_allowed = _float32_allowance(frame["federal_health_split"])
+    state_allowed = _float32_allowance(frame["state_health_split"])
+    if (moved + unfunded_federal > frame["federal_health_split"] + federal_allowed).any():
         raise AssertionError("state-only coverage moves more than the federal share it comes from")
-    if (unfunded_state > frame["state_health_split"] + 1e-6).any():
+    if (unfunded_state > frame["state_health_split"] + state_allowed).any():
         raise AssertionError("unfunded coverage drops more than the state share it comes from")
 
 

@@ -26,15 +26,17 @@ From the repository root, on the pinned runtime:
 code put back: ``published`` puts back all three differences,
 ``medicaid_at_baseline`` the last two and ``head_start_excluded`` only the
 shift's. It saves the result with its decile impacts under
-``metadata.baseline_facts``, where the sweep file keeps them, and counts under
-``metadata.diagnose_configuration`` the shifted branches it priced each way.
-``report`` checks from each run's metadata that its configuration took, and
-that the ``published`` run reproduces the published sweep. It then splits each
-measure's change at those shifts into steps that add up to it, in this order:
-pricing Medicaid at the baseline's cost per enrollee, excluding Head Start,
-setting the stored labor inputs, counting TANF once and counting health
-coverage. The deciles get one more step first, for the published deciles'
-older tie-breaking.
+``metadata.baseline_facts``, where the sweep file keeps them. Under
+``metadata.diagnose_configuration`` it counts the shifted branches that hold
+the baseline's Medicaid denominator once priced, and those left to price over
+their own enrollees. ``report`` checks from each run's metadata that its
+configuration took, and that the ``published`` run reproduces the published
+sweep. It then splits each measure's change at those shifts into steps that add
+up to it, in this order: the reproduction gap (what the ``published`` run
+misses of the published values, which for the deciles includes the published
+deciles' older tie-breaking), pricing Medicaid at the baseline's cost per
+enrollee, excluding Head Start, setting the stored labor inputs, counting TANF
+once and counting health coverage.
 """
 
 from __future__ import annotations
@@ -62,6 +64,9 @@ CODE_STEPS = (
     ("head_start", "Head Start left out"),
     ("labor_inputs", "Stored labor inputs"),
 )
+#: The first step in each table: what the ``published`` run misses of the
+#: published values. For the deciles it includes their older tie-breaking.
+REPRODUCTION = "Reproduction gap"
 HEAD_START = ["early_head_start", "head_start"]
 #: A field moves in a step when it changes by more than this: $0.05B for
 #: fields in $B, and 0.0001 for rates, shares and Gini coefficients.
@@ -102,9 +107,11 @@ def _set_built_labor_income_only(baseline, branch, variable, year, values):
 def configuration(name):
     """Put back the published code that ``name`` calls for while the block runs.
 
-    It yields the configuration's settings with ``medicaid_pricing_calls``,
-    which counts the shifted branches the sweep prices at the baseline's cost
-    and over their own enrollees while the block runs.
+    It yields the configuration's settings with ``medicaid_pricing_calls``.
+    Each time the sweep prices a shifted branch while the block runs, it counts
+    the branch under ``baseline`` if the branch then holds a Medicaid
+    denominator, which only the baseline's pricing sets, and under
+    ``own_enrollees`` if not.
     """
     from . import health_tanf, labor_capital_shift, policyengine_runtime
 
@@ -115,12 +122,13 @@ def configuration(name):
         labor_capital_shift.set_labor_income,
     )
     calls = {"baseline": 0, "own_enrollees": 0}
-    kind = "baseline" if settings["medicaid_at_baseline"] else "own_enrollees"
     pricing = saved[0] if settings["medicaid_at_baseline"] else _price_medicaid_over_own_enrollees
 
     def counted_pricing(branch, denominator, year):
-        calls[kind] += 1
-        return pricing(branch, denominator, year)
+        result = pricing(branch, denominator, year)
+        held = branch.get_holder(health_tanf.MEDICAID_DENOMINATOR).get_known_periods()
+        calls["baseline" if held else "own_enrollees"] += 1
+        return result
 
     try:
         health_tanf.price_medicaid_at_baseline = counted_pricing
@@ -255,6 +263,7 @@ def total_steps(published, runs, rerun, shift_pct=10):
     steps = {
         "published": earlier_total(_row(published, shift_pct)),
         "reproduced": totals[0],
+        "reproduction": totals[0] - earlier_total(_row(published, shift_pct)),
         **_code_steps(totals),
         "tanf_counted_once": row["tanf_in_state_benefits_change_b"],
         "health": -row["health_change_b"],
@@ -293,6 +302,7 @@ def distribution_steps(published, runs, rerun, shift_pct):
                 "label": label,
                 "published": values[0],
                 "reproduced": values[1],
+                "reproduction": values[1] - values[0],
                 **_code_steps(values[1:]),
                 "rerun": values[-1],
             }
@@ -310,7 +320,7 @@ def decile_steps(published, runs, rerun, shift_pct=10):
             {
                 "decile": decile,
                 "published": values[0],
-                "ties": values[1] - values[0],
+                "reproduction": values[1] - values[0],
                 **_code_steps(values[1:]),
                 "rerun": values[-1],
             }
@@ -352,12 +362,17 @@ def report(published, runs, rerun):
         )
     steps = total_steps(published, runs, rerun)
     lines += ["", "Net revenue change at a 10% shift ($B, 2026):", ""]
-    lines += _header(["Published", *labels, "TANF counted once", "Health coverage", "Rerun"], False)
+    lines += _header(
+        ["Published", REPRODUCTION, *labels, "TANF counted once", "Health coverage", "Rerun"], False
+    )
     lines.append(
         "| "
         + " | ".join(
             [f"{steps['published']:,.2f}"]
-            + [_signed(steps[name], ",.2f") for name in keys + ["tanf_counted_once", "health"]]
+            + [
+                _signed(steps[name], ",.2f")
+                for name in ["reproduction", *keys, "tanf_counted_once", "health"]
+            ]
             + [f"{steps['rerun']:,.2f}"]
         )
         + " |"
@@ -379,19 +394,19 @@ def report(published, runs, rerun):
         )
     for shift_pct in (0, 10):
         lines += ["", f"Distribution at a {shift_pct}% shift:", ""]
-        lines += _header(["Measure", "Published", *labels, "Rerun"])
+        lines += _header(["Measure", "Published", REPRODUCTION, *labels, "Rerun"])
         for row in distribution_steps(published, runs, rerun, shift_pct):
             lines.append(
                 f"| {row['label']} | {row['published']:.4f} | "
-                + " | ".join(_signed(row[key], ".4f") for key in keys)
+                + " | ".join(_signed(row[key], ".4f") for key in ["reproduction", *keys])
                 + f" | {row['rerun']:.4f} |"
             )
     lines += ["", "Change in mean net income by decile at a 10% shift (%):", ""]
-    lines += _header(["Decile", "Published", "Tie-breaking", *labels, "Rerun"], False)
+    lines += _header(["Decile", "Published", REPRODUCTION, *labels, "Rerun"], False)
     for row in decile_steps(published, runs, rerun):
         lines.append(
-            f"| {row['decile']} | {row['published']:+.2f} | {_signed(row['ties'], '.2f')} | "
-            + " | ".join(_signed(row[key], ".2f") for key in keys)
+            f"| {row['decile']} | {row['published']:+.2f} | "
+            + " | ".join(_signed(row[key], ".2f") for key in ["reproduction", *keys])
             + f" | {row['rerun']:+.2f} |"
         )
     return "\n".join(lines)
