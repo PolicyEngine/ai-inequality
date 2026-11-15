@@ -34,7 +34,7 @@ CAPITAL_INCOME_VARS = (
 SHIFT_SWEEP_DESCRIPTION = (
     "Positive employment and self-employment income fall by the selected "
     "share, and the same weighted total goes to positive capital income: "
-    "savings and ISA interest, dividends, property income and capital gains. "
+    "savings interest, dividends, property income and capital gains. "
     "We scale every positive amount by one common factor, so each person "
     "gains in proportion to the capital income they already receive, and "
     "losses stay as they are. We simulate current law with no behavioural "

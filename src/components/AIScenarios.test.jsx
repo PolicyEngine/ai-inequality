@@ -99,7 +99,10 @@ describe("AIScenarios", () => {
 
   it("words a state tax change that rounds to $0B without a direction", () => {
     expect(stateTaxMove(0.3)).toBe("change by less than $0.5B");
+    expect(stateTaxMove(0.49)).toBe("change by less than $0.5B");
     expect(stateTaxMove(-0.49)).toBe("change by less than $0.5B");
+    expect(stateTaxMove(0.5)).toBe("rise by $1B");
+    expect(stateTaxMove(-0.5)).toBe("fall by $1B");
     expect(stateTaxMove(0.6)).toBe("rise by $1B");
     expect(stateTaxMove(-12.4)).toBe("fall by $12B");
   });
