@@ -38,6 +38,12 @@ const VARIANTS = [
   { key: "expansive", label: "Wages spread" },
 ];
 const VARIANT_KEYS = VARIANTS.map((v) => v.key);
+// How each variant moves wages, as the state tax note says it.
+const VARIANT_PHRASES = {
+  compressive: "wages compressing",
+  proportional: "proportional wage changes",
+  expansive: "wages spreading",
+};
 
 // Palette reuses values already in the repo: pe-blue-dark for the
 // shares-fixed counterfactual, pe-teal-600 for the forecast tilt, semantic
@@ -344,6 +350,13 @@ function CapitalScopeTable({ scenarios, scopeRows }) {
   );
 }
 
+// How the state tax note words a change in $B, so a change that rounds to $0B
+// doesn't read "rise by $0B".
+export function stateTaxMove(changeB) {
+  if (Math.abs(changeB) < 0.5) return "change by less than $0.5B";
+  return `${changeB >= 0 ? "rise" : "fall"} by $${Math.abs(changeB).toFixed(0)}B`;
+}
+
 function AIScenarios({ scenariosData = defaultScenariosData }) {
   const [scenarioName, setScenarioName] = useState("Rapid");
   const [variantKey, setVariantKey] = useState("proportional");
@@ -460,7 +473,7 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
           <StatTile
             label="Net government revenue"
             value={fmtBillions(selected.revenueChange)}
-            delta="federal + state, net of transfers"
+            delta="income, payroll and use taxes, net of transfers"
           />
           <StatTile
             label="SPM poverty"
@@ -483,12 +496,16 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
         </div>
 
         <p className="ai-scenarios-stat-note">
-          Net government revenue is federal <em>and</em> state taxes minus
-          transfers: refundable credits (EITC, refundable CTC) and benefit
-          outlays (SNAP, SSI, TANF, WIC, state-funded benefits) are netted out,
-          so a scenario that raises taxes and benefit spending together shows
-          the difference. Under {scenarioName} / proportional, state income tax
-          is {fmtBillions(selected.stateTaxChange)} of it.
+          Net government revenue = federal, state and local income and payroll
+          taxes + state use taxes − refundable credits such as the EITC and
+          refundable CTC − benefits such as SNAP, SSI, TANF, WIC and school
+          meals. We count no sales, property or excise taxes, and we leave out
+          health coverage such as Medicaid, CHIP and ACA premium tax credits.
+          Under {scenarioName.toLowerCase()} adoption with{" "}
+          {VARIANT_PHRASES[variantKey]}, we estimate that state income and use
+          taxes before refundable credits{" "}
+          {stateTaxMove(selected.stateTaxChange)}. Those state taxes include New
+          York City&apos;s income tax and Maryland&apos;s county income taxes.
         </p>
 
         {crossover != null && (

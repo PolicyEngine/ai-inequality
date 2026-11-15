@@ -2,7 +2,7 @@ import React from "react";
 import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import AIScenarios, { realizationBreakeven } from "./AIScenarios";
+import AIScenarios, { realizationBreakeven, stateTaxMove } from "./AIScenarios";
 import scenariosData from "../data/aiScenariosData.json";
 import { microcosmBuildLabel } from "../utils/modelMetadata";
 
@@ -17,6 +17,15 @@ function revenueOf(name, variant) {
     (r) => r.name === name && r.inequality === variant && !r.holdSharesFixed,
   );
   return fmtBillions(row.revenueChange);
+}
+
+// The state tax note's change, as the component words it.
+function stateTaxMoveOf(name, variant) {
+  const row = scenariosData.scenarios.find(
+    (r) => r.name === name && r.inequality === variant && !r.holdSharesFixed,
+  );
+  const verb = row.stateTaxChange >= 0 ? "rise" : "fall";
+  return `${verb} by $${Math.abs(row.stateTaxChange).toFixed(0)}B`;
 }
 
 describe("AIScenarios", () => {
@@ -65,6 +74,51 @@ describe("AIScenarios", () => {
     expect(screen.queryByText(/workers earning below/i)).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: "Wages spread" }));
     expect(screen.getByText(/workers earning below/i)).toBeTruthy();
+  });
+
+  it("names the selected wage variant in the state tax note", () => {
+    render(
+      <MemoryRouter>
+        <AIScenarios />
+      </MemoryRouter>,
+    );
+    expect(document.body.textContent).toContain(
+      `Under rapid adoption with proportional wage changes, we estimate that state income and use taxes before refundable credits ${stateTaxMoveOf("Rapid", "proportional")}. Those state taxes include New York City's income tax and Maryland's county income taxes.`,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Wages spread" }));
+    expect(document.body.textContent).toContain(
+      `Under rapid adoption with wages spreading, we estimate that state income and use taxes before refundable credits ${stateTaxMoveOf("Rapid", "expansive")}.`,
+    );
+    expect(document.body.textContent).not.toMatch(/proportional wage changes/);
+    fireEvent.click(screen.getByRole("radio", { name: "Slow" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Wages compress" }));
+    expect(document.body.textContent).toContain(
+      `Under slow adoption with wages compressing, we estimate that state income and use taxes before refundable credits ${stateTaxMoveOf("Slow", "compressive")}.`,
+    );
+  });
+
+  it("words a state tax change that rounds to $0B without a direction", () => {
+    expect(stateTaxMove(0.3)).toBe("change by less than $0.5B");
+    expect(stateTaxMove(0.49)).toBe("change by less than $0.5B");
+    expect(stateTaxMove(-0.49)).toBe("change by less than $0.5B");
+    expect(stateTaxMove(0.5)).toBe("rise by $1B");
+    expect(stateTaxMove(-0.5)).toBe("fall by $1B");
+    expect(stateTaxMove(0.6)).toBe("rise by $1B");
+    expect(stateTaxMove(-12.4)).toBe("fall by $12B");
+  });
+
+  it("defines net government revenue in the stat tile and its note", () => {
+    render(
+      <MemoryRouter>
+        <AIScenarios />
+      </MemoryRouter>,
+    );
+    expect(document.body.textContent).toContain(
+      "income, payroll and use taxes, net of transfers",
+    );
+    expect(document.body.textContent).toContain(
+      "Net government revenue = federal, state and local income and payroll taxes + state use taxes − refundable credits such as the EITC and refundable CTC − benefits such as SNAP, SSI, TANF, WIC and school meals. We count no sales, property or excise taxes, and we leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.",
+    );
   });
 
   it("carries the corporate-tax scope note from the payload", () => {

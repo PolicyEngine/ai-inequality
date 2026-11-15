@@ -1,7 +1,8 @@
 """Decompose the transfer response, program by program, including health.
 
 The headline run (`compute_ai_scenarios.py`) stores five named benefit
-components (SNAP, SSI, TANF, WIC and state-funded benefits) plus a total, which
+components (SNAP, SSI, TANF, WIC and the programs in
+`household_state_benefits`) plus a total, which
 leaves two gaps this script closes:
 
   1. Part of the non-credit benefit swing across the Rapid wage-inequality

@@ -14,8 +14,15 @@ records:
 * Federal net revenue: the all-government total less every state's net
   change and less the state payroll taxes (``STATE_PAYROLL_TAXES``) and local
   taxes (``LOCAL_TAXES``) that the all-government total counts but no state's
-  line holds. The published site's federal line keeps those taxes;
-  ``federal_net_published_definition_change_b`` reproduces it.
+  line holds. ``federal_net_published_definition_change_b`` keeps those
+  taxes: it is the all-government total less every state's net change, the
+  split ``california_summary`` applies to the published sweep. The site's
+  federal chart instead adds up its own bands, so its payroll band holds
+  employers' state and local payroll taxes, and it leaves out workers' state
+  payroll taxes, the Additional Medicare Tax,
+  ``local_income_tax_before_refundable_credits`` and ``local_occupational_tax``.
+  New York City's and Maryland's local income taxes sit in those states'
+  income tax.
 * A within-state variant of the shift. The sweep scales every positive
   capital-income dollar in the country by one factor, so a state whose share of
   national capital income exceeds its share of labor income gains market
@@ -183,8 +190,8 @@ RUN_DESCRIPTION = (
     "all-government change less every state's net change and less state "
     "payroll taxes (employee and employer) and local taxes, which the "
     "all-government total counts but no state's line holds; "
-    "federal_net_published_definition_change_b keeps them, as the published "
-    "site does. Each shifted branch prices Medicaid enrollees at the "
+    "federal_net_published_definition_change_b keeps them (all governments "
+    "less the states). Each shifted branch prices Medicaid enrollees at the "
     "baseline's cost per enrollee (the baseline's "
     "medicaid_slcsp_state_denominator), so state Medicaid totals move with "
     "enrollment. The *_with_health_tanf fields "
@@ -795,7 +802,8 @@ def _level_row(branch, freed, pct, base, base_rev, base_states, allocation):
         - all_states
         - outside["state_payroll_tax_change_b"]
         - outside["local_tax_change_b"],
-        # The published site's federal line: all governments less the states.
+        # All governments less the states, the split california_summary
+        # applies to the published sweep.
         "federal_net_published_definition_change_b": all_government - all_states,
         "other_states_net_change_b": other_states,
         "states_gaining": gainers,

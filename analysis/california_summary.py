@@ -80,8 +80,8 @@ def federal_split(components):
     taxes (the flat tax), and ``employer_residual`` employer payroll tax outside
     its federal, state and local parts; both are zero when the decomposition is
     complete. A run that predates the state payroll and local lines reports
-    none of them, so its residuals hold those taxes and its federal line is the
-    published site's.
+    none of them, so its residuals hold those taxes and its federal line is all
+    governments less the states.
     """
     c = components
 
@@ -242,13 +242,13 @@ def summarize(run, published=None):
             )
         if published and row["shift_pct"] in published:
             p = published[row["shift_pct"]]
-            # The site's federal line is all governments less the states.
+            # The published sweep's split: all governments less the states.
             federal_published = row.get(
                 "federal_net_published_definition_change_b", row["federal_net_change_b"]
             )
             lines.append(
                 f"  Published: California {p['california']:+.2f}B ({_pct(ca['state_net_change_b'], p['california']):+.1f}%), "
-                f"other states {p['other_states']:+.2f}B, federal on the site's definition {p['federal']:+.1f}B "
+                f"other states {p['other_states']:+.2f}B, federal as all governments less the states {p['federal']:+.1f}B "
                 f"({_pct(federal_published, p['federal']):+.1f}%)"
             )
     lines.extend(_within_state_lines(run))
