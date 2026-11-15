@@ -14,6 +14,7 @@ import json
 import sys
 import types
 
+import numpy as np
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
@@ -87,7 +88,7 @@ PRICING = {"published": "own_enrollees", "medicaid_at_baseline": "baseline", "he
 
 
 def _pricing_calls(kind, count=1):
-    return {"baseline": 0, "own_enrollees": 0, kind: count}
+    return {"baseline": 0, "own_enrollees": 0, "other": 0, kind: count}
 
 
 def _new_run(name, total, benefits, gini, health_gini, poverty, deciles, tanf=0.2, health=66.2):
@@ -274,12 +275,12 @@ def test_a_configuration_that_did_not_take_is_reported():
     assert diagnose.configuration_problems((published_run, published_run, head_start_run)) == [
         "the medicaid_at_baseline run records configuration 'published'",
         "the medicaid_at_baseline run records Medicaid pricing calls "
-        "{'baseline': 0, 'own_enrollees': 1}, not {'baseline': 1, 'own_enrollees': 0}",
+        "{'baseline': 0, 'own_enrollees': 1, 'other': 0}, not {'baseline': 1, 'own_enrollees': 0, 'other': 0}",
     ]
     assert diagnose.configuration_problems((published_run, medicaid_run, published_run)) == [
         "the head_start_excluded run records configuration 'published'",
         "the head_start_excluded run records Medicaid pricing calls "
-        "{'baseline': 0, 'own_enrollees': 1}, not {'baseline': 1, 'own_enrollees': 0}",
+        "{'baseline': 0, 'own_enrollees': 1, 'other': 0}, not {'baseline': 1, 'own_enrollees': 0, 'other': 0}",
         "the head_start_excluded run left [] out of net income, not "
         "['early_head_start', 'head_start']",
     ]
@@ -291,13 +292,13 @@ def test_a_run_whose_medicaid_pricing_did_not_take_is_reported():
     runs[1]["metadata"]["diagnose_configuration"]["medicaid_pricing_calls"] = _pricing_calls("own_enrollees")
     assert diagnose.configuration_problems(runs) == [
         "the medicaid_at_baseline run records Medicaid pricing calls "
-        "{'baseline': 0, 'own_enrollees': 1}, not {'baseline': 1, 'own_enrollees': 0}"
+        "{'baseline': 0, 'own_enrollees': 1, 'other': 0}, not {'baseline': 1, 'own_enrollees': 0, 'other': 0}"
     ]
     # A run that records no count, such as one from before the count existed.
     del runs[1]["metadata"]["diagnose_configuration"]["medicaid_pricing_calls"]
     assert diagnose.configuration_problems(runs) == [
         "the medicaid_at_baseline run records Medicaid pricing calls None, "
-        "not {'baseline': 1, 'own_enrollees': 0}"
+        "not {'baseline': 1, 'own_enrollees': 0, 'other': 0}"
     ]
     # The sweep never reached the pricing step.
     runs[1]["metadata"]["diagnose_configuration"]["medicaid_pricing_calls"] = _pricing_calls("baseline", 0)
@@ -381,9 +382,28 @@ def test_the_report_names_each_step():
         "| Decile | Published | Reproduction gap | Medicaid priced at baseline | Head Start left out "
         "| Stored labor inputs | Rerun |\n|---:|---:|---:|---:|---:|---:|---:|"
     ) in text
+    assert "It doesn't compare the deciles" in text
     published, runs, rerun = _runs()
     runs[0]["scenarios"][1]["benefits_change_b"] = 20.0
     assert "misses 1 of the published values" in diagnose.report(published, runs, rerun)
+
+
+def test_every_report_row_has_a_cell_for_each_column():
+    tables, rows = 0, 0
+    width = None
+    for line in diagnose.report(*_runs()).splitlines():
+        if not line.startswith("|"):
+            width = None
+            continue
+        cells = line.count("|") - 1
+        if width is None:
+            width, tables = cells, tables + 1
+        else:
+            assert cells == width, line
+            rows += 1
+    # Revenue, field, two distribution and decile tables, each with an alignment row.
+    assert tables == 5
+    assert rows > 2 * tables
 
 
 def _stand_in(monkeypatch, module, **attributes):
@@ -404,23 +424,45 @@ class Untouchable:
 
 
 class FakeBranch:
-    """A branch whose Medicaid denominator holder reports the periods pricing set."""
+    """A branch whose Medicaid denominator holder answers as core's does.
 
-    def __init__(self):
-        self.known = []
+    ``held`` gives it a denominator before any pricing, as a branch would
+    inherit one from a parent that had calculated it. Core stores float
+    inputs in float32.
+    """
+
+    branch_name = "sweep_10"
+
+    def __init__(self, held=None):
+        self.stored = {} if held is None else {2026: np.asarray(held, dtype=np.float32)}
+
+    @property
+    def known(self):
+        return list(self.stored)
+
+    def set_denominator(self, year, values):
+        self.stored[year] = np.asarray(values, dtype=float).astype(np.float32)
 
     def get_holder(self, variable):
         from analysis import health_tanf
 
         assert variable == health_tanf.MEDICAID_DENOMINATOR
-        return types.SimpleNamespace(get_known_periods=lambda: list(self.known))
+
+        def get_array(period, branch_name):
+            assert branch_name == self.branch_name
+            return self.stored.get(period)
+
+        return types.SimpleNamespace(get_known_periods=lambda: list(self.stored), get_array=get_array)
 
 
-def _baseline_pricing(priced):
-    """A stand-in for health_tanf.price_medicaid_at_baseline: it sets the denominator."""
+def _baseline_pricing(priced, scale=1.0):
+    """A stand-in for health_tanf.price_medicaid_at_baseline: it stores the denominator.
+
+    ``scale`` other than 1 stores a different denominator from the one passed.
+    """
 
     def pricing(branch, denominator, year):
-        branch.known.append(year)
+        branch.set_denominator(year, np.asarray(denominator, dtype=float) * scale)
         priced.append(year)
 
     return pricing
@@ -473,6 +515,41 @@ def test_a_baseline_pricing_that_sets_nothing_counts_as_own_enrollees(monkeypatc
     with diagnose.configuration("medicaid_at_baseline") as record:
         health_tanf.price_medicaid_at_baseline(FakeBranch(), [1.0], 2026)
         assert record["medicaid_pricing_calls"] == _pricing_calls("own_enrollees")
+
+
+def test_a_branch_that_held_a_denominator_before_pricing_counts_as_other(monkeypatch):
+    # A branch made from a parent that had calculated the denominator inherits
+    # it. The published code would then have priced at that denominator, not
+    # over the branch's own enrollees, so the count flags it.
+    from analysis import health_tanf
+
+    _stand_in(monkeypatch, "labor_capital_shift", set_labor_income=object())
+    monkeypatch.setattr(health_tanf, "price_medicaid_at_baseline", _baseline_pricing([]))
+    for name in diagnose.RUNS:
+        with diagnose.configuration(name) as record:
+            health_tanf.price_medicaid_at_baseline(FakeBranch(held=[1.0]), [1.0], 2026)
+            assert record["medicaid_pricing_calls"] == _pricing_calls("other")
+    published, runs, _ = _runs()
+    runs[0]["metadata"]["diagnose_configuration"]["medicaid_pricing_calls"] = _pricing_calls("other")
+    assert diagnose.configuration_problems(runs) == [
+        "the published run records Medicaid pricing calls "
+        "{'baseline': 0, 'own_enrollees': 0, 'other': 1}, not {'baseline': 0, 'own_enrollees': 1, 'other': 0}"
+    ]
+
+
+def test_a_pricing_that_stores_another_denominator_counts_as_other(monkeypatch):
+    from analysis import health_tanf
+
+    _stand_in(monkeypatch, "labor_capital_shift", set_labor_income=object())
+    monkeypatch.setattr(health_tanf, "price_medicaid_at_baseline", _baseline_pricing([], scale=2.0))
+    with diagnose.configuration("medicaid_at_baseline") as record:
+        health_tanf.price_medicaid_at_baseline(FakeBranch(), [1.0, 3.0], 2026)
+        assert record["medicaid_pricing_calls"] == _pricing_calls("other")
+    # Core keeps the denominator in float32, so the count compares in float32.
+    monkeypatch.setattr(health_tanf, "price_medicaid_at_baseline", _baseline_pricing([]))
+    with diagnose.configuration("medicaid_at_baseline") as record:
+        health_tanf.price_medicaid_at_baseline(FakeBranch(), [0.1, 1e6 / 3], 2026)
+        assert record["medicaid_pricing_calls"] == _pricing_calls("baseline")
 
 
 def test_run_records_how_the_sweep_priced_medicaid(monkeypatch, tmp_path):

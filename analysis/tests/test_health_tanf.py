@@ -196,6 +196,10 @@ def test_health_programs_checks_the_refundable_credits(monkeypatch):
     monkeypatch.setattr(health_tanf, "adds", lambda sim, variable, year: ADDS_1764)
     with pytest.raises(ValueError, match="premium_tax_credit"):
         health_tanf.health_programs(None, 2026)
+    # assigned_aca_ptc builds on aca_ptc, so listing aca_ptc counts it twice too.
+    credits.refundable = ["eitc", "aca_ptc"]
+    with pytest.raises(ValueError, match="aca_ptc"):
+        health_tanf.health_programs(None, 2026)
     credits.refundable = ["eitc", "refundable_ctc"]
     assert health_tanf.health_programs(None, 2026) == _classify()
 

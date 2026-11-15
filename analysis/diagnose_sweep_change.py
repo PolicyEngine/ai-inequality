@@ -27,16 +27,17 @@ code put back: ``published`` puts back all three differences,
 ``medicaid_at_baseline`` the last two and ``head_start_excluded`` only the
 shift's. It saves the result with its decile impacts under
 ``metadata.baseline_facts``, where the sweep file keeps them. Under
-``metadata.diagnose_configuration`` it counts the shifted branches that hold
-the baseline's Medicaid denominator once priced, and those left to price over
-their own enrollees. ``report`` checks from each run's metadata that its
-configuration took, and that the ``published`` run reproduces the published
-sweep. It then splits each measure's change at those shifts into steps that add
-up to it, in this order: the reproduction gap (what the ``published`` run
-misses of the published values, which for the deciles includes the published
-deciles' older tie-breaking), pricing Medicaid at the baseline's cost per
-enrollee, excluding Head Start, setting the stored labor inputs, counting TANF
-once and counting health coverage.
+``metadata.diagnose_configuration`` it counts the shifted branches whose
+pricing stored the Medicaid denominator the sweep passed, those it left to
+price over their own enrollees, and any other. ``report`` checks from each
+run's metadata that its configuration took, and that the ``published`` run
+reproduces the published sweep. It then splits the revenue, distribution and
+decile changes at those shifts into steps that add up to them, in this order:
+the reproduction gap (what the ``published`` run misses of the published
+values, which for the deciles includes the published deciles' older
+tie-breaking), pricing Medicaid at the baseline's cost per enrollee, excluding
+Head Start, setting the stored labor inputs, counting TANF once and counting
+health coverage. Its field table starts from the ``published`` run instead.
 """
 
 from __future__ import annotations
@@ -103,15 +104,30 @@ def _set_built_labor_income_only(baseline, branch, variable, year, values):
     return None
 
 
+def _pricing_kind(branch, holder, held_before, denominator, year):
+    """How a pricing call left a branch's Medicaid denominator: see ``configuration``."""
+    import numpy as np
+
+    if not holder.get_known_periods():
+        return "own_enrollees"
+    stored = holder.get_array(year, branch.branch_name)
+    if held_before or stored is None:
+        return "other"
+    stored = np.asarray(stored)
+    passed = np.asarray(denominator, dtype=float).astype(stored.dtype)
+    return "baseline" if np.array_equal(stored, passed) else "other"
+
+
 @contextlib.contextmanager
 def configuration(name):
     """Put back the published code that ``name`` calls for while the block runs.
 
     It yields the configuration's settings with ``medicaid_pricing_calls``.
-    Each time the sweep prices a shifted branch while the block runs, it counts
-    the branch under ``baseline`` if the branch then holds a Medicaid
-    denominator, which only the baseline's pricing sets, and under
-    ``own_enrollees`` if not.
+    Each time the sweep prices a shifted branch while the block runs, it reads
+    the branch's Medicaid denominator. It counts the branch under ``baseline``
+    if the pricing stored the denominator the sweep passed, under
+    ``own_enrollees`` if the branch holds none, and under ``other`` if the
+    branch held one before the pricing or holds a different one after it.
     """
     from . import health_tanf, labor_capital_shift, policyengine_runtime
 
@@ -121,13 +137,14 @@ def configuration(name):
         policyengine_runtime.NET_INCOME_EXCLUDED_BENEFITS,
         labor_capital_shift.set_labor_income,
     )
-    calls = {"baseline": 0, "own_enrollees": 0}
+    calls = {"baseline": 0, "own_enrollees": 0, "other": 0}
     pricing = saved[0] if settings["medicaid_at_baseline"] else _price_medicaid_over_own_enrollees
 
     def counted_pricing(branch, denominator, year):
+        holder = branch.get_holder(health_tanf.MEDICAID_DENOMINATOR)
+        held_before = bool(holder.get_known_periods())
         result = pricing(branch, denominator, year)
-        held = branch.get_holder(health_tanf.MEDICAID_DENOMINATOR).get_known_periods()
-        calls["baseline" if held else "own_enrollees"] += 1
+        calls[_pricing_kind(branch, holder, held_before, denominator, year)] += 1
         return result
 
     try:
@@ -222,7 +239,7 @@ def _expected_pricing_calls(name, payload):
     """The pricing calls a run in configuration ``name`` makes: one per shifted branch."""
     shifted = sum(1 for row in payload["scenarios"] if row["shift_pct"])
     kind = "baseline" if CONFIGURATIONS[name]["medicaid_at_baseline"] else "own_enrollees"
-    return {"baseline": 0, "own_enrollees": 0, kind: shifted}
+    return {"baseline": 0, "own_enrollees": 0, "other": 0, kind: shifted}
 
 
 def configuration_problems(runs):
@@ -357,8 +374,9 @@ def report(published, runs, rerun):
         ]
     else:
         lines.append(
-            "The published configuration reproduces every published value at 0% and 10% "
-            "(within $1,000, or 1e-9 for rates)."
+            "The published configuration reproduces every published value it compares at "
+            "0% and 10% (within $1,000, or 1e-9 for rates). It doesn't compare the deciles: "
+            "their table's reproduction gap shows what it misses of them."
         )
     steps = total_steps(published, runs, rerun)
     lines += ["", "Net revenue change at a 10% shift ($B, 2026):", ""]

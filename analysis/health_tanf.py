@@ -116,6 +116,10 @@ EXCLUDED_HEALTH = ("co_omnisalud",)
 #: ``medicaid`` adds ``medicaid_cost`` and ``premium_tax_credit`` adds
 #: ``assigned_aca_ptc``.
 HEALTH_LIST_ALIASES = {"medicaid": "medicaid_cost", "premium_tax_credit": "assigned_aca_ptc"}
+#: The premium tax credit's other variable: ``assigned_aca_ptc`` multiplies
+#: ``aca_ptc`` by take-up, so a benefit or credit list that names ``aca_ptc``
+#: would count the credit twice too.
+OTHER_HEALTH_NAMES = ("aca_ptc",)
 #: The members of ``gov.household.federal_benefit_cost`` and
 #: ``gov.household.state_benefit_cost`` this accounting expects.
 FEDERAL_SHARE_COSTS = ("medicaid_federal_cost", "chip_federal_cost", "msp_federal_cost")
@@ -246,7 +250,7 @@ def classify_health_programs(
                 f"{name} changed: unclassified {sorted(set(members) - set(want))}, "
                 f"missing {sorted(set(want) - set(members))}"
             )
-    netted = (known | set(HEALTH_LIST_ALIASES)) & set(benefit_lists)
+    netted = (known | set(HEALTH_LIST_ALIASES) | set(OTHER_HEALTH_NAMES)) & set(benefit_lists)
     if netted:
         raise ValueError(
             f"the benefit and refundable credit lists include health programs {sorted(netted)}, "
@@ -637,9 +641,10 @@ def check_health_split(frame):
     CHIP and Medicare Savings Program costs they split. The state-only move and
     the unfunded federal share together can't exceed the federal share they
     come from, nor the unfunded state share the state share, beyond float32
-    rounding: policyengine-us sums the federal and state shares in float32, and
-    we sum the moved and unfunded shares from person-level values in float64.
-    None of them can fall below zero.
+    rounding: policyengine-us adds each person's Medicaid, CHIP and Medicare
+    Savings Program shares in float32 before it sums them by household, and we
+    add the moved and unfunded shares in float64, so a person with more than
+    one share can differ by that rounding. None of them can fall below zero.
     """
     _refuse_gap(
         "federal_benefit_cost + state_benefit_cost differ from Medicaid, CHIP and MSP cost",

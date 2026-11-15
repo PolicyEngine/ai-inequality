@@ -653,7 +653,9 @@ class _Sim:
         return _Result(self.columns[variable], self.weight)
 
 
-INCOMES = st.floats(-2e5, 2e6, allow_nan=False, allow_infinity=False)
+# Incomes in whole cents: a positive capital income far below a cent would
+# need a scale factor past float range, which no dataset holds.
+INCOMES = st.floats(-2e5, 2e6, allow_nan=False, allow_infinity=False).map(lambda x: round(x, 2))
 SHIFTS = st.floats(0.0, 1.0, allow_nan=False)
 
 
@@ -1119,12 +1121,12 @@ def test_check_health_split_refuses_gaps():
 
 
 def test_check_health_split_allows_float32_rounding():
-    # Two blocked enrollees hold a household's whole federal share. policyengine-us
-    # sums that share in float32; we sum the move in float64 from the person
-    # amounts, so the move can exceed the share by a fraction of a cent.
-    people = np.asarray([12_345.67, 9_876.54], dtype=np.float32)
-    federal = float(people.sum(dtype=np.float32))
-    moved = float(people.astype(float).sum())
+    # A blocked enrollee with two federal shares. policyengine-us adds a
+    # person's shares in float32; we add the moved shares in float64, so the
+    # move can exceed the federal share by a fraction of a cent.
+    shares = np.asarray([12_345.67, 9_876.54], dtype=np.float32)
+    federal = float(np.add(shares[0], shares[1], dtype=np.float32))
+    moved = float(shares.astype(float).sum())
     scen = _frame(
         [STATE],
         [1.0],
@@ -1141,6 +1143,26 @@ def test_check_health_split_allows_float32_rounding():
     overdropped = dict(scen, unfunded_state=np.asarray([federal + 1.5]))
     with pytest.raises(AssertionError, match="drops more"):
         check_health_split(overdropped)
+
+
+def test_check_health_split_scales_each_allowance_by_its_own_share():
+    # A millionth of a $5M federal share allows $5 over it; the $1,000 state
+    # share allows only the $1 floor.
+    federal, state = 5e6, 1e3
+    scen = _frame(
+        [STATE],
+        [1.0],
+        fmap_split_cost=[federal + state],
+        federal_health_split=[federal],
+        state_health_split=[state],
+        state_only_coverage=[federal + 3.0],
+        unfunded_state=[state + 0.5],
+    )
+    check_health_split(scen)
+    with pytest.raises(AssertionError, match="drops more"):
+        check_health_split(dict(scen, unfunded_state=np.asarray([state + 3.0])))
+    with pytest.raises(AssertionError, match="moves more"):
+        check_health_split(dict(scen, state_only_coverage=np.asarray([federal + 6.0])))
 
 
 def test_unfunded_coverage_leaves_every_line():
