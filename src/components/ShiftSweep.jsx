@@ -1205,8 +1205,8 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
         </div>
       </div>
       <p className="shift-sweep-description">
-        The chart ranks every state by its net change in state revenue at the
-        selected shift level, largest first.{" "}
+        The chart ranks every state and DC by its net change in state revenue at
+        the selected shift level, largest first.{" "}
         {withHealthTanf ? (
           <>
             Net = state income and use tax before refundable credits −

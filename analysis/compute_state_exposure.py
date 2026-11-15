@@ -33,9 +33,10 @@ revenue, and they are the bases that no-income-tax states rely on.
 A score near zero here reflects the **income-tax channel**, not budgetary
 resilience. Texas and Florida collect through sales taxes, and this script
 counts none of them, so it misses their exposure to an AI boom through those
-taxes. The one informative zero-income-tax case is Washington: policyengine-us
-1.764.6 counts its capital gains excise as state income tax, so the ranking
-picks it up.
+taxes. Washington is the informative case among states without a broad
+income tax. At policyengine-us 1.764.6, `wa_income_tax_before_refundable_credits`
+adds its capital gains excise and, from 2028, its 9.9% tax on income above
+$1 million, so the 2030 ranking picks up both.
 
 Usage:
     python -m analysis.compute_state_exposure
@@ -66,11 +67,13 @@ BASELINE_CACHE = os.path.join(
 #: spans, so a state's exposure is reported as a band rather than a point.
 VARIANTS = ["compressive", "proportional", "expansive"]
 
-#: States whose modelled "income tax" reaches capital income only, so the
-#: percentage is a share of a narrow instrument rather than of a broad tax.
-#: Verified from the variable composition at policyengine-us 1.764.6:
+#: States whose modelled "income tax" is a narrow instrument rather than a
+#: broad tax, so the percentage isn't comparable with other states'. Verified
+#: from the variable composition at policyengine-us 1.764.6:
 #: `wa_income_tax_before_refundable_credits` adds exactly
-#: `wa_capital_gains_tax` and `wa_millionaires_tax` — no wage income tax.
+#: `wa_capital_gains_tax` and `wa_millionaires_tax`. From 2028 the second
+#: taxes income above $1 million, wages included, so the data's
+#: "capital_only" label is out of date for 2030; the next refresh renames it.
 #: Low-rate broad-base states (AZ, LA, MS) are NOT in this category: their
 #: percentages are comparable, they simply tax at lower rates.
 CAPITAL_ONLY_INCOME_TAX_STATES = {"WA"}
