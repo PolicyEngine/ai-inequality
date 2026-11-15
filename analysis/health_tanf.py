@@ -31,10 +31,9 @@ the household's state:
   - We charge the state the federal share of Medicaid. We also charge it the
     federal share of CHIP in a state whose ``undocumented_immigrant`` rule is
     on, or where California's own rule covers the person, since the state pays
-    for that coverage alone.
-    Federal funds still match these enrollees' emergency care, labor and
-    delivery included (42 USC 1396b(v)(3)), so we likely overstate the
-    state's cost.
+    for that coverage alone. Federal funds still match these enrollees'
+    emergency care, labor and delivery included (42 USC 1396b(v)(3)), so we
+    likely overstate the state's cost.
   - We keep the federal share for a pregnant enrollee in a state that takes
     CHIP's unborn-child option, with income at or under that option's limit.
     Federal CHIP funds match her prenatal care whatever her status, and
@@ -52,17 +51,19 @@ the household's state:
   the code makes no exception for them. policyengine-us 1.764.6 matches every
   Medicaid child at that rate (``medicaid_federal_share``), and its
   ``per_capita_chip`` documentation says it models these children through
-  Medicaid, where ``medicaid_cost_if_enrolled`` prices them. Federal law pays
-  CHIP's enhanced rate (42 USC 1397ee(b), through 1396d(b)), up to the
-  state's CHIP allotment, for optional targeted low-income children: children
-  a state covers through Medicaid above its March 31, 1997 Medicaid income
-  level who meet CHIP's targeted low-income test, no other coverage included
-  (42 USC 1396d(u)(2)(B) and 1397jj(b)(1)). So the state lines overstate the
-  level of those children's cost, the federal lines understate it by as much,
-  and the total doesn't change. A state line's change errs by the rate gap
-  times the change in those children's enrollment: it overstates the state's
-  change when that enrollment grows and understates it when enrollment
-  shrinks. We haven't measured either.
+  Medicaid, where ``medicaid_cost_if_enrolled`` prices them. For optional
+  targeted low-income children, the federal government pays CHIP's enhanced
+  rate instead, up to the state's CHIP allotment (42 USC 1397ee(b), through
+  1396d(b)). Federal law defines them as children a state covers through
+  Medicaid above its March 31, 1997 Medicaid income level who meet CHIP's
+  targeted low-income test, which includes having no other coverage (42 USC
+  1396d(u)(2)(B) and 1397jj(b)(1)). So the state lines overstate the level of
+  those children's cost, the federal lines understate it by as much, and the
+  total doesn't change. The error in a change in the state's cost equals the
+  rate gap times the change in those children's total cost. We overstate the
+  change in the state's cost when their enrollment grows and understate it
+  when their enrollment shrinks, and a state's revenue line errs by as much
+  the other way. We haven't measured the size of either error.
 * The federal government pays ACA premium tax credits and the Basic Health
   Program.
 * The state pays its own health programs: Healthier Oregon at policyengine-us
