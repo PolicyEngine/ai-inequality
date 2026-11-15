@@ -424,10 +424,16 @@ def _report_tables(text):
 
 def test_every_report_row_adds_up_across_its_cells():
     published, runs, rerun = _runs()
-    # A reproduction gap gives the distribution tables' second column something to add.
+    # Reproduction gaps give the revenue and distribution tables' second column
+    # something to add.
     runs[0]["scenarios"][1]["net_gini_including_health_benefits"] += 0.001
+    runs[0]["scenarios"][1]["total_rev_change_published_definition_b"] += 1.0
     tables = _report_tables(diagnose.report(published, runs, rerun))
     assert [names[0] for names, _ in tables] == ["Published", "Field", "Measure", "Measure", "Decile"]
+    # The revenue table starts from the published total, not the published run's.
+    [revenue_row] = tables[0][1]
+    assert revenue_row[0] == f"{published['scenarios'][1]['revenue_change_b']:,.2f}"
+    assert revenue_row[1] == "+1.00"
     for names, rows in tables:
         assert rows, names
         for row in rows:

@@ -7,6 +7,11 @@ regenerating the paper from such a sweep keeps the paper's definition until the
 paper itself changes it.
 """
 
+import json
+import os
+
+import pytest
+
 from analysis.compare_sweep_vintages import revenue
 from analysis.emit_paper_values import sweep_net_revenue, sweep_table
 
@@ -44,6 +49,21 @@ def test_the_sweep_table_prints_the_papers_definition():
         assert f"10\\% & {revenue_cell} & +12 & 12.5\\% & 0.432 \\\\" in table
         # The redefined total, which counts health coverage, stays out.
         assert not any("-1250" in line for line in table)
+
+
+def test_main_writes_the_table_sweep_table_builds(tmp_path, monkeypatch):
+    # main() reads the replication workbook through openpyxl, which CI doesn't
+    # install, so this runs only where openpyxl is installed.
+    pytest.importorskip("openpyxl")
+    from analysis import emit_paper_values as emit
+
+    monkeypatch.setattr(emit, "PAPER", str(tmp_path))
+    emit.main()
+    with open(os.path.join(emit.ROOT, "src", "data", "shiftSweepData.json")) as fh:
+        sweep = json.load(fh)
+    sw = {row["shift_pct"]: row for row in sweep["scenarios"]}
+    tables = (tmp_path / "tables_generated.tex").read_text()
+    assert "\n".join(sweep_table(sw)) in tables
 
 
 def test_vintage_comparison_reads_the_same_measure():

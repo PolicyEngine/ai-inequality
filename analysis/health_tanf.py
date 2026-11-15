@@ -20,12 +20,13 @@ the household's state:
 
 * Medicaid, CHIP and the Medicare Savings Programs follow the matching shares
   policyengine-us builds from ``gov.hhs.medicaid.cost_share``
-  (``federal_benefit_cost`` and ``state_benefit_cost``), apart from the cases
-  below. Federal law
-  bars federal matching, apart from emergency care, for enrollees whose
-  immigration status fails its test (42 USC 1396b(v)), and policyengine-us
-  books a federal share for them anyway. ``state_only_accounting`` sorts those
-  shares by whether a state rule in policyengine-us covers the enrollee:
+  (``federal_benefit_cost`` and ``state_benefit_cost``), apart from the
+  immigration cases below. Those shares also differ from federal law for
+  Medicaid-expansion CHIP (the next item). Federal law bars federal matching,
+  apart from emergency care, for enrollees whose immigration status fails its
+  test (42 USC 1396b(v)), and policyengine-us books a federal share for them
+  anyway. ``state_only_accounting`` sorts those shares by whether a state rule
+  in policyengine-us covers the enrollee:
 
   - We charge the state the federal share of Medicaid. We also charge it the
     federal share of CHIP in a state whose ``undocumented_immigrant`` rule is
@@ -47,15 +48,21 @@ the household's state:
     governments' lines: no government pays for that coverage.
     policyengine-us 1.764.6 bars only an ``UNDOCUMENTED`` label from CHIP and
     tests no status for the Medicare Savings Programs.
-  - We overstate the state's share for children in Medicaid-expansion CHIP.
-    policyengine-us 1.764.6 matches every Medicaid child at Medicaid's
-    regular rate (``medicaid_federal_share``), and its ``per_capita_chip``
-    prices Medicaid-expansion CHIP children through Medicaid. Federal law
-    matches optional targeted low-income children, those a state covers
-    through Medicaid above its March 31, 1997 Medicaid income level, at CHIP's
-    enhanced rate (42 USC 1396d(b) and (u)(2)). The total doesn't change; the
-    federal line misses what the state line overstates. We haven't measured
-    how much.
+* Children in Medicaid-expansion CHIP get Medicaid's regular match here, and
+  the code makes no exception for them. policyengine-us 1.764.6 matches every
+  Medicaid child at that rate (``medicaid_federal_share``), and its
+  ``per_capita_chip`` documentation says it models these children through
+  Medicaid, where ``medicaid_cost_if_enrolled`` prices them. Federal law pays
+  CHIP's enhanced rate (42 USC 1397ee(b), through 1396d(b)), up to the
+  state's CHIP allotment, for optional targeted low-income children: children
+  a state covers through Medicaid above its March 31, 1997 Medicaid income
+  level who meet CHIP's targeted low-income test, no other coverage included
+  (42 USC 1396d(u)(2)(B) and 1397jj(b)(1)). So the state lines overstate the
+  level of those children's cost, the federal lines understate it by as much,
+  and the total doesn't change. A state line's change errs by the rate gap
+  times the change in those children's enrollment: it overstates the state's
+  change when that enrollment grows and understates it when enrollment
+  shrinks. We haven't measured either.
 * The federal government pays ACA premium tax credits and the Basic Health
   Program.
 * The state pays its own health programs: Healthier Oregon at policyengine-us

@@ -45,13 +45,12 @@ records:
   Program costs under the matching shares policyengine-us builds
   (``state_benefit_cost``, from ``gov.hhs.medicaid.cost_share``; see
   ``health_tanf`` for where they differ from federal law) and its own health
-  subsidies. Federal law
-  fixes each state's TANF block grant, so we also charge the state its TANF
-  change beyond the copy its line holds. Where a state rule covers people
-  whose immigration status rules out federal matching, we also charge the
-  state the federal share policyengine-us books for them
-  (``health_tanf.state_only_accounting``). Federal funds still match their
-  emergency care, so we likely overstate the state's cost. We add every
+  subsidies. Federal law fixes each state's TANF block grant, so we also
+  charge the state its TANF change beyond the copy its line holds. Where a
+  state rule covers people whose immigration status rules out federal
+  matching, we also charge the state the federal share policyengine-us books
+  for them (``health_tanf.state_only_accounting``). Federal funds still match
+  their emergency care, so we likely overstate the state's cost. We add every
   program in ``healthcare_benefit_value`` to the all-government total, apart
   from the coverage ``health_tanf`` leaves out, and count TANF once, as
   ``tanf`` pays it. We again book what the states and localities leave as
@@ -151,7 +150,8 @@ RUN_DESCRIPTION = (
     "medicaid_slcsp_state_denominator), so state Medicaid totals move with "
     "enrollment. In the *_with_health_tanf fields, we also charge each state "
     "its share of Medicaid, CHIP and Medicare Savings Program costs under "
-    "federal matching rules (state_benefit_cost). For people whose "
+    "the matching shares policyengine-us builds (state_benefit_cost). For "
+    "people whose "
     "immigration status rules out federal matching, we charge the state the "
     "federal share policyengine-us books for their Medicaid. In a state "
     "whose undocumented_immigrant rule is on, or where California's own rule "

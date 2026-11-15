@@ -250,9 +250,21 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
     /where a state covers people whose immigration status bars federal matching, we charge it the federal share as well\. the federal government still matches their emergency care, so we likely overstate the state's cost\. in states that cover unborn children through chip, the federal government also matches a pregnant woman's prenatal care whatever her immigration status, so we leave her federal share in place\./i,
   );
   expect(document.body).toHaveTextContent(
-    /we match every child in medicaid at medicaid's regular rate, but federal law pays chip's higher rate for children a state covers through medicaid with chip funds, so we also overstate the state's cost for them\./i,
+    /for children a state covers through medicaid with chip funds, the federal government pays chip's higher rate, and we use medicaid's regular rate\. that overstates the state's share of their cost, and the error in the state's change can run either way\./i,
   );
   expect(document.body).not.toHaveTextContent(/the whole cost/i);
+  // The national view shows each caveat once: the ranking carries them, and
+  // the federal note carries none.
+  for (const caveat of [
+    "still matches their emergency care",
+    "cover unborn children through CHIP",
+    "pays CHIP's higher rate",
+  ]) {
+    expect(document.body.textContent.split(caveat)).toHaveLength(2);
+  }
+  expect(document.body).toHaveTextContent(
+    /the chart ranks every state and dc by its net change in state revenue/i,
+  );
 
   fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
     target: { value: "CA" },

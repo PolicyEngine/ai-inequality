@@ -1221,11 +1221,12 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
             care, so we likely overstate the state&apos;s cost. In states that
             cover unborn children through CHIP, the federal government also
             matches a pregnant woman&apos;s prenatal care whatever her
-            immigration status, so we leave her federal share in place. We match
-            every child in Medicaid at Medicaid&apos;s regular rate, but federal
-            law pays CHIP&apos;s higher rate for children a state covers through
-            Medicaid with CHIP funds, so we also overstate the state&apos;s cost
-            for them.
+            immigration status, so we leave her federal share in place. For
+            children a state covers through Medicaid with CHIP funds, the
+            federal government pays CHIP&apos;s higher rate, and we use
+            Medicaid&apos;s regular rate. That overstates the state&apos;s share
+            of their cost, and the error in the state&apos;s change can run
+            either way.
           </>
         ) : (
           <>

@@ -50,6 +50,21 @@ function bandOutlines(chart) {
   );
 }
 
+// The area an outline encloses, in square pixels, by the shoelace formula over
+// its points (curve control points included). A band of zeros runs out along
+// its top edge and back along the same points, so it encloses none.
+function enclosedArea(outline) {
+  const points = [...outline.matchAll(/(-?[\d.]+),(-?[\d.]+)/g)].map(
+    ([, x, y]) => [Number(x), Number(y)],
+  );
+  let twice = 0;
+  points.forEach(([x1, y1], i) => {
+    const [x2, y2] = points[(i + 1) % points.length];
+    twice += x1 * y2 - x2 * y1;
+  });
+  return Math.abs(twice) / 2;
+}
+
 test("the federal chart draws a health band for a run that counts health coverage", () => {
   renderRevenue();
   const chart = chartUnder(/federal revenue decomposition/i);
@@ -63,7 +78,8 @@ test("the federal chart draws a health band for a run that counts health coverag
   const outlines = bandOutlines(chart);
   expect(outlines).toHaveLength(4);
   // Every band, health included, has amounts to draw.
-  for (const outline of outlines) expect(outline).toMatch(/\d/);
+  for (const outline of outlines)
+    expect(enclosedArea(outline)).toBeGreaterThan(1);
 });
 
 test("a state's chart draws its TANF and health bands", () => {
@@ -81,7 +97,8 @@ test("a state's chart draws its TANF and health bands", () => {
   ]);
   const outlines = bandOutlines(chart);
   expect(outlines).toHaveLength(4);
-  for (const outline of outlines) expect(outline).toMatch(/\d/);
+  for (const outline of outlines)
+    expect(enclosedArea(outline)).toBeGreaterThan(1);
 });
 
 test("the state ranking orders states by their net change with health coverage and TANF", () => {
