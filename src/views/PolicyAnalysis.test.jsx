@@ -19,6 +19,7 @@ test("the US experiment card says market income stays the same", () => {
   expect(document.body).toHaveTextContent(
     `${EXPERIMENT} Total market income stays the same, and we model no behavioral responses.`,
   );
+  expect(document.body).not.toHaveTextContent(/behavioural/i);
 });
 
 test("the UK experiment card makes no market income claim", () => {

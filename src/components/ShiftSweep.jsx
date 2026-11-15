@@ -955,8 +955,8 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
         </div>
       </div>
       <p className="shift-sweep-description">
-        The chart ranks every state by its net change in state revenue at the
-        selected shift level, largest first. Net = state income and use tax
+        The chart ranks every state and DC by its net change in state revenue at
+        the selected shift level, largest first. Net = state income and use tax
         before refundable credits − refundable state credits − state-paid
         benefits. We count state SSI supplements, child care subsidies and other
         programs, such as New Jersey&apos;s property tax relief, as state-paid.

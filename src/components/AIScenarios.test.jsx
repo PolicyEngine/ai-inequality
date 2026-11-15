@@ -83,7 +83,7 @@ describe("AIScenarios", () => {
       </MemoryRouter>,
     );
     expect(document.body.textContent).toContain(
-      `Under rapid adoption with proportional wage changes, we estimate that state income and use taxes before refundable credits ${stateTaxMoveOf("Rapid", "proportional")}.`,
+      `Under rapid adoption with proportional wage changes, we estimate that state income and use taxes before refundable credits ${stateTaxMoveOf("Rapid", "proportional")}. Those state taxes include New York City's income tax and Maryland's county income taxes.`,
     );
     fireEvent.click(screen.getByRole("radio", { name: "Wages spread" }));
     expect(document.body.textContent).toContain(
@@ -114,10 +114,10 @@ describe("AIScenarios", () => {
       </MemoryRouter>,
     );
     expect(document.body.textContent).toContain(
-      "federal, state and local, net of transfers",
+      "income, payroll and use taxes, net of transfers",
     );
     expect(document.body.textContent).toContain(
-      "Net government revenue = federal, state and local taxes − refundable credits such as the EITC and refundable CTC − benefits such as SNAP, SSI, TANF, WIC and school meals. We leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.",
+      "Net government revenue = federal, state and local income and payroll taxes + state use taxes − refundable credits such as the EITC and refundable CTC − benefits such as SNAP, SSI, TANF, WIC and school meals. We count no sales, property or excise taxes, and we leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.",
     );
   });
 
