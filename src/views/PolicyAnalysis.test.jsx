@@ -11,7 +11,8 @@ function renderPolicyAnalysis(initialEntry = "/policy-analysis") {
   );
 }
 
-const EXPERIMENT = "We reduce positive employment and self-employment income by 0% to 100% in 10-point steps, then add the same weighted total to positive capital income. We scale every positive amount by one common factor, so each person gains in proportion to the capital income they already receive.";
+const EXPERIMENT =
+  "We reduce positive employment and self-employment income by 0% to 100% in 10-point steps, then add the same weighted total to positive capital income. We scale every positive amount by one common factor, so each person gains in proportion to the capital income they already receive.";
 
 test("the US experiment card says market income stays the same", () => {
   renderPolicyAnalysis();
