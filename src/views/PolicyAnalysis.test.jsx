@@ -22,8 +22,7 @@ test("the US experiment card says market income stays the same", () => {
 });
 
 test("the UK experiment card makes no market income claim", () => {
-  // policyengine-uk's household_market_income leaves out ISA interest, which
-  // the UK shift raises, so UK market income falls by the ISA share.
+  // The UK sweep records no market income change, so the card claims none.
   renderPolicyAnalysis("/policy-analysis?country=uk");
   expect(document.body).toHaveTextContent(
     `${EXPERIMENT} We model no behavioural responses.`,

@@ -502,7 +502,8 @@ function AIScenarios({ scenariosData = defaultScenariosData }) {
           Medicaid, CHIP and ACA premium tax credits. Under{" "}
           {scenarioName.toLowerCase()} adoption with{" "}
           {VARIANT_PHRASES[variantKey]}, we estimate that state income and use
-          taxes before refundable credits {stateTaxMove(selected.stateTaxChange)}.
+          taxes before refundable credits{" "}
+          {stateTaxMove(selected.stateTaxChange)}.
         </p>
 
         {crossover != null && (
