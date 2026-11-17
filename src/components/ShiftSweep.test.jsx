@@ -65,6 +65,9 @@ function renderSweep(data) {
 }
 
 test("switches the single sweep chart between inequality and revenue outcomes", () => {
+  const shift10 = sweepData.scenarios.find(
+    (scenario) => scenario.shift_pct === 10,
+  );
   const shift50 = sweepData.scenarios.find(
     (scenario) => scenario.shift_pct === 50,
   );
@@ -124,11 +127,13 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
   expect(
     screen.queryByRole("radiogroup", { name: /income concept/i }),
   ).not.toBeInTheDocument();
-  // The site's sweep falls at every step, so the summary names the 50% and
-  // 100% shifts and no low point before the end.
+  // The site's sweep falls at every step, so the summary names the 10%, 50%
+  // and 100% shifts and no low point before the end.
   expect(document.body).toHaveTextContent(
-    `We estimate net government revenue falls by ${proseBillions(shift50.revenue_change_b)} at a 50% shift and by ${proseBillions(shift100.revenue_change_b)} at a 100% shift.`,
+    `We estimate net government revenue falls by ${proseBillions(shift10.revenue_change_b)} at a 10% shift, by ${proseBillions(shift50.revenue_change_b)} at a 50% shift and by ${proseBillions(shift100.revenue_change_b)} at a 100% shift.`,
   );
+  // The corporate-tax note belongs to the run that counts health coverage.
+  expect(document.body).not.toHaveTextContent(/no corporate income tax/i);
   expect(document.body).toHaveTextContent(/capital-gains tax and niit/i);
   expect(document.body).toHaveTextContent(
     /we leave out health coverage such as medicaid/i,
@@ -242,7 +247,7 @@ test("a run that counts health coverage and TANF gets their bands and copy", () 
   // Revenue falls at every step of the mock, so the summary has no rebound,
   // and its second sentence gives health spending rather than tax drivers.
   expect(document.body).toHaveTextContent(
-    /we estimate net government revenue falls by \$50B at a 50% shift and by \$100B at a 100% shift\. at that shift, the federal government spends \$10B more on health coverage and the states \$5\.0B more\./i,
+    /we estimate net government revenue falls by \$10B at a 10% shift, by \$50B at a 50% shift and by \$100B at a 100% shift\. at that shift, the federal government spends \$10B more on health coverage and the states \$5\.0B more\. policyengine-us has no corporate income tax, so these estimates leave out any change in corporate tax revenue\./i,
   );
   expect(document.body).not.toHaveTextContent(/capital-gains tax and niit/i);
   // The state ranking charges each state the federal share it moves.
@@ -494,7 +499,7 @@ test("the revenue summary handles a sweep that never falls or ends early", () =>
     screen.getByRole("radio", { name: /net government revenue change/i }),
   );
   expect(document.body).toHaveTextContent(
-    /we estimate net government revenue falls by \$50B at a 50% shift and by \$90B at a 90% shift\./i,
+    /we estimate net government revenue falls by \$10B at a 10% shift, by \$50B at a 50% shift and by \$90B at a 90% shift\./i,
   );
 });
 
@@ -504,7 +509,7 @@ test("the revenue summary names its low point and where it ends", () => {
     [
       (pct) => -pct,
       80,
-      /we estimate net government revenue falls by \$50B at a 50% shift and by \$80B at an 80% shift\./i,
+      /we estimate net government revenue falls by \$10B at a 10% shift, by \$50B at a 50% shift and by \$80B at an 80% shift\./i,
     ],
     // A rebound after a low point past 50%, as in the UK sweep.
     [
@@ -522,7 +527,7 @@ test("the revenue summary names its low point and where it ends", () => {
     [
       (pct) => (pct <= 50 ? pct / 5 : 60 - pct),
       100,
-      /we estimate net government revenue rises by \$10B at a 50% shift and falls by \$40B at a 100% shift\./i,
+      /we estimate net government revenue rises by \$2\.0B at a 10% shift, by \$10B at a 50% shift and falls by \$40B at a 100% shift\./i,
     ],
   ];
   for (const [revenueAt, lastShift, summary] of summaries) {
@@ -577,4 +582,23 @@ test("the old copy survives on a run without health coverage and TANF", () => {
   for (const caveat of healthCaveats) {
     expect(document.body).not.toHaveTextContent(caveat);
   }
+});
+
+test("the site's revenue summary names the 10% shift and leaves out corporate tax", () => {
+  const at = (pct) =>
+    sweepData.scenarios.find((scenario) => scenario.shift_pct === pct)
+      .revenue_change_b;
+  const billions = (value) =>
+    `$${Math.abs(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}B`;
+  renderSweep(sweepData);
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+  // The site's run counts health coverage and falls at every step.
+  expect(document.body).toHaveTextContent(
+    `We estimate net government revenue falls by ${billions(at(10))} at a 10% shift, by ${billions(at(50))} at a 50% shift and by ${billions(at(100))} at a 100% shift.`,
+  );
+  expect(document.body).toHaveTextContent(
+    "PolicyEngine-US has no corporate income tax, so these estimates leave out any change in corporate tax revenue.",
+  );
 });

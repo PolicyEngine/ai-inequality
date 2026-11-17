@@ -425,6 +425,13 @@ const ROUTING = new Set([
 // the page, and the sweep renders App's views directly.
 const ALLOWED_IMPORTS = [{ path: "src/ClientAppRouter.jsx", source: "./App" }];
 
+// The async functions site code may export: Next.js runs these only at export
+// time, to write a page's head tags, so they render nothing a visitor sees.
+// src/utils/routeMetadata.test.js checks the tags.
+const EXPORT_TIME_ASYNC = [
+  { path: "app/[[...slug]]/page.jsx", name: "generateMetadata" },
+];
+
 // Parses a module with JSX, or returns null when espree can't.
 function parseModule(source) {
   try {
@@ -492,6 +499,28 @@ function unsweptBehavior(path, source) {
   const found = [];
   const note = (node, what) =>
     found.push(`${path}:${node.loc.start.line}: ${what}`);
+  // The spans of the export-time functions this file declares.
+  const exportTime = [];
+  walk(ast, (node) => {
+    const declared =
+      node.type === "ExportNamedDeclaration" ? node.declaration : null;
+    if (
+      declared?.type === "FunctionDeclaration" &&
+      EXPORT_TIME_ASYNC.some(
+        (entry) => entry.path === path && entry.name === declared.id?.name,
+      )
+    ) {
+      exportTime.push(declared.loc);
+    }
+  });
+  const notAfter = (a, b) =>
+    a.line < b.line || (a.line === b.line && a.column <= b.column);
+  const atExportTime = (node) =>
+    exportTime.some(
+      (span) =>
+        notAfter(span.start, node.loc.start) &&
+        notAfter(node.loc.end, span.end),
+    );
   const isKey = (node, parent) =>
     (parent?.type === "Property" &&
       parent.key === node &&
@@ -512,7 +541,10 @@ function unsweptBehavior(path, source) {
         note(node, `routes outside App.jsx (${node.name})`);
       }
     }
-    if (node.type === "AwaitExpression" || node.async === true) {
+    if (
+      (node.type === "AwaitExpression" || node.async === true) &&
+      !atExportTime(node)
+    ) {
       note(node, "defers rendering (async)");
     }
     if (
@@ -640,7 +672,11 @@ function importsOf(path) {
 // the sweep renders nothing under app/. So a new file or a new import fails
 // until someone reads what it shows visitors and lists it here.
 const APP_FILES = {
-  "app/[[...slug]]/page.jsx": ["../../src/ClientAppRouter"],
+  // routeMetadata builds the page's head tags, which show visitors nothing.
+  "app/[[...slug]]/page.jsx": [
+    "../../src/ClientAppRouter",
+    "../../src/utils/routeMetadata",
+  ],
   "app/globals.css": [],
   "app/layout.jsx": [
     "@policyengine/ui-kit/layout",
@@ -1825,6 +1861,18 @@ describe("retired dataset names", () => {
       ),
       flags("const options = { lazy: true, hash: 1 };"),
       flags("const Page = () => <p>We await a lazy promise.</p>;"),
+      // Only the listed file's generateMetadata may be async.
+      flags(
+        "export async function generateMetadata({ params }) { const { slug } = await params; return { slug }; }",
+        "app/[[...slug]]/page.jsx",
+      ),
+      flags(
+        "export async function generateMetadata({ params }) { const { slug } = await params; return { slug }; }",
+      ),
+      flags(
+        "export async function generateViewport() { await wait(); }",
+        "app/[[...slug]]/page.jsx",
+      ),
     ]).toEqual([
       ["defers rendering (setTimeout)"],
       ["defers rendering (lazy)", "defers rendering (import())"],
@@ -1850,6 +1898,9 @@ describe("retired dataset names", () => {
       [],
       [],
       [],
+      [],
+      ["defers rendering (async)", "defers rendering (async)"],
+      ["defers rendering (async)", "defers rendering (async)"],
     ]);
   });
 
