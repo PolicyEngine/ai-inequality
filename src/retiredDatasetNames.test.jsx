@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { memoMarkdown } from "./data/memoContent";
 import { COUNTRIES, countryFromSearchParams } from "./utils/countryConfig";
+import { routeMetadata } from "./utils/routeMetadata";
 
 // Every view module, keyed by its path, so the sweep can render each route
 // App.jsx declares.
@@ -425,12 +426,66 @@ const ROUTING = new Set([
 // the page, and the sweep renders App's views directly.
 const ALLOWED_IMPORTS = [{ path: "src/ClientAppRouter.jsx", source: "./App" }];
 
-// The async functions site code may export: Next.js runs these only at export
-// time, to write a page's head tags, so they render nothing a visitor sees.
-// src/utils/routeMetadata.test.js checks the tags.
+// The async functions site code may export: Next.js runs generateMetadata
+// only at export time, to write a page's head tags (its tab title and link
+// previews), so it renders nothing into the page body. The sweep never sees
+// head tags, so "keeps retired names out of every route's head tags" below
+// checks them, and src/utils/routeMetadata.test.js checks their wording. Each entry
+// gives the file and the export's whole source, whitespace collapsed. The
+// exemption covers that function and its await only when the file declares
+// it exactly so and names it nowhere else; any edit to it, any other async
+// code and any other use of its name stay flagged until someone reads them
+// and updates the entry.
 const EXPORT_TIME_ASYNC = [
-  { path: "app/[[...slug]]/page.jsx", name: "generateMetadata" },
+  {
+    path: "app/[[...slug]]/page.jsx",
+    name: "generateMetadata",
+    source:
+      'export async function generateMetadata({ params }) { const { slug } = await params; return routeMetadata(slug?.[0] ?? ""); }',
+  },
 ];
+
+// The source text a node spans, from its loc.
+function sourceAt(source, loc) {
+  const lines = source.split("\n").slice(loc.start.line - 1, loc.end.line);
+  lines[lines.length - 1] = lines[lines.length - 1].slice(0, loc.end.column);
+  lines[0] = lines[0].slice(loc.start.column);
+  return lines.join("\n");
+}
+
+const collapse = (text) => text.replace(/\s+/g, " ").trim();
+
+// The async nodes a file may hold under EXPORT_TIME_ASYNC: a listed export's
+// function and the awaits inside it, by identity.
+function exportTimeAsyncNodes(path, source, ast) {
+  const exempt = new Set();
+  for (const entry of EXPORT_TIME_ASYNC.filter((e) => e.path === path)) {
+    let declaration = null;
+    let mentions = 0;
+    walk(ast, (node) => {
+      if (
+        (node.type === "Identifier" || node.type === "JSXIdentifier") &&
+        node.name === entry.name
+      ) {
+        mentions += 1;
+      }
+      if (
+        node.type === "ExportNamedDeclaration" &&
+        node.declaration?.type === "FunctionDeclaration" &&
+        node.declaration.id?.name === entry.name &&
+        collapse(sourceAt(source, node.loc)) === entry.source
+      ) {
+        declaration = node.declaration;
+      }
+    });
+    if (!declaration || mentions !== 1) continue;
+    exempt.add(declaration);
+    walk(declaration.body, (node) => {
+      if (node.type === "AwaitExpression") exempt.add(node);
+    });
+  }
+  return exempt;
+}
 
 // Parses a module with JSX, or returns null when espree can't.
 function parseModule(source) {
@@ -499,28 +554,7 @@ function unsweptBehavior(path, source) {
   const found = [];
   const note = (node, what) =>
     found.push(`${path}:${node.loc.start.line}: ${what}`);
-  // The spans of the export-time functions this file declares.
-  const exportTime = [];
-  walk(ast, (node) => {
-    const declared =
-      node.type === "ExportNamedDeclaration" ? node.declaration : null;
-    if (
-      declared?.type === "FunctionDeclaration" &&
-      EXPORT_TIME_ASYNC.some(
-        (entry) => entry.path === path && entry.name === declared.id?.name,
-      )
-    ) {
-      exportTime.push(declared.loc);
-    }
-  });
-  const notAfter = (a, b) =>
-    a.line < b.line || (a.line === b.line && a.column <= b.column);
-  const atExportTime = (node) =>
-    exportTime.some(
-      (span) =>
-        notAfter(span.start, node.loc.start) &&
-        notAfter(node.loc.end, span.end),
-    );
+  const exportTime = exportTimeAsyncNodes(path, source, ast);
   const isKey = (node, parent) =>
     (parent?.type === "Property" &&
       parent.key === node &&
@@ -543,7 +577,7 @@ function unsweptBehavior(path, source) {
     }
     if (
       (node.type === "AwaitExpression" || node.async === true) &&
-      !atExportTime(node)
+      !exportTime.has(node)
     ) {
       note(node, "defers rendering (async)");
     }
@@ -672,7 +706,8 @@ function importsOf(path) {
 // the sweep renders nothing under app/. So a new file or a new import fails
 // until someone reads what it shows visitors and lists it here.
 const APP_FILES = {
-  // routeMetadata builds the page's head tags, which show visitors nothing.
+  // routeMetadata builds the page's head tags, which the head-tag test below
+  // checks.
   "app/[[...slug]]/page.jsx": [
     "../../src/ClientAppRouter",
     "../../src/utils/routeMetadata",
@@ -1824,6 +1859,15 @@ describe("retired dataset names", () => {
       unsweptBehavior(path, source).map((finding) =>
         finding.replace(/^[^:]+:\d+: /, ""),
       );
+    // The catch-all page's generateMetadata, as EXPORT_TIME_ASYNC lists it.
+    const PAGE_METADATA = EXPORT_TIME_ASYNC[0].source;
+    // The live page declares it exactly as listed.
+    expect(
+      unsweptBehavior(
+        "app/[[...slug]]/page.jsx",
+        read("app/[[...slug]]/page.jsx"),
+      ),
+    ).toEqual([]);
     expect([
       flags("setTimeout(() => show(true), 300);"),
       flags('const Section = React.lazy(() => import("./Section"));'),
@@ -1861,16 +1905,32 @@ describe("retired dataset names", () => {
       ),
       flags("const options = { lazy: true, hash: 1 };"),
       flags("const Page = () => <p>We await a lazy promise.</p>;"),
-      // Only the listed file's generateMetadata may be async.
+      // Only the listed file's generateMetadata, exactly as listed and named
+      // nowhere else, may be async.
+      flags(PAGE_METADATA, "app/[[...slug]]/page.jsx"),
+      flags(PAGE_METADATA),
       flags(
-        "export async function generateMetadata({ params }) { const { slug } = await params; return { slug }; }",
+        PAGE_METADATA.replace("return", "await 0; return"),
         "app/[[...slug]]/page.jsx",
       ),
       flags(
-        "export async function generateMetadata({ params }) { const { slug } = await params; return { slug }; }",
+        'export async function generateMetadata({ params } = {}) { if (params) return { title: "Probe" }; await 0; return <p>Probe</p>; }',
+        "app/[[...slug]]/page.jsx",
+      ),
+      flags(
+        `${PAGE_METADATA}\nconst Probe = generateMetadata;\nexport default function Page() { return <Probe />; }`,
+        "app/[[...slug]]/page.jsx",
+      ),
+      flags(
+        `${PAGE_METADATA}\nexport default function Page() { return <generateMetadata />; }`,
+        "app/[[...slug]]/page.jsx",
       ),
       flags(
         "export async function generateViewport() { await wait(); }",
+        "app/[[...slug]]/page.jsx",
+      ),
+      flags(
+        `${PAGE_METADATA}\nexport default async function Page() { await wait(); return null; }`,
         "app/[[...slug]]/page.jsx",
       ),
     ]).toEqual([
@@ -1900,8 +1960,36 @@ describe("retired dataset names", () => {
       [],
       [],
       ["defers rendering (async)", "defers rendering (async)"],
+      [
+        "defers rendering (async)",
+        "defers rendering (async)",
+        "defers rendering (async)",
+      ],
+      ["defers rendering (async)", "defers rendering (async)"],
+      ["defers rendering (async)", "defers rendering (async)"],
+      ["defers rendering (async)", "defers rendering (async)"],
+      ["defers rendering (async)", "defers rendering (async)"],
       ["defers rendering (async)", "defers rendering (async)"],
     ]);
+  });
+
+  it("keeps retired names out of every route's head tags", () => {
+    const tags = ROUTES.map(({ path }) => [
+      path,
+      routeMetadata(path.replace(/^\//, "")),
+    ]);
+    // At least one route builds tags of its own, so the check reads something.
+    expect(tags.some(([, metadata]) => Object.keys(metadata).length)).toBe(
+      true,
+    );
+    expect(
+      tags
+        .filter(([, metadata]) => showsRetiredName(JSON.stringify(metadata)))
+        .map(([path]) => path),
+    ).toEqual([]);
+    expect(showsRetiredName(JSON.stringify({ title: "Built on Populace" }))).toBe(
+      true,
+    );
   });
 
   // The longest sweeps take about 30 seconds alone and several minutes on a

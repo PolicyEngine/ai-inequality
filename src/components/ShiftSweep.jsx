@@ -278,10 +278,10 @@ const CONCEPTS = {
 const REVENUE_DESCRIPTION_US =
   "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. We leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.";
 
-// The revenue callout's last sentence on a run that counts health coverage:
-// the totals it gives leave out the corporate channel.
+// The US revenue callout's last sentence: its totals leave out the corporate
+// channel. A payload with its own revenue_summary_note (the UK's) skips it.
 const CORPORATE_TAX_NOTE_US =
-  "PolicyEngine-US has no corporate income tax, so these estimates leave out any change in corporate tax revenue.";
+  "PolicyEngine-US doesn't model corporate income tax, so these estimates leave out any change in corporate tax revenue.";
 
 const REVENUE_DESCRIPTION_US_HEALTH_TANF_REST =
   "We price each new Medicaid enrollee at the baseline cost of an enrollee in their state with the same ACA benchmark premium. The federal and state charts add up to the total, apart from three groups of taxes. We count workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations only in the total. We put New York City's and Maryland's local income taxes in those states' charts instead.";
@@ -525,10 +525,12 @@ function atShift(shift) {
   return `at ${article} ${shift}% shift`;
 }
 
-// "falls by $195B at a 10% shift, by $969B at a 50% shift and by $2,011B at a
-// 100% shift": each point's change from baseline, in order, without repeating
-// a verb. A point that prints as $0.0B stays at the baseline, or returns to it
-// after a change.
+// "falls by $969B at a 50% shift and by $2,011B at a 100% shift": each point's
+// change from baseline, in order, without repeating a verb. A point that
+// prints as $0.0B stays at the baseline, or returns to it after a change.
+// Three points take commas: "falls by $195B at a 10% shift, by $969B at a 50%
+// shift and by $2,011B at a 100% shift". revenuePath passes three only when
+// all three fall, so a dropped verb never comes before a new one.
 function revenueChanges(points, currencySymbol) {
   let previous = null;
   const clauses = points.map(({ value, shift }) => {
@@ -580,8 +582,7 @@ export function revenuePath(
   );
   // The 50% point, when the sweep has one short of its last shift.
   const midway = rows.find((row) => row.shift === 50 && row !== end) ?? null;
-  // The 10% point, the sweep's first step, named when the path falls to its
-  // end, so the summary gives the smallest shift as well as the largest.
+  // The 10% point, when the sweep has one short of its last shift.
   const opening = rows.find((row) => row.shift === 10 && row !== end) ?? null;
   const changes = (...points) =>
     revenueChanges(points.filter(Boolean), currencySymbol);
@@ -600,7 +601,14 @@ export function revenuePath(
     );
   }
   if (low === end) {
-    return close(`We estimate ${subject} ${changes(opening, midway, end)}.`);
+    // The 10% point joins the list only when every point it names falls, so
+    // one verb carries it.
+    const fallsThroughout = [opening, midway, end]
+      .filter(Boolean)
+      .every((row) => row.value < 0);
+    return close(
+      `We estimate ${subject} ${changes(fallsThroughout ? opening : null, midway, end)}.`,
+    );
   }
   const toLow = low.shift > 50 && midway ? changes(midway, low) : changes(low);
   const atEnd = atShift(end.shift);
@@ -683,6 +691,8 @@ function summaryForMetric(
   }
 
   const currencySymbol = metadata.currency_symbol ?? "$";
+  const corporate =
+    metadata.revenue_summary_note == null ? ` ${CORPORATE_TAX_NOTE_US}` : "";
   if (metadata.revenue_summary_note == null && withHealthTanf) {
     const path = revenuePath(
       chartData,
@@ -690,7 +700,7 @@ function summaryForMetric(
       currencySymbol,
       healthSpendingClause(endPoint, currencySymbol),
     );
-    return `${path} ${CORPORATE_TAX_NOTE_US}`;
+    return `${path}${corporate}`;
   }
   const path = revenuePath(chartData, config.label, currencySymbol);
   const note =
@@ -699,6 +709,7 @@ function summaryForMetric(
   return (
     <>
       {path} {note}
+      {corporate}
     </>
   );
 }

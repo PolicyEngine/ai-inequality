@@ -81,7 +81,7 @@ function PolicyAnalysis() {
                 common factor, so each person gains in proportion to the capital
                 income they already receive.{" "}
                 {countryKey === "us"
-                  ? "Total market income stays the same, and we model no behavioral responses."
+                  ? "Households' total market income stays the same. We don't pass employers' savings on payroll tax to anyone, and we model no behavioral responses."
                   : "We model no behavioural responses."}
               </p>
             </div>

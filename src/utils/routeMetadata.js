@@ -4,12 +4,13 @@
 // ?country=uk, so every tag names the US instead of assuming the reader's
 // country.
 import sweepData from "../data/shiftSweepData.json";
+import { countsHealthTanf } from "./sweepRevenue";
 
 export const SITE_URL = "https://www.policyengine.org/us/ai-inequality";
 
 // scripts/make_og_card.py draws this card from src/data/shiftSweepData.json
-// and stamps the amounts it drew into the PNG, which routeMetadata.test.js
-// checks against the data.
+// and stamps the year and amounts it drew into the PNG, which
+// routeMetadata.test.js checks against the data and the description.
 export const POLICY_ANALYSIS_CARD = {
   path: "/images/og/policy-analysis.png",
   width: 1200,
@@ -24,35 +25,55 @@ function revenueAt(data, shift) {
   return row.revenue_change_b;
 }
 
+// Whole billions, halves away from zero, as scripts/make_og_card.py rounds the
+// card's callout.
+export function wholeBillions(value) {
+  return Math.round(Math.abs(value));
+}
+
 // "$195 billion", "$2,011 billion": whole billions, the sign left to the words.
 function billions(value) {
-  return `$${Math.round(Math.abs(value)).toLocaleString("en-US")} billion`;
+  return `$${wholeBillions(value).toLocaleString("en-US")} billion`;
 }
 
 export function policyAnalysisDescription(data = sweepData) {
   const year = data.metadata?.year ?? data.year;
   const value = revenueAt(data, 10);
   const outcome =
-    Math.round(Math.abs(value)) === 0
+    wholeBillions(value) === 0
       ? "would break even"
       : `would come out ${billions(value)} ${value < 0 ? "behind" : "ahead"}`;
-  return `If AI shifted 10% of US labor income to capital income in ${year}, with total market income unchanged, we estimate federal, state and local governments ${outcome}, leaving aside corporate taxes.`;
+  return `If AI shifted 10% of US labor income to capital income in ${year}, with household market income unchanged, we estimate federal, state and local governments ${outcome}, leaving aside corporate taxes.`;
+}
+
+// The card's scope, as scripts/make_og_card.py words it from the same test.
+function cardScope(data) {
+  return countsHealthTanf(data)
+    ? "counting health coverage and excluding corporate taxes"
+    : "excluding health coverage and corporate taxes";
 }
 
 export function policyAnalysisCardAlt(data = sweepData) {
   const year = data.metadata?.year ?? data.year;
   const amounts = [10, 50, 100].map((shift) => {
     const value = revenueAt(data, shift);
-    return { shift, value, words: value < 0 ? "falls" : "rises" };
+    const verb =
+      wholeBillions(value) === 0 ? "stays" : value < 0 ? "falls" : "rises";
+    return { shift, value, verb };
   });
   const [ten, fifty, hundred] = amounts;
-  const sameVerb = amounts.every((amount) => amount.words === ten.words);
-  const list = sameVerb
-    ? `${ten.words} ${billions(ten.value)} at a 10% shift, ${billions(fifty.value)} at 50% and ${billions(hundred.value)} at 100%`
-    : amounts
-        .map(({ shift, value, words }) => `${words} ${billions(value)} at ${shift}%`)
-        .join(", ");
-  return `Line chart of the change in US federal, state and local net revenue in ${year} by share of labor income shifted to capital income, counting health coverage and excluding corporate taxes. We estimate it ${list}.`;
+  let list;
+  if (ten.verb !== "stays" && amounts.every(({ verb }) => verb === ten.verb)) {
+    list = `${ten.verb} ${billions(ten.value)} at a 10% shift, ${billions(fifty.value)} at 50% and ${billions(hundred.value)} at 100%`;
+  } else {
+    const clauses = amounts.map(({ shift, value, verb }) =>
+      verb === "stays"
+        ? `changes by less than $0.5 billion at ${shift}%`
+        : `${verb} ${billions(value)} at ${shift}%`,
+    );
+    list = `${clauses.slice(0, -1).join(", ")} and ${clauses.at(-1)}`;
+  }
+  return `Line chart of the change in US federal, state and local net revenue in ${year} by share of labor income shifted to capital income, ${cardScope(data)}. We estimate it ${list}.`;
 }
 
 const POLICY_ANALYSIS_TITLE = "What if AI shifts income from labor to capital?";

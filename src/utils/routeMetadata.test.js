@@ -4,12 +4,14 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import sweepData from "../data/shiftSweepData.json";
+import { countsHealthTanf } from "./sweepRevenue";
 import {
   POLICY_ANALYSIS_CARD,
   SITE_URL,
   policyAnalysisCardAlt,
   policyAnalysisDescription,
   routeMetadata,
+  wholeBillions,
 } from "./routeMetadata";
 
 const revenueAt = (data, shift) =>
@@ -65,7 +67,7 @@ describe("routeMetadata", () => {
   it("states the site's 10% amount for the US and the corporate-tax scope", () => {
     const description = policyAnalysisDescription();
     expect(description).toBe(
-      `If AI shifted 10% of US labor income to capital income in ${sweepData.metadata.year}, with total market income unchanged, we estimate federal, state and local governments would come out ${billions(revenueAt(sweepData, 10))} behind, leaving aside corporate taxes.`,
+      `If AI shifted 10% of US labor income to capital income in ${sweepData.metadata.year}, with household market income unchanged, we estimate federal, state and local governments would come out ${billions(revenueAt(sweepData, 10))} behind, leaving aside corporate taxes.`,
     );
     expect(revenueAt(sweepData, 10)).toBeLessThan(0);
   });
@@ -124,5 +126,40 @@ describe("routeMetadata", () => {
     );
     // Rerun scripts/make_og_card.py after a data refresh.
     expect(source.revenue_change_b).toEqual(drawn);
+    expect(source.year).toBe(sweepData.metadata.year);
+    expect(source.counts_health).toBe(countsHealthTanf(sweepData));
+    // The card's callout and the description print the same whole billions.
+    expect(source.callout_billions_at_10).toBe(
+      wholeBillions(revenueAt(sweepData, 10)),
+    );
+    expect(policyAnalysisDescription()).toContain(
+      `$${source.callout_billions_at_10.toLocaleString("en-US")} billion`,
+    );
+  });
+
+  it("words the alt text's scope and mixed or zero amounts from the data", () => {
+    const withoutHealth = {
+      ...sweepData,
+      scenarios: sweepData.scenarios.map((scenario) => {
+        const copy = { ...scenario };
+        delete copy.federal_health_change_b;
+        return copy;
+      }),
+    };
+    expect(policyAnalysisCardAlt(withoutHealth)).toContain(
+      "excluding health coverage and corporate taxes",
+    );
+    expect(policyAnalysisCardAlt(withTenPercent(0.3))).toContain(
+      "We estimate it changes by less than $0.5 billion at 10%, falls ",
+    );
+    expect(policyAnalysisCardAlt(withTenPercent(12))).toMatch(
+      /We estimate it rises \$12 billion at 10%, falls \$[\d,]+ billion at 50% and falls \$[\d,]+ billion at 100%\.$/,
+    );
+  });
+
+  it("rounds halves away from zero, as the card script does", () => {
+    expect([-194.5, 194.5, -0.4, 2010.79].map(wholeBillions)).toEqual([
+      195, 195, 0, 2011,
+    ]);
   });
 });

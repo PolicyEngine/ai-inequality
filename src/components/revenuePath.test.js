@@ -101,6 +101,14 @@ function checkClauses(list, rowAt) {
       ? `${clauses.slice(0, -1).join(", ")} and ${last}`
       : last,
   );
+  // A clause that drops its verb borrows the one before it, so no clause
+  // that brings a verb of its own may follow it: the list stays parallel.
+  let borrowed = false;
+  for (const clause of clauses) {
+    const ownVerb = /^(rises|falls|stays at|returns to) /.test(clause);
+    expect(borrowed && ownVerb, list).toBe(false);
+    borrowed = !ownVerb;
+  }
   for (const clause of clauses) {
     const byAmount = clause.match(AMOUNT_CLAUSE);
     const byBaseline = clause.match(BASELINE_CLAUSE);
@@ -147,7 +155,6 @@ function checkPath(rows) {
   // The last row at the lowest printed amount.
   const lowRow = rows[values.lastIndexOf(low)];
   const midway = rows.find((row) => row.shift === 50 && row !== end);
-  const opening = rows.find((row) => row.shift === 10 && row !== end);
 
   let match;
   if (
@@ -206,8 +213,15 @@ function checkPath(rows) {
     expect(match, context).toBeTruthy();
     expect(low, context).toBeLessThan(0);
     expect(endShown, context).toBe(low);
+    // The path names the 50% row and the end, in shift order, and the 10%
+    // row before them when every row it would name prints as a fall.
+    const named = [
+      ...rows.filter((row) => [10, 50].includes(row.shift) && row !== end),
+      end,
+    ];
+    const fallsThroughout = named.every((row) => shown(row.revenue) < 0);
     expect(checkClauses(match[1], rowAt), context).toEqual(
-      [opening, midway, end].filter(Boolean),
+      fallsThroughout ? named : named.filter((row) => row.shift !== 10),
     );
   }
   return text;
@@ -372,7 +386,7 @@ test("the revenue path words the edge cases from what it prints", () => {
       ],
       "We estimate net government revenue falls by $195B at a 10% shift, by $969B at a 50% shift and by $2,011B at a 100% shift.",
     ],
-    // A rise at 10% before a fall to the end keeps one verb per run.
+    // A rise at 10% keeps 10% out of a list that falls.
     [
       [
         { shift: 0, revenue: 0 },
@@ -380,7 +394,27 @@ test("the revenue path words the edge cases from what it prints", () => {
         { shift: 50, revenue: -5 },
         { shift: 100, revenue: -9 },
       ],
-      "We estimate net government revenue rises by $2.0B at a 10% shift, falls by $5.0B at a 50% shift and by $9.0B at a 100% shift.",
+      "We estimate net government revenue falls by $5.0B at a 50% shift and by $9.0B at a 100% shift.",
+    ],
+    // So does a 10% amount that prints as zero, or a rise at 50%: no list
+    // drops a verb before a new one.
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 10, revenue: 0.01 },
+        { shift: 50, revenue: 0.02 },
+        { shift: 100, revenue: -9 },
+      ],
+      "We estimate net government revenue stays at its baseline at a 50% shift and falls by $9.0B at a 100% shift.",
+    ],
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 10, revenue: 2 },
+        { shift: 50, revenue: 5 },
+        { shift: 100, revenue: -9 },
+      ],
+      "We estimate net government revenue rises by $5.0B at a 50% shift and falls by $9.0B at a 100% shift.",
     ],
     // A low point past 50% leaves 10% out, so ", its low point" closes a
     // list of two.
