@@ -52,8 +52,8 @@ def test_the_sweep_table_prints_the_papers_definition():
 
 
 def test_main_writes_the_table_sweep_table_builds(tmp_path, monkeypatch):
-    # main() reads the replication workbook through openpyxl, which CI doesn't
-    # install, so this runs only where openpyxl is installed.
+    # main() reads the replication workbook through openpyxl. CI installs it;
+    # the skip covers local runs without it.
     pytest.importorskip("openpyxl")
     from analysis import emit_paper_values as emit
 

@@ -560,11 +560,21 @@ test("the old copy survives on a run without health coverage and TANF", () => {
     /we leave medicaid, chip and tanf out of these figures, apart from massachusetts's tafdc\./i,
   );
   expect(document.body).not.toHaveTextContent(/the health band includes/i);
+  // The caveats that come with health coverage and TANF stay out too.
+  const healthCaveats = [
+    /congress sets each state's tanf block grant/i,
+    /immigration status/i,
+    /unborn children/i,
+    /medicaid with chip funds/i,
+  ];
+  for (const caveat of healthCaveats) {
+    expect(document.body).not.toHaveTextContent(caveat);
+  }
 
   fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
     target: { value: "CA" },
   });
-  expect(document.body).not.toHaveTextContent(
-    /congress sets each state's tanf block grant/i,
-  );
+  for (const caveat of healthCaveats) {
+    expect(document.body).not.toHaveTextContent(caveat);
+  }
 });
