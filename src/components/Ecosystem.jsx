@@ -1,4 +1,5 @@
 import React from "react";
+import { cite } from "../data/references";
 
 function Ecosystem({ countryKey = "us" }) {
   const isUK = countryKey === "uk";
@@ -18,9 +19,9 @@ function Ecosystem({ countryKey = "us" }) {
           url: "https://digitaleconomy.stanford.edu/",
         },
         {
-          name: "MIT Future Tech Lab",
-          desc: "Job displacement modeling by skill category. Iceberg Index.",
-          url: "https://futuretech.mit.edu/",
+          name: "MIT Media Lab Camera Culture (Project Iceberg)",
+          desc: "Led by Ayush Chopra. Iceberg Index of skills-based AI exposure, built on Large Population Models that simulate 151 million US workers.",
+          url: cite("Chopraetal2025").url,
         },
         {
           name: "Seth Benzell (Chapman)",
