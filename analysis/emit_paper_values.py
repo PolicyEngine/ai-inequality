@@ -106,6 +106,44 @@ def sfmt(x, nd=0):
     return f"{x:+.{nd}f}"
 
 
+def sweep_net_revenue(row):
+    """A mechanism-sweep row's change in net government revenue, as the paper defines it.
+
+    The paper's methodology section counts taxes less refundable credits and
+    benefit outlays, with no health spending. Sweeps that count health coverage
+    and TANF keep that measure in ``total_rev_change_published_definition_b``;
+    older sweeps hold it in ``total_rev_change_b``.
+    """
+    return row.get(
+        "total_rev_change_published_definition_b", row["total_rev_change_b"]
+    )
+
+
+def sweep_table(sw):
+    """The appendix's ``\\tabSweep``: the mechanism sweep every 10 points.
+
+    ``sw`` maps each shift to its sweep row. The revenue column reads
+    ``sweep_net_revenue``, so the table keeps the paper's definition of net
+    revenue.
+    """
+    T = [
+        r"\newcommand{\tabSweep}{%",
+        r"\begin{tabular}{rrrrr}",
+        r"\toprule",
+        r"Shift & Revenue & Income tax & Poverty & Net Gini \\",
+        r"\midrule",
+    ]
+    for pct in range(0, 101, 10):
+        r = sw[pct]
+        T.append(
+            f"{pct}\\% & {sweep_net_revenue(r):+.0f} & "
+            f"{r['income_tax_change_b']:+.0f} & "
+            f"{100 * r['spm_poverty_rate']:.1f}\\% & {r['net_gini']:.3f} \\\\"
+        )
+    T += [r"\bottomrule", r"\end{tabular}}"]
+    return T
+
+
 def main():
     with open(os.path.join(OUT, "ai_scenarios.json")) as fh:
         sc = json.load(fh)
@@ -405,10 +443,10 @@ def main():
     V["SweepFullGini"] = fmt(sw[100]["net_gini"], 3)
     V["SweepBasePovPct"] = fmt(100 * sw[0]["spm_poverty_rate"], 1)
     V["SweepFullPovPct"] = fmt(100 * sw[100]["spm_poverty_rate"], 1)
-    trough = min(sweep["scenarios"], key=lambda r: r["total_rev_change_b"])
-    V["SweepTroughRev"] = sfmt(trough["total_rev_change_b"])
+    trough = min(sweep["scenarios"], key=sweep_net_revenue)
+    V["SweepTroughRev"] = sfmt(sweep_net_revenue(trough))
     V["SweepTroughShift"] = str(trough["shift_pct"])
-    V["SweepFullRev"] = sfmt(sw[100]["total_rev_change_b"])
+    V["SweepFullRev"] = sfmt(sweep_net_revenue(sw[100]))
     ten = sw[10]
     V["SweepTenIIT"] = sfmt(ten["income_tax_change_b"])
     V["SweepTenPayroll"] = sfmt(
@@ -691,20 +729,7 @@ def main():
     T.append(r"\end{tabular}}")
 
     # Sweep table (every 10 points).
-    T.append(r"\newcommand{\tabSweep}{%")
-    T.append(r"\begin{tabular}{rrrrr}")
-    T.append(r"\toprule")
-    T.append(r"Shift & Revenue & Income tax & Poverty & Net Gini \\")
-    T.append(r"\midrule")
-    for pct in range(0, 101, 10):
-        r = sw[pct]
-        T.append(
-            f"{pct}\\% & {r['total_rev_change_b']:+.0f} & "
-            f"{r['income_tax_change_b']:+.0f} & "
-            f"{100 * r['spm_poverty_rate']:.1f}\\% & {r['net_gini']:.3f} \\\\"
-        )
-    T.append(r"\bottomrule")
-    T.append(r"\end{tabular}}")
+    T.extend(sweep_table(sw))
 
     with open(os.path.join(PAPER, "tables_generated.tex"), "w") as fh:
         fh.write("\n".join(T) + "\n")

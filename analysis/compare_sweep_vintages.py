@@ -26,6 +26,14 @@ REFRESHED = (
 
 
 def revenue(row):
+    """Net revenue as the site defined it before it counted health coverage and TANF.
+
+    Sweeps that count them keep that measure in
+    ``total_rev_change_published_definition_b``, so a sweep from either side of
+    that change compares with one from the other.
+    """
+    if "total_rev_change_published_definition_b" in row:
+        return row["total_rev_change_published_definition_b"]
     return row.get("total_rev_change_b", row.get("revenue_change_b", 0.0))
 
 

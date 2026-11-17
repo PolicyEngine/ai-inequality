@@ -122,8 +122,57 @@ def legend_location(values):
     return "lower left" if -min(values) > max(values) else "upper left"
 
 
-def series_from_sweep(path=SWEEP_PATH):
+#: California's note for the measure with health spending and TANF, from a run
+#: on a model without the Covered California premium subsidy, which
+#: policyengine-us models from 2.x but not at 1.764.6.
+CALIFORNIA_HEALTH_TANF_NOTE_NO_SUBSIDY = (
+    "We net out refundable credits like CalEITC, benefits like the SSI supplement, CalWORKs, "
+    "and California's Medi-Cal spending."
+)
+CALIFORNIA_PREMIUM_SUBSIDY = "assigned_ca_premium_subsidy"
+
+
+def california_note(measure, state_health_programs=None):
+    """What California's line nets, naming the premium subsidy only where the run counts it.
+
+    ``state_health_programs`` lists the state health programs a run counts,
+    where its record says (a sweep's ``metadata.health_tanf_programs.state``).
+    """
+    if (
+        measure == "with_health_tanf"
+        and state_health_programs is not None
+        and CALIFORNIA_PREMIUM_SUBSIDY not in state_health_programs
+    ):
+        return CALIFORNIA_HEALTH_TANF_NOTE_NO_SUBSIDY
+    return MEASURES[measure]["california_note"]
+
+
+def sweep_measure(data):
+    """The state measure a sweep payload's ``state_net_change_b`` holds."""
+    for row in data["scenarios"]:
+        for state_row in (row.get("state_deltas") or {}).values():
+            return "with_health_tanf" if "state_health_change_b" in state_row else "study"
+    return "study"
+
+
+def series_from_sweep(path=SWEEP_PATH, measure=None):
+    """California and the other states from the site's sweep payload.
+
+    A sweep that counts health spending and TANF holds both measures: its
+    ``state_net_change_b`` counts them and
+    ``state_net_excluding_health_tanf_change_b`` doesn't. An older sweep holds
+    only the study measure. ``measure`` defaults to what
+    ``state_net_change_b`` holds.
+    """
     data = json.load(open(path))
+    headline = sweep_measure(data)
+    measure = measure or headline
+    if measure == headline:
+        key = "state_net_change_b"
+    elif measure == "study":
+        key = "state_net_excluding_health_tanf_change_b"
+    else:
+        raise ValueError("this sweep payload doesn't count health spending and TANF")
     xs, ca, other = [], [], []
     for row in data["scenarios"]:
         states = row.get("state_deltas") or {}
@@ -132,8 +181,8 @@ def series_from_sweep(path=SWEEP_PATH):
             ca.append(0.0)
             other.append(0.0)
             continue
-        ca_net = states["CA"]["state_net_change_b"]
-        total = sum(v["state_net_change_b"] for v in states.values())
+        ca_net = states["CA"][key]
+        total = sum(v[key] for v in states.values())
         ca.append(ca_net)
         other.append(total - ca_net)
     meta = data["metadata"]
@@ -236,22 +285,32 @@ def main():
         "--measure",
         choices=sorted(MEASURES),
         default=None,
-        help="state measure to chart: a run defaults to with_health_tanf; the sweep has only study",
+        help=(
+            "state measure to chart: a run defaults to with_health_tanf; the sweep defaults to "
+            "the measure its state_net_change_b holds"
+        ),
     )
     args = parser.parse_args()
+    state_programs = None
     if args.source == "sweep":
-        measure = args.measure or "study"
-        if measure != "study":
-            parser.error("the sweep payload holds only the study measure")
-        series = series_from_sweep()
+        with open(SWEEP_PATH) as f:
+            data = json.load(f)
+        measure = args.measure or sweep_measure(data)
+        state_programs = (data["metadata"].get("health_tanf_programs") or {}).get("state")
+        try:
+            series = series_from_sweep(measure=measure)
+        except ValueError as exc:
+            parser.error(str(exc))
     else:
         measure = args.measure or "with_health_tanf"
         series = series_from_run(args.run, measure)
+        with open(args.run) as f:
+            state_programs = (json.load(f)["metadata"].get("health_tanf_programs") or {}).get("state")
     xs, ca, ca_sdi, other, note = series
     measure_note = None
     if args.california_only:
         other = None
-        measure_note = MEASURES[measure]["california_note"]
+        measure_note = california_note(measure, state_programs)
     print(draw(xs, ca, ca_sdi, other, args.out, note, measure_note,
                subtitle=subtitle_for(measure, args.california_only)))
 

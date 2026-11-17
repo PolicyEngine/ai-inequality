@@ -4,9 +4,10 @@ Prints, for each shift level:
 
 * California's net change, with and without its employee SDI contribution;
 * the same once health spending and TANF count: California's share of
-  Medi-Cal, CHIP and Medicare Savings Program costs, the state-only coverage it
-  pays for in full, its premium subsidy and CalWORKs, with the other states and
-  federal lines on the same basis (runs without these fields skip the lines);
+  Medi-Cal, CHIP and Medicare Savings Program costs, the federal share it pays
+  for coverage it funds alone, its premium subsidy and CalWORKs, with the
+  other states and federal lines on the same basis (runs without these fields
+  skip the lines);
 * all other states combined, every state, and federal net revenue;
 * the federal split into income tax, federal payroll taxes, refundable credits
   and benefits, and the state payroll and local taxes that the all-government
@@ -57,9 +58,11 @@ EMPLOYER_STATE_LOCAL_KEYS = (
 )
 
 
-#: The limit on the TANF lines, printed with any run that reports them.
+#: The limit on the TANF lines of runs whose shift set only the built labor
+#: variables, printed with any such run that reports them. Runs that also set
+#: the stored inputs say so in ``metadata.sets_stored_labor_inputs``.
 BEFORE_LSR_NOTE = (
-    "Note: the shift sets employment_income and self_employment_income on each branch, so "
+    "Note: this run's shift sets employment_income and self_employment_income on each branch, so "
     "programs that read their *_before_lsr inputs see pre-shift earnings. The default TANF "
     "earned-income list and Massachusetts's, Montana's and South Carolina's lists read them, "
     "so those states' TANF responds to the added capital income and not to the wage cut, and "
@@ -134,20 +137,35 @@ def federal_split(components):
     }
 
 
+def _study_state_net(state_row):
+    """A state's net change without health spending or TANF, from either sweep format."""
+    return state_row.get("state_net_excluding_health_tanf_change_b", state_row["state_net_change_b"])
+
+
 def published_by_level(path=SWEEP_PATH):
+    """The published sweep's lines by level, on a ``california_shift`` run's study measure.
+
+    The run's study fields leave out health spending and TANF, and its federal
+    line starts from the total as the site defined it before it counted them.
+    A sweep that counts them keeps those measures in
+    ``state_net_excluding_health_tanf_change_b`` and
+    ``total_rev_change_published_definition_b``; an older sweep's
+    ``state_net_change_b`` and ``total_rev_change_b`` are those measures.
+    """
     data = json.load(open(path))
     out = {}
     for row in data["scenarios"]:
         states = row.get("state_deltas") or {}
         if not states:
             continue
-        ca = states["CA"]["state_net_change_b"]
-        all_states = sum(v["state_net_change_b"] for v in states.values())
+        ca = _study_state_net(states["CA"])
+        all_states = sum(_study_state_net(v) for v in states.values())
+        total = row.get("total_rev_change_published_definition_b", row["total_rev_change_b"])
         out[row["shift_pct"]] = {
             "california": ca,
             "other_states": all_states - ca,
-            "federal": row["total_rev_change_b"] - all_states,
-            "total": row["total_rev_change_b"],
+            "federal": total - all_states,
+            "total": total,
         }
     return out, data["metadata"]
 
@@ -252,7 +270,8 @@ def summarize(run, published=None):
                 f"({_pct(federal_published, p['federal']):+.1f}%)"
             )
     lines.extend(_within_state_lines(run))
-    if any("state_net_with_health_tanf_change_b" in r["california"] for r in run["levels"]):
+    reports_tanf = any("state_net_with_health_tanf_change_b" in r["california"] for r in run["levels"])
+    if reports_tanf and not run.get("metadata", {}).get("sets_stored_labor_inputs"):
         lines.extend(["", BEFORE_LSR_NOTE])
     return "\n".join(lines)
 
@@ -269,7 +288,8 @@ def _health_tanf_lines(row):
         f"  California with health and TANF {ca['state_net_with_health_tanf_change_b']:+.2f}B; with SDI "
         f"{ca['state_net_with_health_tanf_including_sdi_change_b']:+.2f}B. Spending changes: state health "
         f"{ca['state_health_change_b']:+.2f}B (matched shares {ca['state_health_split_change_b']:+.2f}B, "
-        f"state-only coverage {ca['state_only_coverage_change_b']:+.2f}B, premium subsidy "
+        f"state-only coverage {ca['state_only_coverage_change_b']:+.2f}B, less the state share no "
+        f"government pays {ca.get('unfunded_state_coverage_change_b', 0.0):+.2f}B, premium subsidy "
         f"{ca['state_health_programs_change_b']:+.2f}B), CalWORKs {ca['tanf_change_b']:+.2f}B",
         f"  With health and TANF: other states {row['other_states_net_with_health_tanf_change_b']:+.2f}B "
         f"({row['states_losing_with_health_tanf_count']} losing); federal "
@@ -278,7 +298,8 @@ def _health_tanf_lines(row):
         f"{row['health_federal_change_b']:+.1f}B, states {row['health_state_change_b']:+.2f}B; TANF "
         f"{tanf:+.2f}B leaves the federal line: {tanf - twice:+.2f}B to the states and {twice:+.2f}B "
         f"(TANF household_state_benefits already counts) out of the all-government total; "
-        f"Healthier Oregon cost for Medicaid enrollees dropped {oregon:+.3f}B",
+        f"Healthier Oregon cost we leave out (Medicaid or CHIP enrollees, and people who don't "
+        f"take Medicaid up) {oregon:+.3f}B",
     ]
 
 

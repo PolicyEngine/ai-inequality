@@ -21,6 +21,7 @@ except ImportError:  # pragma: no cover - hypothesis is a test-only extra
 
 from analysis import compute_state_exposure as exposure
 from analysis.compute_ai_scenarios import _state_delta_rows as scenario_rows
+from analysis.fiscal import HEALTH_TANF_KEYS
 
 
 def _import_sweep_rows():
@@ -68,6 +69,9 @@ def _levels(code, scale):
         "eitc": 0.0,
         "snap": 0.0,
         "household_weight": 1e6,
+        # The sweep's rows also net each state's health spending and TANF.
+        "tanf": 0.0,
+        **dict.fromkeys(HEALTH_TANF_KEYS, 0.0),
     }
 
 
