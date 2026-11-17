@@ -72,11 +72,17 @@ describe("routeMetadata", () => {
     expect(revenueAt(sweepData, 10)).toBeLessThan(0);
   });
 
-  it("words a gain and a near-zero change from the amount", () => {
+  it("words a gain, a near-zero change and no change from the amount", () => {
     expect(policyAnalysisDescription(withTenPercent(12.4))).toContain(
       "would come out $12 billion ahead",
     );
     expect(policyAnalysisDescription(withTenPercent(-0.3))).toContain(
+      "governments would come out less than $0.5 billion behind,",
+    );
+    expect(policyAnalysisDescription(withTenPercent(0.3))).toContain(
+      "governments would come out less than $0.5 billion ahead,",
+    );
+    expect(policyAnalysisDescription(withTenPercent(0))).toContain(
       "governments would break even,",
     );
   });

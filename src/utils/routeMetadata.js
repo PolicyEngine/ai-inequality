@@ -39,10 +39,14 @@ function billions(value) {
 export function policyAnalysisDescription(data = sweepData) {
   const year = data.metadata?.year ?? data.year;
   const value = revenueAt(data, 10);
+  // Only an exact zero breaks even; a change that rounds to $0 billion is
+  // still a loss or a gain.
+  const amount =
+    wholeBillions(value) === 0 ? "less than $0.5 billion" : billions(value);
   const outcome =
-    wholeBillions(value) === 0
+    value === 0
       ? "would break even"
-      : `would come out ${billions(value)} ${value < 0 ? "behind" : "ahead"}`;
+      : `would come out ${amount} ${value < 0 ? "behind" : "ahead"}`;
   return `If AI shifted 10% of US labor income to capital income in ${year}, with household market income unchanged, we estimate federal, state and local governments ${outcome}, leaving aside corporate taxes.`;
 }
 
