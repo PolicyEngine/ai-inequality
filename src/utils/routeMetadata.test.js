@@ -1,8 +1,12 @@
+// @vitest-environment node
+// Next.js writes head tags in Node, where there is no window, so these tests
+// run there too.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import * as catchAllPage from "../../app/[[...slug]]/page.jsx";
 import sweepData from "../data/shiftSweepData.json";
 import { countsHealthTanf } from "./sweepRevenue";
 import {
@@ -160,6 +164,61 @@ describe("routeMetadata", () => {
     );
     expect(policyAnalysisCardAlt(withTenPercent(12))).toMatch(
       /We estimate it rises \$12 billion at 10%, falls \$[\d,]+ billion at 50% and falls \$[\d,]+ billion at 100%\.$/,
+    );
+  });
+
+  it("writes exactly these head tags, in Node, for every route the catch-all page exports", async () => {
+    // Built here from the data, not from routeMetadata.js, so an extra tag
+    // or any other wording fails.
+    const year = sweepData.metadata.year;
+    const [ten, fifty, hundred] = [10, 50, 100].map((shift) =>
+      revenueAt(sweepData, shift),
+    );
+    expect([ten, fifty, hundred].every((value) => value <= -0.5)).toBe(true);
+    expect(
+      sweepData.scenarios.every((scenario) =>
+        Number.isFinite(scenario.federal_health_change_b),
+      ),
+    ).toBe(true);
+    const title = "What if AI shifts income from labor to capital?";
+    const description = `If AI shifted 10% of US labor income to capital income in ${year}, with household market income unchanged, we estimate federal, state and local governments would come out ${billions(ten)} behind, leaving aside corporate taxes.`;
+    const image = {
+      url: "https://www.policyengine.org/us/ai-inequality/images/og/policy-analysis.png",
+      width: 1200,
+      height: 630,
+      alt: `Line chart of the change in US federal, state and local net revenue in ${year} by share of labor income shifted to capital income, counting health coverage and excluding corporate taxes. We estimate it falls ${billions(ten)} at a 10% shift, ${billions(fifty)} at 50% and ${billions(hundred)} at 100%.`,
+    };
+    const expected = {
+      "policy-analysis": {
+        title: `${title} | PolicyEngine`,
+        description,
+        openGraph: {
+          type: "website",
+          siteName: "PolicyEngine",
+          title,
+          description,
+          images: [image],
+        },
+        twitter: {
+          card: "summary_large_image",
+          title,
+          description,
+          images: [image],
+        },
+      },
+    };
+    expect(typeof window).toBe("undefined");
+    const params = catchAllPage.generateStaticParams();
+    expect(params.length).toBeGreaterThan(1);
+    for (const routeParams of params) {
+      const route = routeParams.slug.join("/");
+      const metadata = await catchAllPage.generateMetadata({
+        params: Promise.resolve(routeParams),
+      });
+      expect(metadata, route || "/").toStrictEqual(expected[route] ?? {});
+    }
+    expect(params.map(({ slug }) => slug.join("/"))).toContain(
+      "policy-analysis",
     );
   });
 

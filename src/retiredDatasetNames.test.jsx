@@ -422,6 +422,10 @@ const ROUTING = new Set([
   "RouterProvider",
 ]);
 
+// Code built from a string at run time, which no scan here can read. A direct
+// eval can also reassign a module's own bindings without naming them.
+const CODE_FROM_STRINGS = new Set(["eval", "Function"]);
+
 // The deferred load site code may make: Next.js loads the router app after
 // the page, and the sweep renders App's views directly.
 const ALLOWED_IMPORTS = [{ path: "src/ClientAppRouter.jsx", source: "./App" }];
@@ -431,19 +435,45 @@ const ALLOWED_IMPORTS = [{ path: "src/ClientAppRouter.jsx", source: "./App" }];
 // previews), so it renders nothing into the page body. The sweep never sees
 // head tags, so "keeps retired names out of every route's head tags" below
 // runs this export for every route the page exports, and
-// src/utils/routeMetadata.test.js checks their wording. Each entry gives the
-// file, the export and the imports its body calls, as source. The exemption
-// covers that function and its await only when the file holds the export and
-// each import with the same syntax trees and names them nowhere else, so
-// nothing else in the file can stand in for what the export calls. Any edit
-// to them, any other async code and any other use of their names stay
-// flagged until someone reads them and updates the entry.
+// src/utils/routeMetadata.test.js runs it in Node, as Next.js does, and
+// checks every tag it writes. Each entry gives a file's whole source and the
+// export to exempt. The exemption covers that function and its await only
+// when the file's syntax tree, positions aside, equals the listed source's.
+// The file then holds nothing but the listed code, so nothing in it can
+// rebind, wrap or stand in for the export or what the export calls. Any edit
+// to the file stays flagged until someone reads it and updates the entry;
+// comments and spacing aren't code and may change.
 const EXPORT_TIME_ASYNC = [
   {
     path: "app/[[...slug]]/page.jsx",
-    source:
-      'export async function generateMetadata({ params }) { const { slug } = await params; return routeMetadata(slug?.[0] ?? ""); }',
-    imports: ['import { routeMetadata } from "../../src/utils/routeMetadata";'],
+    name: "generateMetadata",
+    file: `import ClientAppRouter from "../../src/ClientAppRouter";
+import { routeMetadata } from "../../src/utils/routeMetadata";
+
+const routes = [
+  "",
+  "research",
+  "policy-analysis",
+  "income-shift",
+  "references",
+  "budget-lab",
+];
+
+export function generateStaticParams() {
+  return routes.map((route) => ({
+    slug: route ? [route] : [],
+  }));
+}
+
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  return routeMetadata(slug?.[0] ?? "");
+}
+
+export default function Page() {
+  return <ClientAppRouter />;
+}
+`,
   },
 ];
 
@@ -459,55 +489,26 @@ const shape = (node) =>
         : value,
   );
 
-// How many times each name appears as an identifier in a tree.
-function nameCounts(tree, names) {
-  const counts = new Map(names.map((name) => [name, 0]));
-  walk(tree, (node) => {
-    if (
-      (node.type === "Identifier" || node.type === "JSXIdentifier") &&
-      counts.has(node.name)
-    ) {
-      counts.set(node.name, counts.get(node.name) + 1);
-    }
-  });
-  return counts;
-}
-
 // The async nodes a file may hold under EXPORT_TIME_ASYNC: a listed export's
 // function and the awaits inside it, by identity.
 function exportTimeAsyncNodes(path, ast) {
   const exempt = new Set();
   for (const entry of EXPORT_TIME_ASYNC.filter((e) => e.path === path)) {
-    const listed = [entry.source, ...entry.imports].map(
-      (text) => parseModule(text)?.body ?? [],
-    );
-    if (listed.some((body) => body.length !== 1)) continue;
-    const [declaration, ...imports] = listed.map(([statement]) => statement);
-    const fn = declaration.declaration;
-    if (fn?.type !== "FunctionDeclaration") continue;
-    // The file's top-level statements with each listed statement's tree.
-    const copies = (statement) =>
-      ast.body.filter((node) => shape(node) === shape(statement));
-    const [found, ...more] = copies(declaration);
-    if (!found || more.length) continue;
-    if (imports.some((statement) => copies(statement).length !== 1)) continue;
-    // The names the listed code binds, counted in it and in the file.
-    const names = [
-      fn.id.name,
-      ...imports.flatMap((statement) =>
-        statement.specifiers.map((specifier) => specifier.local.name),
-      ),
-    ];
-    const expected = nameCounts(
-      { type: "Program", body: [declaration, ...imports] },
-      names,
-    );
-    const actual = nameCounts(ast, names);
-    if (names.some((name) => actual.get(name) !== expected.get(name))) continue;
-    exempt.add(found.declaration);
-    walk(found.declaration.body, (node) => {
-      if (node.type === "AwaitExpression") exempt.add(node);
-    });
+    const listed = parseModule(entry.file);
+    if (!listed || shape(listed.body) !== shape(ast.body)) continue;
+    for (const statement of ast.body) {
+      const fn =
+        statement.type === "ExportNamedDeclaration"
+          ? statement.declaration
+          : null;
+      if (fn?.type !== "FunctionDeclaration" || fn.id.name !== entry.name) {
+        continue;
+      }
+      exempt.add(fn);
+      walk(fn.body, (node) => {
+        if (node.type === "AwaitExpression") exempt.add(node);
+      });
+    }
   }
   return exempt;
 }
@@ -598,6 +599,9 @@ function unsweptBehavior(path, source) {
       }
       if (ROUTING.has(node.name) && path !== APP) {
         note(node, `routes outside App.jsx (${node.name})`);
+      }
+      if (CODE_FROM_STRINGS.has(node.name)) {
+        note(node, `runs code from a string (${node.name})`);
       }
     }
     if (
@@ -1921,6 +1925,9 @@ describe("retired dataset names", () => {
       ),
       flags("const options = { lazy: true, hash: 1 };"),
       flags("const Page = () => <p>We await a lazy promise.</p>;"),
+      flags("eval(code);"),
+      flags("const run = new Function(code);"),
+      flags("const options = { eval: 1 };"),
     ]).toEqual([
       ["defers rendering (setTimeout)"],
       ["defers rendering (lazy)", "defers rendering (import())"],
@@ -1946,77 +1953,92 @@ describe("retired dataset names", () => {
       [],
       [],
       [],
+      ["runs code from a string (eval)"],
+      ["runs code from a string (Function)"],
+      [],
     ]);
   });
 
-  it("lets only the listed generateMetadata be async, with its listed import and nothing standing in for either", () => {
+  it("lets only the listed page's generateMetadata be async, and only while the page is exactly as listed", () => {
     const PAGE = "app/[[...slug]]/page.jsx";
     const flags = (source, path = PAGE) =>
       unsweptBehavior(path, source).map((finding) =>
         finding.replace(/^[^:]+:\d+: /, ""),
       );
     const deferred = (count) => Array(count).fill("defers rendering (async)");
-    const [
-      {
-        source: METADATA,
-        imports: [IMPORT],
-      },
-    ] = EXPORT_TIME_ASYNC;
-    const LISTED = `${IMPORT}\n${METADATA}`;
-    // Round 2's probe, which passed the earlier, text-matching exemption: an
-    // altered export after a line break that espree counts and a split on
+    const [{ file: LISTED }] = EXPORT_TIME_ASYNC;
+    const METADATA =
+      'export async function generateMetadata({ params }) {\n  const { slug } = await params;\n  return routeMetadata(slug?.[0] ?? "");\n}';
+    const ONE_LINE =
+      'export async function generateMetadata({ params }) { const { slug } = await params; return routeMetadata(slug?.[0] ?? ""); }';
+    const IMPORT = 'import { routeMetadata } from "../../src/utils/routeMetadata";';
+    expect(LISTED).toContain(METADATA);
+    expect(LISTED).toContain(IMPORT);
+    // The listed page with its export replaced.
+    const withExport = (code) => LISTED.replace(METADATA, code);
+    // Round 3's probe, which passed the earlier exemption: an eval appended to
+    // the page reassigns the export during the build only, without naming it.
+    const BUILD_ONLY_EVAL =
+      'if (typeof window === "undefined")\n  eval(\'generateMetadata = async () => ({ title: ["Built on Pop", "ulace"].join("") })\');';
+    // Round 2's probe, which passed the text-matching exemption before that:
+    // an altered export after a line break that espree counts and a split on
     // "\n" doesn't, padded to the listed export's length, with the listed
-    // export at the start of the next "\n" line, inside a string. The
-    // altered export builds a retired name the raw scan can't read.
+    // export at the start of the next "\n" line, inside a string. Both
+    // altered exports build a retired name the raw scan can't read.
     const ALTERED =
       'export async function generateMetadata({ params }) { await 0; return { title: ["Built on Pop", "ulace"].join("") };';
     const behindBreak = (lineBreak) =>
-      `${IMPORT}\n${lineBreak}${ALTERED.padEnd(METADATA.length - 1)}} const copy = \`\n${METADATA}\`;`;
-    // The live page holds both as listed.
+      withExport(
+        `${lineBreak}${ALTERED.padEnd(ONE_LINE.length - 1)}} const copy = \`\n${ONE_LINE}\`;`,
+      );
+    // The live page is the listed page.
     expect(flags(read(PAGE))).toEqual([]);
     expect([
       flags(LISTED),
-      // Line breaks between statements don't matter.
-      flags(
-        `${IMPORT}\r\n${METADATA.replace("{ const", "{   const").replace("; return", ";   return")}`,
-      ),
+      // Spacing and line breaks aren't code.
+      flags(withExport(ONE_LINE).replaceAll("\n\n", "\r\n\u2028\u2029\n")),
       flags(LISTED, "src/components/Example.jsx"),
-      flags(METADATA),
-      flags(LISTED.replace("return", "await 0; return")),
-      // A line break after return returns nothing.
-      flags(`${IMPORT}\n${METADATA.replace("return ", "return\n")}`),
-      flags(behindBreak(" ")),
-      flags(behindBreak(" ")),
+      flags(`${LISTED}\n${BUILD_ONLY_EVAL}`),
+      flags(behindBreak("\u2028")),
+      flags(behindBreak("\u2029")),
       flags(behindBreak("\r")),
+      flags(withExport(ONE_LINE.replace("return", "await 0; return"))),
+      // A line break after return returns nothing.
+      flags(withExport(METADATA.replace("return ", "return\n"))),
+      flags(`${LISTED}\nconst Probe = generateMetadata;`),
+      flags(LISTED.replace('"../../src/utils/routeMetadata"', '"./elsewhere"')),
       flags(
-        `${IMPORT}\nexport async function generateMetadata({ params } = {}) { if (params) return { title: "Probe" }; await 0; return <p>Probe</p>; }`,
+        LISTED.replace(
+          IMPORT,
+          'import "../../src/utils/routeMetadata";\nconst routeMetadata = () => ({ title: ["Built on Pop", "ulace"].join("") });',
+        ),
+      ),
+      flags(LISTED.replace('"budget-lab",', '"budget-lab",\n  "extra",')),
+      flags(
+        `${LISTED}\nexport async function generateViewport() { await wait(); }`,
       ),
       flags(
-        `${LISTED}\nconst Probe = generateMetadata;\nexport default function Page() { return <Probe />; }`,
-      ),
-      flags(
-        `${LISTED}\nexport default function Page() { return <generateMetadata />; }`,
-      ),
-      // Something else named routeMetadata, or the import used elsewhere.
-      flags(
-        `import "../../src/utils/routeMetadata";\nconst routeMetadata = () => ({ title: ["Built on Pop", "ulace"].join("") });\n${METADATA}`,
-      ),
-      flags(`import { routeMetadata } from "./elsewhere";\n${METADATA}`),
-      flags(
-        `import { routeMetadata as listed } from "../../src/utils/routeMetadata";\nconst routeMetadata = listed;\n${METADATA}`,
-      ),
-      flags(`${LISTED}\nexport { routeMetadata as generateViewport };`),
-      flags("export async function generateViewport() { await wait(); }"),
-      flags(
-        `${LISTED}\nexport default async function Page() { await wait(); return null; }`,
+        LISTED.replace(
+          "export default function Page()",
+          "export default async function Page()",
+        ),
       ),
     ]).toEqual([
       [],
       [],
       deferred(2),
+      [...deferred(2), "runs code from a string (eval)"],
+      deferred(2),
+      deferred(2),
       deferred(2),
       deferred(3),
-      ...Array(13).fill(deferred(2)),
+      deferred(2),
+      deferred(2),
+      deferred(2),
+      deferred(2),
+      deferred(2),
+      deferred(4),
+      deferred(3),
     ]);
   });
 
