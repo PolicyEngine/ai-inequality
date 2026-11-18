@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { PolicyEngineShell } from "@policyengine/ui-kit/layout";
@@ -172,6 +172,17 @@ function appRoutes() {
   }));
 }
 const ROUTES = appRoutes();
+
+// The pages and page payloads next build exported, or null before a build.
+// CI builds before it tests. Locally, an old out/ holds what an earlier build
+// wrote, so rebuild (bun run build) to check current code.
+const OUT = "out";
+const BUILT_PAGES = existsSync(join(ROOT, OUT))
+  ? pathsUnder(OUT).filter(
+      (path) =>
+        /\.(?:html|txt)$/.test(path) && !path.startsWith(`${OUT}/_next/`),
+    )
+  : null;
 
 // Each route in each country, written as a visitor reaches it.
 const DEFAULT_COUNTRY = countryFromSearchParams(new URLSearchParams());
@@ -434,15 +445,15 @@ const ALLOWED_IMPORTS = [{ path: "src/ClientAppRouter.jsx", source: "./App" }];
 // only at export time, to write a page's head tags (its tab title and link
 // previews), so it renders nothing into the page body. The sweep never sees
 // head tags, so "keeps retired names out of every route's head tags" below
-// runs this export for every route the page exports, and
-// src/utils/routeMetadata.test.js runs it in Node, as Next.js does, and
-// checks every tag it writes. Each entry gives a file's whole source and the
-// export to exempt. The exemption covers that function and its await only
-// when the file's syntax tree, positions aside, equals the listed source's.
-// The file then holds nothing but the listed code, so nothing in it can
-// rebind, wrap or stand in for the export or what the export calls. Any edit
-// to the file stays flagged until someone reads it and updates the entry;
-// comments and spacing aren't code and may change.
+// runs this export for every route the page exports, "keeps retired names
+// out of every page the export writes" reads what the build wrote, and
+// src/utils/routeMetadata.test.js checks every tag in Node. Each entry gives
+// a file's whole text and the export to exempt. The exemption covers that
+// function and its await only while the file's text, line endings aside, is
+// exactly the listed text, so the file holds nothing but the listed code.
+// Comments count too: a JSX pragma comment changes what the compiler
+// imports. Any edit to the file stays flagged until someone reads it and
+// updates the entry.
 const EXPORT_TIME_ASYNC = [
   {
     path: "app/[[...slug]]/page.jsx",
@@ -465,6 +476,8 @@ export function generateStaticParams() {
   }));
 }
 
+// Link-preview tags, built at export time. Reading searchParams here would
+// stop the static export, so the tags can't follow ?country=.
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   return routeMetadata(slug?.[0] ?? "");
@@ -477,25 +490,16 @@ export default function Page() {
   },
 ];
 
-// A syntax tree without its positions, so code that differs only in spacing
-// or line breaks compares equal and any other code doesn't.
-const POSITIONS = new Set(["loc", "range", "start", "end"]);
-const shape = (node) =>
-  JSON.stringify(node, (key, value) =>
-    POSITIONS.has(key)
-      ? undefined
-      : typeof value === "bigint"
-        ? `${value}n`
-        : value,
-  );
+// Text with its line endings made "\n", as git may check a file out with
+// "\r\n".
+const lf = (text) => text.replace(/\r\n?/g, "\n");
 
 // The async nodes a file may hold under EXPORT_TIME_ASYNC: a listed export's
 // function and the awaits inside it, by identity.
-function exportTimeAsyncNodes(path, ast) {
+function exportTimeAsyncNodes(path, source, ast) {
   const exempt = new Set();
   for (const entry of EXPORT_TIME_ASYNC.filter((e) => e.path === path)) {
-    const listed = parseModule(entry.file);
-    if (!listed || shape(listed.body) !== shape(ast.body)) continue;
+    if (lf(source) !== entry.file) continue;
     for (const statement of ast.body) {
       const fn =
         statement.type === "ExportNamedDeclaration"
@@ -511,6 +515,29 @@ function exportTimeAsyncNodes(path, ast) {
     }
   }
   return exempt;
+}
+
+// True when a value is plain data: arrays and objects with the usual
+// prototypes, whose properties are all their own, enumerable values. Next.js
+// reads a metadata object's inherited keys too, which JSON.stringify and
+// toStrictEqual skip, so the head-tag tests check this first.
+function isPlainData(value) {
+  if (typeof value === "function" || typeof value === "symbol") return false;
+  if (value === null || typeof value !== "object") return true;
+  const array = Array.isArray(value);
+  if (Object.getPrototypeOf(value) !== (array ? Array.prototype : Object.prototype)) {
+    return false;
+  }
+  return Reflect.ownKeys(value).every((key) => {
+    if (array && key === "length") return true;
+    const property = Object.getOwnPropertyDescriptor(value, key);
+    return (
+      typeof key === "string" &&
+      property.enumerable &&
+      "value" in property &&
+      isPlainData(property.value)
+    );
+  });
 }
 
 // Parses a module with JSX, or returns null when espree can't.
@@ -580,7 +607,7 @@ function unsweptBehavior(path, source) {
   const found = [];
   const note = (node, what) =>
     found.push(`${path}:${node.loc.start.line}: ${what}`);
-  const exportTime = exportTimeAsyncNodes(path, ast);
+  const exportTime = exportTimeAsyncNodes(path, source, ast);
   const isKey = (node, parent) =>
     (parent?.type === "Property" &&
       parent.key === node &&
@@ -1995,9 +2022,14 @@ describe("retired dataset names", () => {
     expect(flags(read(PAGE))).toEqual([]);
     expect([
       flags(LISTED),
-      // Spacing and line breaks aren't code.
-      flags(withExport(ONE_LINE).replaceAll("\n\n", "\r\n\u2028\u2029\n")),
+      // Git may check the page out with "\r\n".
+      flags(LISTED.replaceAll("\n", "\r\n")),
       flags(LISTED, "src/components/Example.jsx"),
+      // A JSX pragma, which would change the module the build compiles JSX
+      // against, though the code is unchanged.
+      flags(`/** @jsxImportSource ../../src/elsewhere */\n${LISTED}`),
+      // Same code, other spacing.
+      flags(withExport(ONE_LINE)),
       flags(`${LISTED}\n${BUILD_ONLY_EVAL}`),
       flags(behindBreak("\u2028")),
       flags(behindBreak("\u2029")),
@@ -2027,6 +2059,8 @@ describe("retired dataset names", () => {
       [],
       [],
       deferred(2),
+      deferred(2),
+      deferred(2),
       [...deferred(2), "runs code from a string (eval)"],
       deferred(2),
       deferred(2),
@@ -2040,6 +2074,27 @@ describe("retired dataset names", () => {
       deferred(4),
       deferred(3),
     ]);
+  });
+
+  it("knows plain data from objects that hide keys", () => {
+    const hidden = Object.assign(Object.create({ abstract: "x" }), { title: "t" });
+    const getter = Object.defineProperty({}, "title", {
+      enumerable: true,
+      get: () => "t",
+    });
+    const unlisted = Object.defineProperty({}, "title", { value: "t" });
+    expect(
+      [
+        { title: "t", images: [{ url: "u", width: 1 }] },
+        {},
+        hidden,
+        { openGraph: hidden },
+        getter,
+        unlisted,
+        { [Symbol("s")]: 1 },
+        { make: () => 1 },
+      ].map(isPlainData),
+    ).toEqual([true, true, false, false, false, false, false, false]);
   });
 
   it("keeps retired names out of every route's head tags", async () => {
@@ -2057,6 +2112,10 @@ describe("retired dataset names", () => {
     expect(tags.some(([, metadata]) => Object.keys(metadata).length)).toBe(
       true,
     );
+    // So JSON.stringify sees every key Next.js reads.
+    expect(
+      tags.filter(([, metadata]) => !isPlainData(metadata)).map(([path]) => path),
+    ).toEqual([]);
     expect(
       tags
         .filter(([, metadata]) => showsRetiredName(JSON.stringify(metadata)))
@@ -2066,6 +2125,34 @@ describe("retired dataset names", () => {
       true,
     );
   });
+
+  // The pages and page payloads next build writes, read as the build wrote
+  // them. This sees what the tests above can't: code that runs differently in
+  // the build than under Vitest, such as a branch on NODE_ENV or another
+  // environment variable, and anything Next.js adds to the head tags. What
+  // only the browser renders comes from the bundle, which the sweep reads.
+  it.skipIf(!BUILT_PAGES && !process.env.CI)(
+    "keeps retired names out of every page the export writes",
+    () => {
+      expect(BUILT_PAGES, "build the export (bun run build) first").not.toBeNull();
+      // Every route's page is there, and the build is one with link previews.
+      expect(
+        ROUTES.map(
+          ({ path }) => `${OUT}/${path.replace(/^\//, "") || "index"}.html`,
+        ).filter((path) => !BUILT_PAGES.includes(path)),
+      ).toEqual([]);
+      expect(read(`${OUT}/policy-analysis.html`)).toContain('property="og:image"');
+      expect(
+        BUILT_PAGES.filter((path) => {
+          const text = read(path);
+          return (
+            showsRetiredName(text) ||
+            (MARKUP.test(path) && showsRetiredName(markupText(text)))
+          );
+        }),
+      ).toEqual([]);
+    },
+  );
 
   // The longest sweeps take about 30 seconds alone and several minutes on a
   // loaded machine.

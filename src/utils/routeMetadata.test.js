@@ -1,6 +1,9 @@
 // @vitest-environment node
-// Next.js writes head tags in Node, where there is no window, so these tests
-// run there too.
+// Next.js runs generateMetadata in Node at export time, where there is no
+// window, so these tests run there too. A branch on NODE_ENV or another
+// environment variable still differs between this run and the build; the
+// guard's "keeps retired names out of every page the export writes" reads
+// what the build wrote.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -35,6 +38,29 @@ function withTenPercent(value) {
         : scenario,
     ),
   };
+}
+
+// True when a value is plain data: arrays and objects with the usual
+// prototypes, whose properties are all their own, enumerable values. Next.js
+// reads a metadata object's inherited keys too, which toStrictEqual skips.
+// src/retiredDatasetNames.test.jsx holds the same check and its self-test.
+function isPlainData(value) {
+  if (typeof value === "function" || typeof value === "symbol") return false;
+  if (value === null || typeof value !== "object") return true;
+  const array = Array.isArray(value);
+  if (Object.getPrototypeOf(value) !== (array ? Array.prototype : Object.prototype)) {
+    return false;
+  }
+  return Reflect.ownKeys(value).every((key) => {
+    if (array && key === "length") return true;
+    const property = Object.getOwnPropertyDescriptor(value, key);
+    return (
+      typeof key === "string" &&
+      property.enumerable &&
+      "value" in property &&
+      isPlainData(property.value)
+    );
+  });
 }
 
 // The PNG's text chunks, keyword to text.
@@ -215,6 +241,7 @@ describe("routeMetadata", () => {
       const metadata = await catchAllPage.generateMetadata({
         params: Promise.resolve(routeParams),
       });
+      expect(isPlainData(metadata), route || "/").toBe(true);
       expect(metadata, route || "/").toStrictEqual(expected[route] ?? {});
     }
     expect(params.map(({ slug }) => slug.join("/"))).toContain(
