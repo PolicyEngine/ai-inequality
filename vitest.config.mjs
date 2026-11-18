@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react({ include: /\.(js|jsx|ts|tsx)$/ })],
   esbuild: {
     loader: "jsx",
-    include: /src\/.*\.[jt]sx?$/,
+    include: /(?:src|app)\/.*\.[jt]sx?$/,
   },
   test: {
     environment: "jsdom",

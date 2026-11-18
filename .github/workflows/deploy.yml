@@ -54,6 +54,11 @@ jobs:
       - name: Run linter
         run: bun run lint -- --max-warnings=0
 
+      # The retired-names guard reads the pages the export writes, so build
+      # them before the tests.
+      - name: Build the static export
+        run: bun run build
+
       - name: Run tests
         run: bun run test:run
 

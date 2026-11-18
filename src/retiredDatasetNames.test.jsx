@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { PolicyEngineShell } from "@policyengine/ui-kit/layout";
@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { memoMarkdown } from "./data/memoContent";
 import { COUNTRIES, countryFromSearchParams } from "./utils/countryConfig";
+import * as catchAllPage from "../app/[[...slug]]/page.jsx";
 
 // Every view module, keyed by its path, so the sweep can render each route
 // App.jsx declares.
@@ -171,6 +172,17 @@ function appRoutes() {
   }));
 }
 const ROUTES = appRoutes();
+
+// The pages and page payloads next build exported, or null before a build.
+// CI builds before it tests. Locally, an old out/ holds what an earlier build
+// wrote, so rebuild (bun run build) to check current code.
+const OUT = "out";
+const BUILT_PAGES = existsSync(join(ROOT, OUT))
+  ? pathsUnder(OUT).filter(
+      (path) =>
+        /\.(?:html|txt)$/.test(path) && !path.startsWith(`${OUT}/_next/`),
+    )
+  : null;
 
 // Each route in each country, written as a visitor reaches it.
 const DEFAULT_COUNTRY = countryFromSearchParams(new URLSearchParams());
@@ -421,9 +433,112 @@ const ROUTING = new Set([
   "RouterProvider",
 ]);
 
+// Code built from a string at run time, which no scan here can read. A direct
+// eval can also reassign a module's own bindings without naming them.
+const CODE_FROM_STRINGS = new Set(["eval", "Function"]);
+
 // The deferred load site code may make: Next.js loads the router app after
 // the page, and the sweep renders App's views directly.
 const ALLOWED_IMPORTS = [{ path: "src/ClientAppRouter.jsx", source: "./App" }];
+
+// The async functions site code may export: Next.js runs generateMetadata
+// only at export time, to write a page's head tags (its tab title and link
+// previews), so it renders nothing into the page body. The sweep never sees
+// head tags, so "keeps retired names out of every route's head tags" below
+// runs this export for every route the page exports, "keeps retired names
+// out of every page the export writes" reads what the build wrote, and
+// src/utils/routeMetadata.test.js checks every tag in Node. Each entry gives
+// a file's whole text and the export to exempt. The exemption covers that
+// function and its await only while the file's text, line endings aside, is
+// exactly the listed text, so the file holds nothing but the listed code.
+// Comments count too: a JSX pragma comment changes what the compiler
+// imports. Any edit to the file stays flagged until someone reads it and
+// updates the entry.
+const EXPORT_TIME_ASYNC = [
+  {
+    path: "app/[[...slug]]/page.jsx",
+    name: "generateMetadata",
+    file: `import ClientAppRouter from "../../src/ClientAppRouter";
+import { routeMetadata } from "../../src/utils/routeMetadata";
+
+const routes = [
+  "",
+  "research",
+  "policy-analysis",
+  "income-shift",
+  "references",
+  "budget-lab",
+];
+
+export function generateStaticParams() {
+  return routes.map((route) => ({
+    slug: route ? [route] : [],
+  }));
+}
+
+// Link-preview tags, built at export time. Reading searchParams here would
+// stop the static export, so the tags can't follow ?country=.
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  return routeMetadata(slug?.[0] ?? "");
+}
+
+export default function Page() {
+  return <ClientAppRouter />;
+}
+`,
+  },
+];
+
+// Text with its line endings made "\n", as git may check a file out with
+// "\r\n".
+const lf = (text) => text.replace(/\r\n?/g, "\n");
+
+// The async nodes a file may hold under EXPORT_TIME_ASYNC: a listed export's
+// function and the awaits inside it, by identity.
+function exportTimeAsyncNodes(path, source, ast) {
+  const exempt = new Set();
+  for (const entry of EXPORT_TIME_ASYNC.filter((e) => e.path === path)) {
+    if (lf(source) !== entry.file) continue;
+    for (const statement of ast.body) {
+      const fn =
+        statement.type === "ExportNamedDeclaration"
+          ? statement.declaration
+          : null;
+      if (fn?.type !== "FunctionDeclaration" || fn.id.name !== entry.name) {
+        continue;
+      }
+      exempt.add(fn);
+      walk(fn.body, (node) => {
+        if (node.type === "AwaitExpression") exempt.add(node);
+      });
+    }
+  }
+  return exempt;
+}
+
+// True when a value is plain data: arrays and objects with the usual
+// prototypes, whose properties are all their own, enumerable values. Next.js
+// reads a metadata object's inherited keys too, which JSON.stringify and
+// toStrictEqual skip, so the head-tag tests check this first.
+function isPlainData(value) {
+  if (typeof value === "function" || typeof value === "symbol") return false;
+  if (value === null || typeof value !== "object") return true;
+  const array = Array.isArray(value);
+  if (Object.getPrototypeOf(value) !== (array ? Array.prototype : Object.prototype)) {
+    return false;
+  }
+  return Reflect.ownKeys(value).every((key) => {
+    if (array && key === "length") return true;
+    const property = Object.getOwnPropertyDescriptor(value, key);
+    return (
+      typeof key === "string" &&
+      property.enumerable &&
+      "value" in property &&
+      isPlainData(property.value)
+    );
+  });
+}
 
 // Parses a module with JSX, or returns null when espree can't.
 function parseModule(source) {
@@ -492,6 +607,7 @@ function unsweptBehavior(path, source) {
   const found = [];
   const note = (node, what) =>
     found.push(`${path}:${node.loc.start.line}: ${what}`);
+  const exportTime = exportTimeAsyncNodes(path, source, ast);
   const isKey = (node, parent) =>
     (parent?.type === "Property" &&
       parent.key === node &&
@@ -511,8 +627,14 @@ function unsweptBehavior(path, source) {
       if (ROUTING.has(node.name) && path !== APP) {
         note(node, `routes outside App.jsx (${node.name})`);
       }
+      if (CODE_FROM_STRINGS.has(node.name)) {
+        note(node, `runs code from a string (${node.name})`);
+      }
     }
-    if (node.type === "AwaitExpression" || node.async === true) {
+    if (
+      (node.type === "AwaitExpression" || node.async === true) &&
+      !exportTime.has(node)
+    ) {
       note(node, "defers rendering (async)");
     }
     if (
@@ -640,7 +762,12 @@ function importsOf(path) {
 // the sweep renders nothing under app/. So a new file or a new import fails
 // until someone reads what it shows visitors and lists it here.
 const APP_FILES = {
-  "app/[[...slug]]/page.jsx": ["../../src/ClientAppRouter"],
+  // routeMetadata builds the page's head tags, which the head-tag test below
+  // checks.
+  "app/[[...slug]]/page.jsx": [
+    "../../src/ClientAppRouter",
+    "../../src/utils/routeMetadata",
+  ],
   "app/globals.css": [],
   "app/layout.jsx": [
     "@policyengine/ui-kit/layout",
@@ -1825,6 +1952,9 @@ describe("retired dataset names", () => {
       ),
       flags("const options = { lazy: true, hash: 1 };"),
       flags("const Page = () => <p>We await a lazy promise.</p>;"),
+      flags("eval(code);"),
+      flags("const run = new Function(code);"),
+      flags("const options = { eval: 1 };"),
     ]).toEqual([
       ["defers rendering (setTimeout)"],
       ["defers rendering (lazy)", "defers rendering (import())"],
@@ -1850,8 +1980,179 @@ describe("retired dataset names", () => {
       [],
       [],
       [],
+      ["runs code from a string (eval)"],
+      ["runs code from a string (Function)"],
+      [],
     ]);
   });
+
+  it("lets only the listed page's generateMetadata be async, and only while the page is exactly as listed", () => {
+    const PAGE = "app/[[...slug]]/page.jsx";
+    const flags = (source, path = PAGE) =>
+      unsweptBehavior(path, source).map((finding) =>
+        finding.replace(/^[^:]+:\d+: /, ""),
+      );
+    const deferred = (count) => Array(count).fill("defers rendering (async)");
+    const [{ file: LISTED }] = EXPORT_TIME_ASYNC;
+    const METADATA =
+      'export async function generateMetadata({ params }) {\n  const { slug } = await params;\n  return routeMetadata(slug?.[0] ?? "");\n}';
+    const ONE_LINE =
+      'export async function generateMetadata({ params }) { const { slug } = await params; return routeMetadata(slug?.[0] ?? ""); }';
+    const IMPORT = 'import { routeMetadata } from "../../src/utils/routeMetadata";';
+    expect(LISTED).toContain(METADATA);
+    expect(LISTED).toContain(IMPORT);
+    // The listed page with its export replaced.
+    const withExport = (code) => LISTED.replace(METADATA, code);
+    // Round 3's probe, which passed the earlier exemption: an eval appended to
+    // the page reassigns the export during the build only, without naming it.
+    const BUILD_ONLY_EVAL =
+      'if (typeof window === "undefined")\n  eval(\'generateMetadata = async () => ({ title: ["Built on Pop", "ulace"].join("") })\');';
+    // Round 2's probe, which passed the text-matching exemption before that:
+    // an altered export after a line break that espree counts and a split on
+    // "\n" doesn't, padded to the listed export's length, with the listed
+    // export at the start of the next "\n" line, inside a string. Both
+    // altered exports build a retired name the raw scan can't read.
+    const ALTERED =
+      'export async function generateMetadata({ params }) { await 0; return { title: ["Built on Pop", "ulace"].join("") };';
+    const behindBreak = (lineBreak) =>
+      withExport(
+        `${lineBreak}${ALTERED.padEnd(ONE_LINE.length - 1)}} const copy = \`\n${ONE_LINE}\`;`,
+      );
+    // The live page is the listed page.
+    expect(flags(read(PAGE))).toEqual([]);
+    expect([
+      flags(LISTED),
+      // Git may check the page out with "\r\n".
+      flags(LISTED.replaceAll("\n", "\r\n")),
+      flags(LISTED, "src/components/Example.jsx"),
+      // A JSX pragma, which would change the module the build compiles JSX
+      // against, though the code is unchanged.
+      flags(`/** @jsxImportSource ../../src/elsewhere */\n${LISTED}`),
+      // Same code, other spacing.
+      flags(withExport(ONE_LINE)),
+      flags(`${LISTED}\n${BUILD_ONLY_EVAL}`),
+      flags(behindBreak("\u2028")),
+      flags(behindBreak("\u2029")),
+      flags(behindBreak("\r")),
+      flags(withExport(ONE_LINE.replace("return", "await 0; return"))),
+      // A line break after return returns nothing.
+      flags(withExport(METADATA.replace("return ", "return\n"))),
+      flags(`${LISTED}\nconst Probe = generateMetadata;`),
+      flags(LISTED.replace('"../../src/utils/routeMetadata"', '"./elsewhere"')),
+      flags(
+        LISTED.replace(
+          IMPORT,
+          'import "../../src/utils/routeMetadata";\nconst routeMetadata = () => ({ title: ["Built on Pop", "ulace"].join("") });',
+        ),
+      ),
+      flags(LISTED.replace('"budget-lab",', '"budget-lab",\n  "extra",')),
+      flags(
+        `${LISTED}\nexport async function generateViewport() { await wait(); }`,
+      ),
+      flags(
+        LISTED.replace(
+          "export default function Page()",
+          "export default async function Page()",
+        ),
+      ),
+    ]).toEqual([
+      [],
+      [],
+      deferred(2),
+      deferred(2),
+      deferred(2),
+      [...deferred(2), "runs code from a string (eval)"],
+      deferred(2),
+      deferred(2),
+      deferred(2),
+      deferred(3),
+      deferred(2),
+      deferred(2),
+      deferred(2),
+      deferred(2),
+      deferred(2),
+      deferred(4),
+      deferred(3),
+    ]);
+  });
+
+  it("knows plain data from objects that hide keys", () => {
+    const hidden = Object.assign(Object.create({ abstract: "x" }), { title: "t" });
+    const getter = Object.defineProperty({}, "title", {
+      enumerable: true,
+      get: () => "t",
+    });
+    const unlisted = Object.defineProperty({}, "title", { value: "t" });
+    expect(
+      [
+        { title: "t", images: [{ url: "u", width: 1 }] },
+        {},
+        hidden,
+        { openGraph: hidden },
+        getter,
+        unlisted,
+        { [Symbol("s")]: 1 },
+        { make: () => 1 },
+      ].map(isPlainData),
+    ).toEqual([true, true, false, false, false, false, false, false]);
+  });
+
+  it("keeps retired names out of every route's head tags", async () => {
+    // The page's own export, for every route the page exports.
+    const tags = await Promise.all(
+      catchAllPage.generateStaticParams().map(async (params) => [
+        `/${params.slug.join("/")}`,
+        await catchAllPage.generateMetadata({ params: Promise.resolve(params) }),
+      ]),
+    );
+    expect(tags.map(([path]) => path).sort()).toEqual(
+      ROUTES.map(({ path }) => path).sort(),
+    );
+    // At least one route builds tags of its own, so the check reads something.
+    expect(tags.some(([, metadata]) => Object.keys(metadata).length)).toBe(
+      true,
+    );
+    // So JSON.stringify sees every key Next.js reads.
+    expect(
+      tags.filter(([, metadata]) => !isPlainData(metadata)).map(([path]) => path),
+    ).toEqual([]);
+    expect(
+      tags
+        .filter(([, metadata]) => showsRetiredName(JSON.stringify(metadata)))
+        .map(([path]) => path),
+    ).toEqual([]);
+    expect(showsRetiredName(JSON.stringify({ title: "Built on Populace" }))).toBe(
+      true,
+    );
+  });
+
+  // The pages and page payloads next build writes, read as the build wrote
+  // them. This sees what the tests above can't: code that runs differently in
+  // the build than under Vitest, such as a branch on NODE_ENV or another
+  // environment variable, and anything Next.js adds to the head tags. What
+  // only the browser renders comes from the bundle, which the sweep reads.
+  it.skipIf(!BUILT_PAGES && !process.env.CI)(
+    "keeps retired names out of every page the export writes",
+    () => {
+      expect(BUILT_PAGES, "build the export (bun run build) first").not.toBeNull();
+      // Every route's page is there, and the build is one with link previews.
+      expect(
+        ROUTES.map(
+          ({ path }) => `${OUT}/${path.replace(/^\//, "") || "index"}.html`,
+        ).filter((path) => !BUILT_PAGES.includes(path)),
+      ).toEqual([]);
+      expect(read(`${OUT}/policy-analysis.html`)).toContain('property="og:image"');
+      expect(
+        BUILT_PAGES.filter((path) => {
+          const text = read(path);
+          return (
+            showsRetiredName(text) ||
+            (MARKUP.test(path) && showsRetiredName(markupText(text)))
+          );
+        }),
+      ).toEqual([]);
+    },
+  );
 
   // The longest sweeps take about 30 seconds alone and several minutes on a
   // loaded machine.
