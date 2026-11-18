@@ -25,3 +25,24 @@ test("renders the UK overview with UK-specific evidence", () => {
   );
   expect(screen.queryByText(/MIT Iceberg Index/i)).not.toBeInTheDocument();
 });
+
+test.each(["us", "uk"])(
+  "links the %s users and citations pages, with no Iceberg tile or past event",
+  (country) => {
+    renderHome(`/?country=${country}`);
+
+    expect(
+      screen.getByRole("link", { name: /government teams, research groups/i }),
+    ).toHaveAttribute("href", `https://www.policyengine.org/${country}/users`);
+    expect(
+      screen.getByRole("link", {
+        name: /legislators and academic researchers/i,
+      }),
+    ).toHaveAttribute(
+      "href",
+      `https://www.policyengine.org/${country}/citations`,
+    );
+    expect(screen.queryByText(/workers simulated/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/EA Global/i)).not.toBeInTheDocument();
+  },
+);
