@@ -54,6 +54,11 @@ jobs:
       - name: Run linter
         run: bun run lint -- --max-warnings=0
 
+      # The retired-names guard reads the pages the export writes, so build
+      # them before the tests.
+      - name: Build the static export
+        run: bun run build
+
       - name: Run tests
         run: bun run test:run
 
@@ -86,6 +91,17 @@ jobs:
         run: bun run build
         env:
           NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+
+      # lint-and-test checked the pages built for policyengine.org's base path.
+      # This build uses another, so check the pages it wrote before they go up.
+      - name: Check the built pages for retired names
+        run: |
+          bun run test:run src/retiredDatasetNames.test.jsx \
+            -t "keeps retired names out of every page the export writes" \
+            --reporter=default --reporter=json \
+            --outputFile.json="$RUNNER_TEMP/export-check.json"
+          # A filter that matches no test passes, so make sure the check ran.
+          jq -e '.numPassedTests == 1' "$RUNNER_TEMP/export-check.json"
 
       - name: Setup Pages
         uses: actions/configure-pages@v6

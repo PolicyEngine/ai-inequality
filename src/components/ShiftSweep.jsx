@@ -278,6 +278,11 @@ const CONCEPTS = {
 const REVENUE_DESCRIPTION_US =
   "Net government revenue change = taxes (household tax before refundable credits + employer payroll) minus transfers (refundable credits + benefits), across federal, state and local governments. We leave out health coverage such as Medicaid, CHIP and ACA premium tax credits.";
 
+// The US revenue callout's last sentence: its totals leave out the corporate
+// channel. A payload with its own revenue_summary_note (the UK's) skips it.
+const CORPORATE_TAX_NOTE_US =
+  "PolicyEngine-US doesn't model corporate income tax, so these estimates leave out any change in corporate tax revenue.";
+
 const REVENUE_DESCRIPTION_US_HEALTH_TANF_REST =
   "We price each new Medicaid enrollee at the baseline cost of an enrollee in their state with the same ACA benchmark premium. The federal and state charts add up to the total, apart from three groups of taxes. We count workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations only in the total. We put New York City's and Maryland's local income taxes in those states' charts instead.";
 
@@ -520,33 +525,37 @@ function atShift(shift) {
   return `at ${article} ${shift}% shift`;
 }
 
-// "falls by $970B at a 50% shift and by $2,011B at a 100% shift": each point's
+// "falls by $969B at a 50% shift and by $2,011B at a 100% shift": each point's
 // change from baseline, in order, without repeating a verb. A point that
 // prints as $0.0B stays at the baseline, or returns to it after a change.
+// Three points take commas: "falls by $195B at a 10% shift, by $969B at a 50%
+// shift and by $2,011B at a 100% shift". revenuePath passes three only when
+// all three fall, so a dropped verb never comes before a new one.
 function revenueChanges(points, currencySymbol) {
   let previous = null;
-  return points
-    .map(({ value, shift }) => {
-      const shown = proseValue(value);
-      if (shown === 0) {
-        const lead =
-          previous === "stays"
-            ? ""
-            : `${previous === null ? "stays at" : "returns to"} its baseline `;
-        previous = "stays";
-        return `${lead}${atShift(shift)}`;
-      }
-      const verb = shown > 0 ? "rises" : "falls";
-      const lead = verb === previous ? "" : `${verb} `;
-      previous = verb;
-      return `${lead}by ${proseBillions(value, currencySymbol)} ${atShift(shift)}`;
-    })
-    .join(" and ");
+  const clauses = points.map(({ value, shift }) => {
+    const shown = proseValue(value);
+    if (shown === 0) {
+      const lead =
+        previous === "stays"
+          ? ""
+          : `${previous === null ? "stays at" : "returns to"} its baseline `;
+      previous = "stays";
+      return `${lead}${atShift(shift)}`;
+    }
+    const verb = shown > 0 ? "rises" : "falls";
+    const lead = verb === previous ? "" : `${verb} `;
+    previous = verb;
+    return `${lead}by ${proseBillions(value, currencySymbol)} ${atShift(shift)}`;
+  });
+  const last = clauses.pop();
+  return clauses.length ? `${clauses.join(", ")} and ${last}` : last;
 }
 
 // The revenue callout's first sentence, worded from the amounts as it prints
-// them: "We estimate net government revenue falls by $970B at a 50% shift and
-// by $2,011B at a 100% shift." Every form names the sweep's last shift last.
+// them: "We estimate net government revenue falls by $195B at a 10% shift, by
+// $969B at a 50% shift and by $2,011B at a 100% shift." Every form names the
+// sweep's last shift last.
 // An end clause states something else at that shift. It joins the sentence
 // that opens on the last shift after a low point, and otherwise follows "At
 // that shift," so no two sentences open on the same shift.
@@ -573,6 +582,8 @@ export function revenuePath(
   );
   // The 50% point, when the sweep has one short of its last shift.
   const midway = rows.find((row) => row.shift === 50 && row !== end) ?? null;
+  // The 10% point, when the sweep has one short of its last shift.
+  const opening = rows.find((row) => row.shift === 10 && row !== end) ?? null;
   const changes = (...points) =>
     revenueChanges(points.filter(Boolean), currencySymbol);
   const close = (sentence) =>
@@ -590,7 +601,14 @@ export function revenuePath(
     );
   }
   if (low === end) {
-    return close(`We estimate ${subject} ${changes(midway, end)}.`);
+    // The 10% point joins the list only when every point it names falls, so
+    // one verb carries it.
+    const fallsThroughout = [opening, midway, end]
+      .filter(Boolean)
+      .every((row) => row.value < 0);
+    return close(
+      `We estimate ${subject} ${changes(fallsThroughout ? opening : null, midway, end)}.`,
+    );
   }
   const toLow = low.shift > 50 && midway ? changes(midway, low) : changes(low);
   const atEnd = atShift(end.shift);
@@ -673,13 +691,16 @@ function summaryForMetric(
   }
 
   const currencySymbol = metadata.currency_symbol ?? "$";
+  const corporate =
+    metadata.revenue_summary_note == null ? ` ${CORPORATE_TAX_NOTE_US}` : "";
   if (metadata.revenue_summary_note == null && withHealthTanf) {
-    return revenuePath(
+    const path = revenuePath(
       chartData,
       config.label,
       currencySymbol,
       healthSpendingClause(endPoint, currencySymbol),
     );
+    return `${path}${corporate}`;
   }
   const path = revenuePath(chartData, config.label, currencySymbol);
   const note =
@@ -688,6 +709,7 @@ function summaryForMetric(
   return (
     <>
       {path} {note}
+      {corporate}
     </>
   );
 }

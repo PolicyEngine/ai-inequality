@@ -86,12 +86,30 @@ const BASELINE_CLAUSE =
   /^(?:(stays at|returns to) its baseline )?at (an?) ([\d.]+)% shift$/;
 
 // Checks each clause of a changes list against the rows it names, and
-// returns the rows in order.
+// returns the rows in order. Two clauses join with "and"; three or more take
+// commas, with "and" before the last.
 function checkClauses(list, rowAt) {
   const named = [];
   let verb = null;
   let changed = false;
-  for (const clause of list.split(" and ")) {
+  // Amounts print their thousands commas without a space, so ", " only ever
+  // separates clauses.
+  const clauses = list.split(/, | and /);
+  const last = clauses[clauses.length - 1];
+  expect(list).toBe(
+    clauses.length > 1
+      ? `${clauses.slice(0, -1).join(", ")} and ${last}`
+      : last,
+  );
+  // A clause that drops its verb borrows the one before it, so no clause
+  // that brings a verb of its own may follow it: the list stays parallel.
+  let borrowed = false;
+  for (const clause of clauses) {
+    const ownVerb = /^(rises|falls|stays at|returns to) /.test(clause);
+    expect(borrowed && ownVerb, list).toBe(false);
+    borrowed = !ownVerb;
+  }
+  for (const clause of clauses) {
     const byAmount = clause.match(AMOUNT_CLAUSE);
     const byBaseline = clause.match(BASELINE_CLAUSE);
     expect(byAmount || byBaseline, clause).toBeTruthy();
@@ -195,8 +213,15 @@ function checkPath(rows) {
     expect(match, context).toBeTruthy();
     expect(low, context).toBeLessThan(0);
     expect(endShown, context).toBe(low);
+    // The path names the 50% row and the end, in shift order, and the 10%
+    // row before them when every row it would name prints as a fall.
+    const named = [
+      ...rows.filter((row) => [10, 50].includes(row.shift) && row !== end),
+      end,
+    ];
+    const fallsThroughout = named.every((row) => shown(row.revenue) < 0);
     expect(checkClauses(match[1], rowAt), context).toEqual(
-      midway ? [midway, end] : [end],
+      fallsThroughout ? named : named.filter((row) => row.shift !== 10),
     );
   }
   return text;
@@ -350,6 +375,58 @@ test("the revenue path words the edge cases from what it prints", () => {
         { shift: 100, revenue: -60 },
       ],
       "We estimate net government revenue falls by $50B at a 50% shift and by $80B at a 90% shift, its low point. At a 100% shift, the fall narrows to $60B.",
+    ],
+    // The site's sweep: a fall at every step names 10%, 50% and 100%.
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 10, revenue: -195.19 },
+        { shift: 50, revenue: -969.22 },
+        { shift: 100, revenue: -2010.79 },
+      ],
+      "We estimate net government revenue falls by $195B at a 10% shift, by $969B at a 50% shift and by $2,011B at a 100% shift.",
+    ],
+    // A rise at 10% keeps 10% out of a list that falls.
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 10, revenue: 2 },
+        { shift: 50, revenue: -5 },
+        { shift: 100, revenue: -9 },
+      ],
+      "We estimate net government revenue falls by $5.0B at a 50% shift and by $9.0B at a 100% shift.",
+    ],
+    // So does a 10% amount that prints as zero, or a rise at 50%: no list
+    // drops a verb before a new one.
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 10, revenue: 0.01 },
+        { shift: 50, revenue: 0.02 },
+        { shift: 100, revenue: -9 },
+      ],
+      "We estimate net government revenue stays at its baseline at a 50% shift and falls by $9.0B at a 100% shift.",
+    ],
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 10, revenue: 2 },
+        { shift: 50, revenue: 5 },
+        { shift: 100, revenue: -9 },
+      ],
+      "We estimate net government revenue rises by $5.0B at a 50% shift and falls by $9.0B at a 100% shift.",
+    ],
+    // A low point past 50% leaves 10% out, so ", its low point" closes a
+    // list of two.
+    [
+      [
+        { shift: 0, revenue: 0 },
+        { shift: 10, revenue: -129.01 },
+        { shift: 50, revenue: -538.52 },
+        { shift: 90, revenue: -761.55 },
+        { shift: 100, revenue: -671.82 },
+      ],
+      "We estimate net government revenue falls by $539B at a 50% shift and by $762B at a 90% shift, its low point. At a 100% shift, the fall narrows to $672B.",
     ],
     // 11% and 18% take "an".
     [
