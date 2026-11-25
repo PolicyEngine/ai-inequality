@@ -51,6 +51,11 @@ function isPlainData(value) {
   if (Object.getPrototypeOf(value) !== (array ? Array.prototype : Object.prototype)) {
     return false;
   }
+  // A key that a library adds to a standard prototype, enumerable, reaches
+  // Next.js's for...in as well.
+  for (const key in value) {
+    if (!Object.hasOwn(value, key)) return false;
+  }
   return Reflect.ownKeys(value).every((key) => {
     if (array && key === "length") return true;
     const property = Object.getOwnPropertyDescriptor(value, key);

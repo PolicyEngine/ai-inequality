@@ -140,6 +140,19 @@ function markupText(markup) {
     .replace(/&amp;/gi, "&");
 }
 
+// True when markup shows a retired name: in its text, or in an attribute value
+// such as a meta tag's content. A browser's parser decodes every character
+// reference, with or without its semicolon, so the parsed page's text and
+// attribute values are checked as well as markupText's reading.
+function markupShowsRetiredName(markup) {
+  if (showsRetiredName(markupText(markup))) return true;
+  const page = new DOMParser().parseFromString(markup, "text/html");
+  if (showsRetiredName(page.documentElement.textContent)) return true;
+  return [...page.querySelectorAll("*")].some((element) =>
+    [...element.attributes].some(({ value }) => showsRetiredName(value)),
+  );
+}
+
 const linksRetiredPage = (url) =>
   PAGES_SHOWING_RETIRED_NAMES.some((pattern) => pattern.test(url));
 
@@ -527,6 +540,11 @@ function isPlainData(value) {
   const array = Array.isArray(value);
   if (Object.getPrototypeOf(value) !== (array ? Array.prototype : Object.prototype)) {
     return false;
+  }
+  // A key that a library adds to a standard prototype, enumerable, reaches
+  // Next.js's for...in as well.
+  for (const key in value) {
+    if (!Object.hasOwn(value, key)) return false;
   }
   return Reflect.ownKeys(value).every((key) => {
     if (array && key === "length") return true;
@@ -1608,6 +1626,25 @@ describe("retired dataset names", () => {
     }
   });
 
+  it("reads markup's text and its attribute values as a browser decodes them", () => {
+    for (const markup of [
+      "<p>Pop<b>ulace</b></p>",
+      "<p>Pop&#117lace</p>",
+      "<title>e&hyphen;CPS</title>",
+      '<meta property="og:title" content="Built on Pop&#117;lace">',
+      '<meta name="description" content="e&#x2d;CPS rows">',
+      '<meta content="Pop&#117lace">',
+      '<img alt="Enhanced&nbsp;CPS">',
+    ]) {
+      expect(markupShowsRetiredName(markup), markup).toBe(true);
+    }
+    expect(
+      markupShowsRetiredName(
+        '<meta property="og:title" content="Built on Microcosm"><p>the CPS</p><p>Pop&amp;#117;lace</p>',
+      ),
+    ).toBe(false);
+  });
+
   it("renders every route App.jsx declares, and the app serves no other page", () => {
     expect(ROUTES.length).toBeGreaterThan(0);
     expect(ROUTES.length).toBe((read(APP).match(/<Route\b/g) ?? []).length);
@@ -2095,6 +2132,22 @@ describe("retired dataset names", () => {
         { make: () => 1 },
       ].map(isPlainData),
     ).toEqual([true, true, false, false, false, false, false, false]);
+    // An enumerable key added to Object.prototype, which every object and
+    // array inherits. Nothing else runs while it is there.
+    Object.defineProperty(Object.prototype, "abstract", {
+      configurable: true,
+      enumerable: true,
+      value: "x",
+      writable: true,
+    });
+    let inherited;
+    try {
+      inherited = [{ title: "t" }, ["t"]].map(isPlainData);
+    } finally {
+      delete Object.prototype.abstract;
+    }
+    expect(inherited).toEqual([false, false]);
+    expect(isPlainData({ title: "t" })).toBe(true);
   });
 
   it("keeps retired names out of every route's head tags", async () => {
@@ -2131,6 +2184,8 @@ describe("retired dataset names", () => {
   // the build than under Vitest, such as a branch on NODE_ENV or another
   // environment variable, and anything Next.js adds to the head tags. What
   // only the browser renders comes from the bundle, which the sweep reads.
+  // The GitHub Pages job in .github/workflows/deploy.yml runs this test by
+  // its name on the pages it uploads, so rename both together.
   it.skipIf(!BUILT_PAGES && !process.env.CI)(
     "keeps retired names out of every page the export writes",
     () => {
@@ -2147,7 +2202,7 @@ describe("retired dataset names", () => {
           const text = read(path);
           return (
             showsRetiredName(text) ||
-            (MARKUP.test(path) && showsRetiredName(markupText(text)))
+            (MARKUP.test(path) && markupShowsRetiredName(text))
           );
         }),
       ).toEqual([]);
@@ -2222,7 +2277,7 @@ describe("retired dataset names", () => {
         const text = sourceText(path);
         return (
           showsRetiredName(text) ||
-          (MARKUP.test(path) && showsRetiredName(markupText(text)))
+          (MARKUP.test(path) && markupShowsRetiredName(text))
         );
       }),
     ).toEqual([]);
@@ -2243,7 +2298,7 @@ describe("retired dataset names", () => {
         const text = read(path);
         return (
           showsRetiredName(text) ||
-          (MARKUP.test(path) && showsRetiredName(markupText(text)))
+          (MARKUP.test(path) && markupShowsRetiredName(text))
         );
       }),
     ).toEqual([]);
