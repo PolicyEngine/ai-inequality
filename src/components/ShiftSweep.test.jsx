@@ -151,7 +151,7 @@ test("switches the single sweep chart between inequality and revenue outcomes", 
     /we put new york city's and maryland's local income taxes in those states' charts instead/i,
   );
   expect(document.body).toHaveTextContent(
-    /montgomery county's earned income credit\. california's include san francisco's working families tax credit\. teal gains, orange loses\./i,
+    /montgomery county's earned income credit\. california's include san francisco's working families tax credit\. teal gains, gray loses\./i,
   );
   expect(document.body).toHaveTextContent(
     "We sort households into deciles by weighted baseline market income and keep each household in its baseline decile in every scenario. Bars show the total change in each decile's net income ($B).",

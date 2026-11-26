@@ -2,13 +2,10 @@
  * Shared chart styling constants and formatters used across analysis components.
  */
 
-export const TOOLTIP_STYLE = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 6,
-  padding: "8px 12px",
-  fontSize: 13,
-};
+import { TOOLTIP_CONTENT_STYLE } from "../charts/kitTheme";
+
+// The UI kit's tooltip box, which every chart passes as contentStyle.
+export const TOOLTIP_STYLE = TOOLTIP_CONTENT_STYLE;
 
 /** Format a decimal as a percentage string, e.g. 0.205 → "20.5%" */
 export const pct = (v) => `${(v * 100).toFixed(1)}%`;
