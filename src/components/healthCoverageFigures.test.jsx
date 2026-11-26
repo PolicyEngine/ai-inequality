@@ -84,9 +84,9 @@ const lines = revenueLines.lines;
 const GATED = {
   heading: "What counting health coverage changes",
   intro:
-    "The sweep counts Medicaid, CHIP and ACA premium tax credits, which grow as wages fall, and charges each government its share of the added spending.",
+    "As the modeled shift moves income from wages to capital, spending rises on health programs such as Medicaid, CHIP and ACA premium tax credits. The lines counting health coverage subtract each government's share of the spending added over the baseline.",
   revenueTitle:
-    "At a 10% shift, health coverage costs the federal government $48 billion and the states $18 billion",
+    "At a 10% shift, health spending rises $48 billion for the federal government and $18 billion for the states",
   revenueSubtitle:
     "Net revenue change in 2026, taxes less benefits and excluding corporate taxes, by share of labor income shifted to capital income",
   panels: ["Federal government", "States combined"],
@@ -98,15 +98,15 @@ const GATED = {
   revenueFootnote:
     "The federal line includes employers' state and local payroll taxes. Neither line counts the Additional Medicare Tax, which falls $3.5 billion at a 10% shift, or workers' state payroll taxes, such as California's State Disability Insurance, and local taxes on occupations, which fall $3.4 billion. Counting those, all governments' net revenue falls $195 billion.",
   californiaTitle:
-    "At a 10% shift, California's income and use tax rises $5.1 billion, and added health and benefit spending takes $2.9 billion of it",
+    "At a 10% shift, California's income and use tax after refundable credits rises $5.1 billion, and added health and benefit spending takes $2.9 billion of it",
   californiaSubtitle:
-    "Change in California's revenue in 2026, by share of labor income shifted to capital income",
+    "Change in California's income and use tax in 2026, alone and net of the state's added health and benefit spending, by share of labor income shifted to capital income",
   californiaSeries: [
     "Income and use tax, after refundable credits",
     "Less added health and benefit spending",
   ],
   californiaFootnote:
-    "Neither line counts workers' State Disability Insurance contributions, which fall with wages.",
+    "Neither line counts payroll taxes, such as workers' State Disability Insurance contributions, which fall with wages.",
 };
 
 const SOURCE = "PolicyEngine 5.0.1, 2026 baseline.";
@@ -508,7 +508,7 @@ describe("the copy", () => {
 
   it("uses the verbs the file's signs call for", () => {
     const at = linesAt(revenueLines, QUOTED_SHIFT);
-    // "costs the federal government ... and the states ..."
+    // "health spending rises ... for the federal government and ... for the states"
     expect(at.federal_health_change_b).toBeGreaterThan(0);
     expect(at.state_health_change_b).toBeGreaterThan(0);
     // "... which falls ...", "... which fall ...", "... net revenue falls ..."
@@ -713,9 +713,7 @@ describe("the new chart files", () => {
       );
       return strings
         .filter(
-          (text) =>
-            /var\(--/.test(text) ||
-            new RegExp(NAMED, "i").test(text),
+          (text) => /var\(--/.test(text) || new RegExp(NAMED, "i").test(text),
         )
         .map((text) => `${path}: "${text}"`);
     });

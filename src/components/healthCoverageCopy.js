@@ -52,10 +52,10 @@ export function healthCoverageCopy(revenueLines) {
     section: {
       heading: "What counting health coverage changes",
       intro:
-        "The sweep counts Medicaid, CHIP and ACA premium tax credits, which grow as wages fall, and charges each government its share of the added spending.",
+        "As the modeled shift moves income from wages to capital, spending rises on health programs such as Medicaid, CHIP and ACA premium tax credits. The lines counting health coverage subtract each government's share of the spending added over the baseline.",
     },
     revenueByGovernment: {
-      title: `${shift}, health coverage costs the federal government ${word(at.federal_health_change_b)} and the states ${word(at.state_health_change_b)}`,
+      title: `${shift}, health spending rises ${word(at.federal_health_change_b)} for the federal government and ${word(at.state_health_change_b)} for the states`,
       subtitle: `Net revenue change in ${year}, taxes less benefits and excluding corporate taxes, by share of labor income shifted to capital income`,
       panels: {
         federal: "Federal government",
@@ -69,14 +69,14 @@ export function healthCoverageCopy(revenueLines) {
       footnote: `The federal line includes employers' state and local payroll taxes. Neither line counts the Additional Medicare Tax, which falls ${word(at.additional_medicare_tax_change_b)} at a ${QUOTED_SHIFT}% shift, or workers' state payroll taxes, such as California's State Disability Insurance, and local taxes on occupations, which fall ${word(at.employee_state_payroll_tax_change_b + at.local_occupational_tax_change_b)}. Counting those, all governments' net revenue falls ${word(at.total_rev_change_b)}.`,
     },
     california: {
-      title: `${shift}, California's income and use tax rises ${word(californiaTax)}, and added health and benefit spending takes ${word(californiaSpending)} of it`,
-      subtitle: `Change in California's revenue in ${year}, by share of labor income shifted to capital income`,
+      title: `${shift}, California's income and use tax after refundable credits rises ${word(californiaTax)}, and added health and benefit spending takes ${word(californiaSpending)} of it`,
+      subtitle: `Change in California's income and use tax in ${year}, alone and net of the state's added health and benefit spending, by share of labor income shifted to capital income`,
       series: {
         incomeTax: "Income and use tax, after refundable credits",
         net: "Less added health and benefit spending",
       },
       footnote:
-        "Neither line counts workers' State Disability Insurance contributions, which fall with wages.",
+        "Neither line counts payroll taxes, such as workers' State Disability Insurance contributions, which fall with wages.",
     },
   };
 }

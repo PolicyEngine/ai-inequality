@@ -31,6 +31,19 @@ export const LINE_STYLES = {
 
 const STROKE_WIDTH = 2.5;
 const SHIFT_TICKS = [0, 20, 40, 60, 80, 100];
+const MARGIN = { top: 8, right: 16, bottom: 4, left: 0 };
+const Y_AXIS_WIDTH = 68;
+
+// Recharts' tooltip box never wraps, so on a phone a long series name pushes
+// it past the chart's right edge. This lets it wrap and caps it at the plot's
+// width; Recharts then keeps the whole box inside the plot.
+export const TOOLTIP_BOX_STYLE = {
+  ...TOOLTIP_CONTENT_STYLE,
+  whiteSpace: "normal",
+};
+export const TOOLTIP_WRAPPER_STYLE = {
+  maxWidth: `calc(100% - ${MARGIN.left + Y_AXIS_WIDTH + MARGIN.right}px)`,
+};
 
 // The vertical line the tooltip follows, in the axis text's ink.
 const CROSSHAIR = { stroke: TEXT.muted, strokeWidth: 1 };
@@ -68,7 +81,7 @@ export default function LinePanel({
     <ResponsiveContainer width="100%" height={height}>
       <LineChart
         data={data}
-        margin={{ top: 8, right: 16, bottom: 4, left: 0 }}
+        margin={MARGIN}
         aria-label={label}
         desc={KEYBOARD_HINT}
       >
@@ -90,12 +103,13 @@ export default function LinePanel({
           tick={AXIS_STYLE}
           axisLine={false}
           tickLine={false}
-          width={68}
+          width={Y_AXIS_WIDTH}
         />
         <ReferenceLine y={0} {...ZERO_LINE} />
         <Tooltip
           cursor={CROSSHAIR}
-          contentStyle={TOOLTIP_CONTENT_STYLE}
+          contentStyle={TOOLTIP_BOX_STYLE}
+          wrapperStyle={TOOLTIP_WRAPPER_STYLE}
           labelStyle={TOOLTIP_LABEL_STYLE}
           itemStyle={TOOLTIP_ITEM_STYLE}
           labelFormatter={shiftLabel}
