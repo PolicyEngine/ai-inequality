@@ -28,26 +28,59 @@ async function charts(page) {
   return surfaces;
 }
 
+// The tooltip's edges, and how far its text runs past its box, once Recharts
+// has stopped moving it. Recharts slides the tooltip over 400ms and moves it
+// again once it has measured new text, so this reads only when no transition
+// runs and three frames in a row give the same edges.
+function settledEdges(tooltip) {
+  return tooltip.evaluate(async (wrapper) => {
+    const box = wrapper.querySelector(".recharts-default-tooltip");
+    const frame = () =>
+      new Promise((resolve) => requestAnimationFrame(resolve));
+    const running = () => wrapper.getAnimations({ subtree: true });
+    const read = () => {
+      const outer = wrapper.getBoundingClientRect();
+      const inner = box.getBoundingClientRect();
+      return JSON.stringify({
+        wrapper: [outer.left, outer.right],
+        box: [inner.left, inner.right],
+        overflow: box.scrollWidth - box.clientWidth,
+      });
+    };
+    let last = "";
+    let same = 0;
+    for (let i = 0; i < 300; i += 1) {
+      // A transition Recharts retargets ends cancelled, which rejects.
+      await Promise.all(running().map((a) => a.finished.catch(() => {})));
+      await frame();
+      const now = read();
+      same = now === last && running().length === 0 ? same + 1 : 0;
+      last = now;
+      if (same === 2) return JSON.parse(now);
+    }
+    throw new Error("The tooltip never stopped moving.");
+  });
+}
+
 async function expectTooltip(surface, label) {
   const wrapper = surface.locator(
     "xpath=ancestor::div[contains(@class,'recharts-wrapper')]",
   );
   const tooltip = wrapper.locator(".recharts-tooltip-wrapper");
-  const box = tooltip.locator(".recharts-default-tooltip");
+  const title = tooltip.locator(
+    ".recharts-default-tooltip .recharts-tooltip-label",
+  );
   await expect(tooltip).toBeVisible();
-  await expect(box.locator(".recharts-tooltip-label")).toHaveText(label);
-  // Recharts slides the tooltip into place, so wait for it to settle on
-  // screen.
-  for (const part of [tooltip, box]) {
-    await expect
-      .poll(async () => {
-        const rect = await part.boundingBox();
-        return rect !== null && rect.x >= 0 && rect.x + rect.width <= WIDTH;
-      })
-      .toBe(true);
+  await expect(title).toHaveText(label);
+  const edges = await settledEdges(tooltip);
+  for (const [left, right] of [edges.wrapper, edges.box]) {
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(right).toBeLessThanOrEqual(WIDTH);
   }
   // No line of text runs past the box.
-  expect(await box.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
+  expect(edges.overflow).toBe(0);
+  // Still the chosen shift once it has settled.
+  await expect(title).toHaveText(label);
 }
 
 // Where to point at one shift, relative to the chart: over the x-axis tick
