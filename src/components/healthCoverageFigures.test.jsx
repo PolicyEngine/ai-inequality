@@ -84,7 +84,7 @@ const lines = revenueLines.lines;
 const GATED = {
   heading: "What counting health coverage changes",
   intro:
-    "As the modeled shift moves income from wages to capital, spending rises on health programs such as Medicaid, CHIP and ACA premium tax credits. The lines counting health coverage subtract each government's share of the spending added over the baseline.",
+    "As the modeled shift moves labor income to capital income, total health spending in the model rises. That spending includes Medicaid, CHIP and ACA premium tax credits, among other programs. The lines counting health coverage subtract each government's share of the spending added over the baseline.",
   revenueTitle:
     "At a 10% shift, health spending rises $48 billion for the federal government and $18 billion for the states",
   revenueSubtitle:

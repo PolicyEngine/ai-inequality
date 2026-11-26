@@ -52,7 +52,7 @@ export function healthCoverageCopy(revenueLines) {
     section: {
       heading: "What counting health coverage changes",
       intro:
-        "As the modeled shift moves income from wages to capital, spending rises on health programs such as Medicaid, CHIP and ACA premium tax credits. The lines counting health coverage subtract each government's share of the spending added over the baseline.",
+        "As the modeled shift moves labor income to capital income, total health spending in the model rises. That spending includes Medicaid, CHIP and ACA premium tax credits, among other programs. The lines counting health coverage subtract each government's share of the spending added over the baseline.",
     },
     revenueByGovernment: {
       title: `${shift}, health spending rises ${word(at.federal_health_change_b)} for the federal government and ${word(at.state_health_change_b)} for the states`,
