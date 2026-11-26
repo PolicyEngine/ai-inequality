@@ -33,11 +33,12 @@ test("tooltips stay on screen on hover", async ({ page }) => {
   const surfaces = await charts(page);
   for (let i = 0; i < 3; i += 1) {
     const surface = surfaces.nth(i);
-    await surface.scrollIntoViewIfNeeded();
-    const box = await surface.boundingBox();
-    // The 10%, 50% and 100% shifts, across the plot.
+    // The page scrolls smoothly, so hover() places the pointer once the
+    // chart stops moving; only the chart's size is read here.
+    const { width, height } = await surface.boundingBox();
+    // Near the 10%, 50% and 100% shifts, across the plot.
     for (const share of [0.3, 0.6, 0.95]) {
-      await page.mouse.move(box.x + box.width * share, box.y + box.height / 2);
+      await surface.hover({ position: { x: width * share, y: height / 2 } });
       await expectTooltipOnScreen(page, surface);
     }
   }
