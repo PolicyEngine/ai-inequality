@@ -75,11 +75,12 @@ def test_the_committed_file_regenerates_byte_for_byte():
 
 def test_the_script_runs_isolated_and_finds_the_file_current():
     # -I keeps the user's site-packages and the script's folder off sys.path,
-    # so this passes only on the standard library.
+    # and -S the interpreter's own, so this passes only on the standard library.
     result = subprocess.run(
         [
             sys.executable,
             "-I",
+            "-S",
             os.path.join("analysis", "revenue_lines.py"),
             "--check",
         ],
@@ -224,6 +225,7 @@ def _without(path):
         ("scenarios", 1, "tanf_change_b"),
         ("scenarios", 5, "taxes_outside_charts_change_b"),
         ("scenarios", 0, "total_rev_change_b"),
+        ("scenarios", 0, "state_deltas"),
         ("scenarios", 3, "state_deltas", "TX", "state_health_change_b"),
         ("scenarios", 3, "state_deltas", "WY", "tanf_in_state_benefits_change_b"),
         ("scenarios", 2, "state_deltas", "CA"),

@@ -6,7 +6,11 @@ stores, for each shift from 0% to 100% in 10-point steps:
 * the federal line and the states combined, each counting and not counting
   health coverage;
 * all governments, counting (``total_rev_change_b``) and not counting
-  (``total_rev_change_excluding_health_b``) health coverage;
+  (``total_rev_change_excluding_health_b``) health coverage. The paper's
+  total without health coverage is the sweep's
+  ``total_rev_change_published_definition_b`` instead: -129.19 at 10%,
+  against -129.01 here. The gap is TANF in state benefits, which
+  ``fiscal.net_fiscal_impact`` adds back so this total counts TANF once;
 * the taxes outside both lines (``taxes_outside_charts_change_b``) and its
   parts: the Additional Medicare Tax, workers' state payroll taxes and local
   taxes on occupations;
@@ -168,8 +172,8 @@ def baseline_line(row):
     """
     where = "0%"
     deltas = row.get("state_deltas")
-    if deltas not in ({}, None):
-        raise SweepError(f"{where}: state rows {sorted(deltas)}, expected none")
+    if deltas != {}:
+        raise SweepError(f"{where}: state_deltas is {deltas!r}, expected {{}}")
     for key in FEDERAL_FIELDS + COPIED_FIELDS:
         if field(row, key, where) != 0.0:
             raise SweepError(f"{where}: {key} is {row[key]!r}, expected 0.0")
