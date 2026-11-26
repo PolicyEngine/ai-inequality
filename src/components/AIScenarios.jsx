@@ -17,6 +17,9 @@ import {
 import { IconInfoCircle, IconTimeline } from "@tabler/icons-react";
 import defaultScenariosData from "../data/aiScenariosData.json";
 import {
+  AXIS_LABEL_STYLE,
+  AXIS_PROPS,
+  AXIS_STYLE,
   FALL_IS_GOOD,
   GRID_STYLE,
   LEGEND_PROPS,
@@ -61,6 +64,8 @@ const VARIANT_PHRASES = {
 const COLOR_FIXED = SERIES[3];
 const COLOR_FORECAST = SERIES[0];
 const COLOR_GRID = GRID_STYLE.stroke;
+// The variant names run long, so their ticks drop a size.
+const SMALL_TICK = { ...AXIS_STYLE, fontSize: 11 };
 const COLOR_GOOD = FALL_IS_GOOD.fall;
 const COLOR_BAD = FALL_IS_GOOD.rise;
 const COLOR_BREAKEVEN = LINE.comparison;
@@ -134,16 +139,16 @@ function TiltCostChart({ scenarios }) {
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={data} margin={{ left: 20, right: 30, top: 10 }}>
           <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" />
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+          <XAxis {...AXIS_PROPS} dataKey="name" />
           <YAxis
+            {...AXIS_PROPS}
             tickFormatter={(v) => `$${v}B`}
-            tick={{ fontSize: 12 }}
             label={{
               value: "Revenue change ($B)",
               angle: -90,
               position: "insideLeft",
               offset: -8,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <Tooltip
@@ -188,8 +193,8 @@ function VariantPairCharts({ scenarios, scenarioName }) {
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={rows} margin={{ left: 12, right: 12, top: 10 }}>
             <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" />
-            <XAxis dataKey="variant" tick={{ fontSize: 11 }} />
-            <YAxis tickFormatter={(v) => `$${v}B`} tick={{ fontSize: 12 }} />
+            <XAxis {...AXIS_PROPS} dataKey="variant" tick={SMALL_TICK} />
+            <YAxis {...AXIS_PROPS} tickFormatter={(v) => `$${v}B`} />
             <Tooltip
               {...TOOLTIP_PROPS}
               formatter={(value) => [fmtBillions(value), "Revenue change"]}
@@ -207,10 +212,10 @@ function VariantPairCharts({ scenarios, scenarioName }) {
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={rows} margin={{ left: 12, right: 12, top: 10 }}>
             <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" />
-            <XAxis dataKey="variant" tick={{ fontSize: 11 }} />
+            <XAxis {...AXIS_PROPS} dataKey="variant" tick={SMALL_TICK} />
             <YAxis
+              {...AXIS_PROPS}
               tickFormatter={(v) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}pp`}
-              tick={{ fontSize: 12 }}
             />
             <ReferenceLine y={0} {...ZERO_LINE} />
             <Tooltip
@@ -254,28 +259,28 @@ function RealizationChart({ rows, breakeven }) {
         >
           <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" />
           <XAxis
+            {...AXIS_PROPS}
             type="number"
             dataKey="rate"
             domain={[0, 100]}
             ticks={[0, 25, 50, 75, 100]}
             tickFormatter={(v) => `${v}%`}
-            tick={{ fontSize: 12 }}
             label={{
               value: "Share of the AI capital flow reaching tax returns",
               position: "bottom",
               offset: 10,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <YAxis
+            {...AXIS_PROPS}
             tickFormatter={(v) => `$${v}B`}
-            tick={{ fontSize: 12 }}
             label={{
               value: "Revenue change ($B)",
               angle: -90,
               position: "insideLeft",
               offset: -8,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <ReferenceLine y={0} {...ZERO_LINE} />

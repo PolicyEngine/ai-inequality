@@ -9,7 +9,7 @@ import AIScenarios from "../components/AIScenarios";
 import IncomeDistributionBreakdown from "../components/IncomeDistributionBreakdown";
 import ShiftSweep from "../components/ShiftSweep";
 import sweepData from "../data/shiftSweepData.json";
-import { TEXT } from "./kitTheme";
+import { GRID_STYLE, TEXT } from "./kitTheme";
 
 // jsdom gives ResponsiveContainer no size, so Recharts draws no legend there.
 vi.mock("recharts", async (importOriginal) => {
@@ -98,6 +98,101 @@ describe("chart tooltips", () => {
         )
         .map((tag) => `${path}: ${tag.slice(0, 60)}`);
     });
+    expect(missing).toEqual([]);
+  });
+});
+
+// Recharts draws axis lines, tick marks and tick text in #666 unless an axis
+// sets them, so every axis takes the kit's settings through AXIS_PROPS: tick
+// text and axis titles in muted ink, axis lines in the grid's colour and no
+// tick marks.
+const all = (selector) => [...document.querySelectorAll(selector)];
+const KIT_PAINT = /^(none|var\(--[\w-]+\))$/;
+
+// The colour an element paints: an inline style wins over the attribute, as
+// it does in the browser. Recharts writes fill="#808080" on every axis title,
+// and the kit's style covers it.
+function paint(element, prop) {
+  const style = element.getAttribute("style") ?? "";
+  const match = style.match(new RegExp(`(?:^|;)\\s*${prop}:\\s*([^;]+)`));
+  return match ? match[1].trim() : element.getAttribute(prop);
+}
+
+function expectKitAxes() {
+  const lines = all(".recharts-cartesian-axis-line");
+  const ticks = all(".recharts-cartesian-axis-tick-value");
+  const titles = all(".recharts-label");
+  expect(lines.length).toBeGreaterThan(0);
+  expect(ticks.length).toBeGreaterThan(0);
+  expect(titles.length).toBeGreaterThan(0);
+  for (const line of lines)
+    expect(paint(line, "stroke")).toBe(GRID_STYLE.stroke);
+  expect(all(".recharts-cartesian-axis-tick-line")).toHaveLength(0);
+  for (const tick of ticks) expect(paint(tick, "fill")).toBe(TEXT.muted);
+  for (const title of titles) expect(paint(title, "fill")).toBe(TEXT.muted);
+  // Nothing else in an axis paints a colour of its own.
+  const painted = [
+    ...all(".recharts-cartesian-axis, .recharts-cartesian-axis *"),
+    ...ticks,
+  ].flatMap((element) =>
+    ["stroke", "fill"]
+      .map((prop) => paint(element, prop))
+      .filter((value) => value !== null && !KIT_PAINT.test(value)),
+  );
+  expect(painted).toEqual([]);
+}
+
+describe("chart axes", () => {
+  it("draw the sweep's axes in the kit's colours", () => {
+    render(
+      <MemoryRouter>
+        <ShiftSweep sweepData={sweepData} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(
+      screen.getByRole("radio", { name: /net government revenue change/i }),
+    );
+    expectKitAxes();
+  });
+
+  it("draw the income components' axes in the kit's colours", () => {
+    render(<IncomeDistributionBreakdown />);
+    expectKitAxes();
+  });
+
+  it("draw the AI scenarios' axes in the kit's colours", () => {
+    render(
+      <MemoryRouter>
+        <AIScenarios />
+      </MemoryRouter>,
+    );
+    expectKitAxes();
+  });
+
+  // The renders above reach some of each file's charts; this reaches every
+  // axis in the site's chart code.
+  it("each take the kit's axis props", () => {
+    const ROOT = process.cwd();
+    const files = ["src/components", "src/charts", "src/views"].flatMap((dir) =>
+      readdirSync(join(ROOT, dir))
+        .filter((name) => /\.jsx$/.test(name) && !/\.test\./.test(name))
+        .map((name) => join(dir, name)),
+    );
+    const axes = files.flatMap((path) =>
+      [
+        ...readFileSync(join(ROOT, path), "utf8").matchAll(
+          /<(?:XAxis|YAxis)\b[\s\S]*?\/>/g,
+        ),
+      ].map((match) => [path, match[0]]),
+    );
+    expect(axes.length).toBeGreaterThan(0);
+    const missing = axes
+      .filter(
+        ([, tag]) =>
+          !tag.includes("{...AXIS_PROPS}") &&
+          !(tag.includes("axisLine=") && tag.includes("tickLine={false}")),
+      )
+      .map(([path, tag]) => `${path}: ${tag.slice(0, 60)}`);
     expect(missing).toEqual([]);
   });
 });

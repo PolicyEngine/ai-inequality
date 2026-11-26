@@ -4,19 +4,22 @@ import { join, relative } from "node:path";
 import { parse } from "espree";
 
 // Chart code draws every colour from kitTheme.js, so it holds no colour
-// literal of its own: no hex and no CSS colour function such as rgb(), hsl()
-// or oklch(), including one a template literal builds; no var() with a
-// fallback, which could name a colour of its own; no CSS named colour such as
-// "white" anywhere; and no bare word in a colour prop, however its value is
-// written. Comments don't count; kitTheme.js names each token's hex value in
-// one.
+// literal of its own: no hex and no CSS colour function such as rgb(),
+// oklch() or color-mix() in any string, including one a template literal
+// builds; no var() with a fallback, which could name a colour of its own; no
+// CSS named colour such as "white" as a whole string; and no bare word in a
+// colour prop, however its value is written. The scan reads strings, not
+// code, so a function call such as color(dataKey) passes and comments don't
+// count; kitTheme.js names each token's hex value in one.
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
 const APP = join(ROOT, "app");
 
+// CSS allows no space between a function's name and its parenthesis, so
+// prose such as "The Budget Lab (2026)" names no colour.
 const COLOUR_LITERAL =
-  /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\s*\(|var\(\s*--[\w-]+\s*,/gi;
+  /#[0-9a-f]{3,8}\b|\b(?:color-mix|light-dark|rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(|var\(\s*--[\w-]+\s*,/gi;
 // A prop that takes a colour: fill, stroke, color, background and any name
 // ending in one of them, such as stopColor, textFill or backgroundColor.
 const COLOUR_PROP = /(?:fill|stroke|colou?r|background)$/i;
@@ -87,23 +90,10 @@ function walk(node, visit) {
   }
 }
 
-const lineOf = (source, index) => source.slice(0, index).split("\n").length;
-
-// Every colour literal in a module's code, as "line: text".
+// Every colour literal in a module, as "line: text", in line order.
 export function colourLiterals(source) {
   const ast = parseModule(source);
-  // Blank out comments, keeping offsets, so line numbers stay right.
-  let code = source;
-  for (const { range } of ast.comments) {
-    const [start, end] = range;
-    code =
-      code.slice(0, start) +
-      code.slice(start, end).replace(/[^\n]/g, " ") +
-      code.slice(end);
-  }
-  const found = [...code.matchAll(COLOUR_LITERAL)].map(
-    (match) => `${lineOf(source, match.index)}: ${match[0]}`,
-  );
+  const found = [];
   // Each string in the code: string literals and the fixed parts of
   // template literals.
   const strings = (root) => {
@@ -126,20 +116,21 @@ export function colourLiterals(source) {
     for (const [node, text] of strings(value)) {
       const word = text.trim();
       if (/^[a-z]+$/i.test(word) && !KEYWORDS.has(word.toLowerCase())) {
-        found.push(`${node.loc.start.line}: ${prop}="${word}"`);
+        found.push([node.loc.start.line, `${prop}="${word}"`]);
         reported.add(node);
       }
     }
   };
   walk(ast, (node) => {
-    if (node.type === "JSXAttribute") colourProp(node.value, node.name.name);
-    if (node.type === "Property" && !node.computed) {
-      colourProp(node.value, node.key.name ?? node.key.value);
+    // A string literal, JSX attribute values included.
+    if (node.type === "Literal" && typeof node.value === "string") {
+      for (const match of node.value.matchAll(COLOUR_LITERAL)) {
+        found.push([node.loc.start.line, match[0]]);
+      }
     }
-    // A template literal can build a colour the plain-text scan misses:
-    // fill in its literal parts, and treat any other part after "#" as a
-    // hex value made at run time.
-    if (node.type === "TemplateLiteral" && node.expressions.length > 0) {
+    // A template literal, read whole: fill in its literal parts, and treat
+    // any other part after "#" as a hex value made at run time.
+    if (node.type === "TemplateLiteral") {
       let text = "";
       node.quasis.forEach((quasi, i) => {
         text += quasi.value.cooked ?? "";
@@ -148,23 +139,32 @@ export function colourLiterals(source) {
         if (part.type === "Literal") {
           text += String(part.value);
         } else {
-          if (text.endsWith("#")) found.push(`${node.loc.start.line}: #\${…}`);
+          if (text.endsWith("#")) {
+            found.push([node.loc.start.line, "#${…}"]);
+          }
           text += " ";
         }
       });
       for (const match of text.matchAll(COLOUR_LITERAL)) {
-        found.push(`${node.loc.start.line}: \`${match[0]}\``);
+        found.push([node.loc.start.line, `\`${match[0]}\``]);
       }
+    }
+    if (node.type === "JSXAttribute") colourProp(node.value, node.name.name);
+    if (node.type === "Property" && !node.computed) {
+      colourProp(node.value, node.key.name ?? node.key.value);
     }
   });
   // A CSS named colour anywhere, as a whole string.
   for (const [node, text] of strings(ast)) {
     const word = text.trim().toLowerCase();
     if (!reported.has(node) && NAMED_COLOURS.has(word)) {
-      found.push(`${node.loc.start.line}: "${text.trim()}"`);
+      found.push([node.loc.start.line, `"${text.trim()}"`]);
     }
   }
-  return found;
+  // Sort is stable, so finds on one line keep the order the scan made them.
+  return found
+    .sort(([a], [b]) => a - b)
+    .map(([line, text]) => `${line}: ${text}`);
 }
 
 const importsRecharts = (source) =>
@@ -199,15 +199,16 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     'const o = <Line stroke="var(--chart-1, red)" />;',
     'const p = { color: "color(display-p3 1 0 0)", fill: `lab(${l} 0 0)` };',
     'const q = { stroke: "var(--chart-1)", text: getColor(x), label: y };',
+    'const r = <Line stroke="color-mix(in srgb, red, blue)" />;',
+    'const s = <Line stroke="light-dark(red, blue)" />;',
+    "const t = <Line stroke={color(dataKey)} fill={rgb(x)} />;",
+    'const u = { note: "The Budget Lab (2026)", fill: SERIES[0] };',
+    "const v = `#fff`;",
   ].join("\n");
   expect(colourLiterals(sample)).toEqual([
     "3: #227773",
     "4: rgba(",
     "5: hsl(",
-    "16: oklch(",
-    "17: var(--chart-1,",
-    "18: color(",
-    "18: lab(",
     '6: stroke="white"',
     '7: fill="orange"',
     '9: fill="red"',
@@ -217,9 +218,15 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     "12: #${…}",
     '13: textFill="red"',
     '13: labelColor="blue"',
-    "18: `lab(`",
     '14: "teal"',
     '14: "Navy"',
+    "16: oklch(",
+    "17: var(--chart-1,",
+    "18: color(",
+    "18: `lab(`",
+    "20: color-mix(",
+    "21: light-dark(",
+    "24: `#fff`",
   ]);
 });
 

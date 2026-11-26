@@ -13,7 +13,8 @@ import {
 import { IconChartBar, IconInfoCircle } from "@tabler/icons-react";
 import incomeDistributionData from "../data/incomeDistributionData.json";
 import {
-  AXIS_STYLE,
+  AXIS_LABEL_STYLE,
+  AXIS_PROPS,
   BAND_EDGE,
   GAIN,
   GRID_STYLE,
@@ -289,23 +290,23 @@ function IncomeDistributionBreakdown() {
             >
               <CartesianGrid {...GRID_STYLE} />
               <XAxis
+                {...AXIS_PROPS}
                 type="number"
                 ticks={ticks}
                 domain={[ticks[0], ticks[ticks.length - 1]]}
                 tickFormatter={view.formatter}
-                tick={AXIS_STYLE}
                 label={{
                   value: view.axisLabel,
                   position: "insideBottom",
                   offset: -8,
-                  style: { fontSize: 13 },
+                  style: AXIS_LABEL_STYLE,
                 }}
               />
               <YAxis
+                {...AXIS_PROPS}
                 type="category"
                 dataKey="group"
                 width={92}
-                tick={AXIS_STYLE}
               />
               <ReferenceLine x={0} {...ZERO_LINE} />
               <Tooltip

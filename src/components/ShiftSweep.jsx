@@ -21,6 +21,8 @@ import {
 import { IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import defaultSweepData from "../data/shiftSweepData.json";
 import {
+  AXIS_LABEL_STYLE,
+  AXIS_PROPS,
   AXIS_STYLE,
   BAND_EDGE,
   GAIN,
@@ -802,27 +804,27 @@ function RevenueDecompositionChart({
         >
           <CartesianGrid {...GRID_STYLE} />
           <XAxis
+            {...AXIS_PROPS}
             dataKey="shift"
             tickFormatter={(value) => `${value}%`}
-            tick={AXIS_STYLE}
             label={{
               value: `Share of ${laborTerm} income shifted to capital`,
               position: "bottom",
               offset: 0,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <YAxis
+            {...AXIS_PROPS}
             ticks={ticks}
             domain={[ticks[0], ticks[ticks.length - 1]]}
             tickFormatter={tickFormatter}
-            tick={AXIS_STYLE}
             label={{
               value: resolvedAxisLabel,
               angle: -90,
               position: "insideLeft",
               offset: -10,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <ReferenceLine y={0} {...ZERO_LINE} />
@@ -974,16 +976,18 @@ function DecileImpactChart({
         >
           <CartesianGrid {...GRID_STYLE} />
           <XAxis
+            {...AXIS_PROPS}
             dataKey="decile"
             tick={{ ...AXIS_STYLE, fontWeight: 600 }}
             label={{
               value: "Baseline market-income decile",
               position: "bottom",
               offset: 0,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <YAxis
+            {...AXIS_PROPS}
             ticks={ticks}
             domain={[ticks[0], ticks[ticks.length - 1]]}
             tickFormatter={(v) =>
@@ -991,7 +995,6 @@ function DecileImpactChart({
                 ? `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`
                 : billionFmt(v, { currencySymbol })
             }
-            tick={AXIS_STYLE}
             label={{
               value:
                 unit === "share"
@@ -1000,7 +1003,7 @@ function DecileImpactChart({
               angle: -90,
               position: "insideLeft",
               offset: -10,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <ReferenceLine y={0} {...ZERO_LINE} />
@@ -1174,6 +1177,7 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
         >
           <CartesianGrid {...GRID_STYLE} />
           <XAxis
+            {...AXIS_PROPS}
             type="number"
             ticks={ticks}
             domain={[ticks[0], ticks[ticks.length - 1]]}
@@ -1182,7 +1186,6 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
                 ? `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`
                 : `${currencySymbol}${v >= 0 ? "+" : ""}${v.toFixed(0)}B`
             }
-            tick={AXIS_STYLE}
             label={{
               value:
                 unit === "share"
@@ -1190,10 +1193,11 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
                   : `Change in state net revenue vs baseline (${currencySymbol}B)`,
               position: "bottom",
               offset: 0,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <YAxis
+            {...AXIS_PROPS}
             type="category"
             dataKey="state"
             width={40}
@@ -1546,30 +1550,30 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
               >
                 <CartesianGrid {...GRID_STYLE} />
                 <XAxis
+                  {...AXIS_PROPS}
                   type="number"
                   dataKey="shift"
                   domain={[shiftTicks[0], shiftTicks[shiftTicks.length - 1]]}
                   ticks={shiftTicks}
                   tickFormatter={(value) => `${value}%`}
-                  tick={AXIS_STYLE}
                   label={{
                     value: `Share of ${laborTerm} income shifted to capital`,
                     position: "bottom",
                     offset: 0,
-                    style: { fontSize: 13 },
+                    style: AXIS_LABEL_STYLE,
                   }}
                 />
                 <YAxis
+                  {...AXIS_PROPS}
                   ticks={yTicks}
                   domain={[yTicks[0], yTicks[yTicks.length - 1]]}
                   tickFormatter={isRevenue ? revenueFormatter : axisPctFmt}
-                  tick={AXIS_STYLE}
                   label={{
                     value: config.axisLabel,
                     angle: -90,
                     position: "insideLeft",
                     offset: -10,
-                    style: { fontSize: 13 },
+                    style: AXIS_LABEL_STYLE,
                   }}
                 />
                 {isRevenue && <ReferenceLine y={0} {...ZERO_LINE} />}

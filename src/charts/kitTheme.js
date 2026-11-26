@@ -83,6 +83,17 @@ export const TOOLTIP_PROPS = {
   itemStyle: TOOLTIP_ITEM_STYLE,
 };
 
+// Spread onto every XAxis and YAxis, as the kit's own charts set them: tick
+// text in the kit's axis style, the axis line in the grid's colour and no
+// tick marks. Recharts otherwise draws all three in #666. An axis title takes
+// AXIS_LABEL_STYLE, the same muted ink at 13px.
+export const AXIS_PROPS = {
+  tick: AXIS_STYLE,
+  tickLine: false,
+  axisLine: { stroke: GRID_STYLE.stroke },
+};
+export const AXIS_LABEL_STYLE = { ...AXIS_STYLE, fontSize: 13 };
+
 // Every CSS variable a chart can reach through this module, including the
 // ones inside the kit's axis, grid, legend and tooltip styles.
 export function tokensUsed() {
@@ -111,6 +122,8 @@ export function tokensUsed() {
     TEXT,
     LEGEND_PROPS,
     TOOLTIP_PROPS,
+    AXIS_PROPS,
+    AXIS_LABEL_STYLE,
   ]);
   return [...found].sort();
 }
