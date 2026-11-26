@@ -19,6 +19,19 @@ import {
 } from "recharts";
 import { IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import defaultSweepData from "../data/shiftSweepData.json";
+import {
+  AXIS_STYLE,
+  GAIN,
+  GRID_STYLE,
+  LEGEND_STYLE,
+  LINE,
+  LOSS,
+  SERIES,
+  TEXT,
+  TOOLTIP_ITEM_STYLE,
+  TOOLTIP_LABEL_STYLE,
+  ZERO_LINE,
+} from "../charts/kitTheme";
 import { TOOLTIP_STYLE } from "../utils/chartStyles";
 import { niceTicks } from "../utils/chartTicks";
 import {
@@ -37,17 +50,14 @@ const FEDERAL_BUCKETS_US = [
   {
     key: "rev_fed_income_tax_net",
     label: "Net federal income tax (after refundable credits)",
-    color: "#17354F",
   },
   {
     key: "rev_payroll_all",
     label: "Payroll tax (employee + employer + self-employment)",
-    color: "#DD6B20",
   },
   {
     key: "rev_fed_benefits",
     label: "Federal benefits (negated)",
-    color: "#B45309",
   },
 ];
 
@@ -55,17 +65,14 @@ const NATIONAL_BUCKETS_UK = [
   {
     key: "rev_fed_income_tax_net",
     label: "Income tax",
-    color: "#17354F",
   },
   {
     key: "rev_payroll_all",
     label: "National Insurance",
-    color: "#DD6B20",
   },
   {
     key: "rev_fed_benefits",
     label: "Benefits (negated)",
-    color: "#B45309",
   },
 ];
 
@@ -76,12 +83,10 @@ const FEDERAL_BUCKETS_US_HEALTH_TANF = [
   {
     key: "rev_fed_benefits",
     label: "Federal benefits other than TANF (negated)",
-    color: "#805AD5",
   },
   {
     key: "rev_fed_health",
     label: "Federal health coverage (negated)",
-    color: "#0D9488",
   },
 ];
 
@@ -155,31 +160,28 @@ const STATE_BUCKETS = [
   {
     key: "rev_state_income_tax_net",
     label: "Net state income tax (after refundable credits)",
-    color: "#17354F",
   },
   {
     key: "rev_state_benefits",
     label: "State benefits (negated)",
-    color: "#B45309",
   },
 ];
 
+// Bands take SERIES by position, so this order gives benefits other than TANF
+// and health coverage the colours they have in the federal chart.
 const STATE_BUCKETS_HEALTH_TANF = [
   STATE_BUCKETS[0],
   {
-    key: "rev_state_benefits",
-    label: "State benefits other than TANF (negated)",
-    color: "#805AD5",
-  },
-  {
     key: "rev_state_tanf",
     label: "TANF (negated)",
-    color: "#B45309",
+  },
+  {
+    key: "rev_state_benefits",
+    label: "State benefits other than TANF (negated)",
   },
   {
     key: "rev_state_health",
     label: "State health coverage (negated)",
-    color: "#0D9488",
   },
 ];
 
@@ -191,34 +193,33 @@ const FED_INCOME_TAX_BUCKETS = [
   {
     key: "rev_fed_main",
     label: "Main ordinary-rate tax",
-    color: "#17354F",
   },
   {
     key: "rev_fed_capgains",
     label: "Preferential capital gains / qualified div tax",
-    color: "#2C6496",
   },
   {
     key: "rev_fed_amt",
     label: "Alternative minimum tax",
-    color: "#39C6C0",
   },
   {
     key: "rev_fed_niit",
     label: "Net investment income tax (3.8%)",
-    color: "#227773",
   },
   {
     key: "rev_fed_nonref",
     label: "Nonrefundable credits reduction (−Δ)",
-    color: "#D7F6F4",
   },
   {
     key: "rev_fed_other",
     label: "Other (recapture, unreported payroll, retirement penalty)",
-    color: "#85E0DC",
   },
 ];
+
+// Legend names stay in ink; the swatch beside each carries the series colour.
+const legendText = (value) => (
+  <span style={{ color: TEXT.muted }}>{value}</span>
+);
 
 const billionFmt = (value, { precision = 0, currencySymbol = "$" } = {}) => {
   const sign = value >= 0 ? "+" : "";
@@ -248,12 +249,10 @@ const PROPORTION_FALLBACK_TICKS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 const CONCEPTS = {
   market: {
     label: "Market income",
-    color: "#DD6B20",
     description: "pre-tax, pre-transfer household market income",
   },
   net: {
     label: "Net income",
-    color: "#319795",
     description: "household net income after taxes and transfers",
   },
 };
@@ -350,7 +349,6 @@ function measuresForMetadata(metadata, withHealthTanf = false) {
           : "SPM poverty rate",
       field: "Poverty",
       dataKey: "poverty",
-      color: "#DD6B20",
       axisLabel: "Share of people in poverty",
       valueFormatter: shareFmt,
       tooltipFormatter: shareTooltipFmt,
@@ -363,7 +361,6 @@ function measuresForMetadata(metadata, withHealthTanf = false) {
       label: metadata.revenue_label ?? "Net government revenue change",
       field: "Revenue",
       dataKey: "revenue",
-      color: "#2C6496",
       axisLabel:
         metadata.revenue_axis_label ??
         `Change vs baseline (${currencySymbol}B)`,
@@ -444,7 +441,6 @@ function metricConfig(measures, measureKey, conceptKey) {
     ...measure,
     label: `${concept.label} ${measure.label}`,
     dataKey: `${conceptKey}${measure.field}`,
-    color: concept.color,
     description: `${measure.description} Uses ${concept.description}.`,
   };
 }
@@ -760,11 +756,11 @@ function RevenueDecompositionChart({
           margin={{ left: 20, right: 30, top: 10, bottom: 40 }}
           stackOffset="sign"
         >
-          <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+          <CartesianGrid {...GRID_STYLE} />
           <XAxis
             dataKey="shift"
             tickFormatter={(value) => `${value}%`}
-            tick={{ fontSize: 12 }}
+            tick={AXIS_STYLE}
             label={{
               value: `Share of ${laborTerm} income shifted to capital`,
               position: "bottom",
@@ -776,7 +772,7 @@ function RevenueDecompositionChart({
             ticks={ticks}
             domain={[ticks[0], ticks[ticks.length - 1]]}
             tickFormatter={tickFormatter}
-            tick={{ fontSize: 12 }}
+            tick={AXIS_STYLE}
             label={{
               value: resolvedAxisLabel,
               angle: -90,
@@ -785,24 +781,27 @@ function RevenueDecompositionChart({
               style: { fontSize: 13 },
             }}
           />
-          <ReferenceLine y={0} stroke="#718096" strokeDasharray="4 4" />
+          <ReferenceLine y={0} {...ZERO_LINE} />
           <Tooltip
             contentStyle={TOOLTIP_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
             formatter={(value, name) => [tooltipFormatter(value), name]}
             labelFormatter={(value) =>
               scaledData.find((row) => row.shift === value)?.label ??
               `${value}% shift`
             }
           />
-          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-          {buckets.map((bucket) => (
+          <Legend {...LEGEND_STYLE} formatter={legendText} />
+          {/* Band i takes SERIES[i]; no bucket list holds more than six. */}
+          {buckets.map((bucket, i) => (
             <Area
               key={bucket.key}
               type="linear"
               dataKey={bucket.key}
               stackId="decomposition"
-              stroke={bucket.color}
-              fill={bucket.color}
+              stroke={SERIES[i]}
+              fill={SERIES[i]}
               fillOpacity={0.75}
               name={bucket.label}
               isAnimationActive={false}
@@ -812,10 +811,10 @@ function RevenueDecompositionChart({
             <Line
               type="monotone"
               dataKey="revenue"
-              stroke="#1a202c"
+              stroke={TEXT.primary}
               strokeWidth={3}
               strokeDasharray="4 2"
-              dot={{ r: 3, fill: "#1a202c" }}
+              dot={{ r: 3, fill: TEXT.primary }}
               activeDot={{ r: 5 }}
               name="Net (sum of components)"
               isAnimationActive={false}
@@ -926,10 +925,10 @@ function DecileImpactChart({
           data={rows}
           margin={{ left: 10, right: 30, top: 10, bottom: 40 }}
         >
-          <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+          <CartesianGrid {...GRID_STYLE} />
           <XAxis
             dataKey="decile"
-            tick={{ fontSize: 12, fontWeight: 600 }}
+            tick={{ ...AXIS_STYLE, fontWeight: 600 }}
             label={{
               value: "Baseline market-income decile",
               position: "bottom",
@@ -945,7 +944,7 @@ function DecileImpactChart({
                 ? `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`
                 : billionFmt(v, { currencySymbol })
             }
-            tick={{ fontSize: 12 }}
+            tick={AXIS_STYLE}
             label={{
               value:
                 unit === "share"
@@ -957,9 +956,11 @@ function DecileImpactChart({
               style: { fontSize: 13 },
             }}
           />
-          <ReferenceLine y={0} stroke="#718096" />
+          <ReferenceLine y={0} {...ZERO_LINE} />
           <Tooltip
             contentStyle={TOOLTIP_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
             formatter={(value, name) => [
               unit === "share"
                 ? `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`
@@ -974,10 +975,7 @@ function DecileImpactChart({
             isAnimationActive={false}
           >
             {rows.map((row, i) => (
-              <Cell
-                key={`cell-${i}`}
-                fill={row[field] >= 0 ? "#227773" : "#DD6B20"}
-              />
+              <Cell key={`cell-${i}`} fill={row[field] >= 0 ? GAIN : LOSS} />
             ))}
           </Bar>
         </BarChart>
@@ -1113,7 +1111,7 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
         income tax and refundable credits, Maryland&apos;s county income taxes
         and Montgomery County&apos;s earned income credit. California&apos;s
         include San Francisco&apos;s Working Families Tax Credit. Teal gains,
-        orange loses.
+        gray loses.
         {unit === "share"
           ? " In share mode, we divide each state's change by its own baseline net state revenue and leave out states whose baseline doesn't exceed zero."
           : ""}
@@ -1127,7 +1125,7 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
           layout="vertical"
           margin={{ left: 10, right: 30, top: 10, bottom: 30 }}
         >
-          <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+          <CartesianGrid {...GRID_STYLE} />
           <XAxis
             type="number"
             ticks={ticks}
@@ -1137,7 +1135,7 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
                 ? `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`
                 : `${currencySymbol}${v >= 0 ? "+" : ""}${v.toFixed(0)}B`
             }
-            tick={{ fontSize: 12 }}
+            tick={AXIS_STYLE}
             label={{
               value:
                 unit === "share"
@@ -1153,11 +1151,13 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
             dataKey="state"
             width={40}
             interval={0}
-            tick={{ fontSize: 11, fontWeight: 600 }}
+            tick={{ ...AXIS_STYLE, fontSize: 11, fontWeight: 600 }}
           />
-          <ReferenceLine x={0} stroke="#718096" />
+          <ReferenceLine x={0} {...ZERO_LINE} />
           <Tooltip
             contentStyle={TOOLTIP_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
             formatter={(value, name) => [
               unit === "share"
                 ? `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`
@@ -1172,10 +1172,7 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
             isAnimationActive={false}
           >
             {display.map((row, i) => (
-              <Cell
-                key={`cell-${i}`}
-                fill={row.stateNet >= 0 ? "#227773" : "#DD6B20"}
-              />
+              <Cell key={`cell-${i}`} fill={row.stateNet >= 0 ? GAIN : LOSS} />
             ))}
           </Bar>
         </BarChart>
@@ -1500,14 +1497,14 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
                 data={chartData}
                 margin={{ left: 20, right: 30, top: 10, bottom: 35 }}
               >
-                <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+                <CartesianGrid {...GRID_STYLE} />
                 <XAxis
                   type="number"
                   dataKey="shift"
                   domain={[shiftTicks[0], shiftTicks[shiftTicks.length - 1]]}
                   ticks={shiftTicks}
                   tickFormatter={(value) => `${value}%`}
-                  tick={{ fontSize: 12 }}
+                  tick={AXIS_STYLE}
                   label={{
                     value: `Share of ${laborTerm} income shifted to capital`,
                     position: "bottom",
@@ -1519,7 +1516,7 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
                   ticks={yTicks}
                   domain={[yTicks[0], yTicks[yTicks.length - 1]]}
                   tickFormatter={isRevenue ? revenueFormatter : axisPctFmt}
-                  tick={{ fontSize: 12 }}
+                  tick={AXIS_STYLE}
                   label={{
                     value: config.axisLabel,
                     angle: -90,
@@ -1528,25 +1525,25 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
                     style: { fontSize: 13 },
                   }}
                 />
-                {isRevenue && (
-                  <ReferenceLine y={0} stroke="#718096" strokeDasharray="4 4" />
-                )}
+                {isRevenue && <ReferenceLine y={0} {...ZERO_LINE} />}
                 {forecastBand && (
                   <ReferenceArea
                     x1={0}
                     x2={forecastBand.maxPct}
-                    fill="#39c6c0"
+                    fill={SERIES[0]}
                     fillOpacity={0.14}
                     label={{
                       value: "Forecast range",
                       position: "insideTopLeft",
                       fontSize: 11,
-                      fill: "#227773",
+                      fill: TEXT.muted,
                     }}
                   />
                 )}
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
+                  labelStyle={TOOLTIP_LABEL_STYLE}
+                  itemStyle={TOOLTIP_ITEM_STYLE}
                   formatter={(value) => [
                     config.tooltipFormatter(value),
                     config.label,
@@ -1560,7 +1557,7 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
                   type="monotone"
                   dataKey={config.dataKey}
                   name={config.label}
-                  stroke={config.color}
+                  stroke={LINE.main}
                   strokeWidth={3}
                   dot={{ r: 4 }}
                   activeDot={{ r: 6 }}

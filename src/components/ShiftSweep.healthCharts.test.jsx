@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 
+import { GAIN, LOSS, SERIES, TEXT } from "../charts/kitTheme";
 import sweepData from "../data/shiftSweepData.json";
 import ShiftSweep from "./ShiftSweep";
 
@@ -125,13 +126,53 @@ test("the state ranking orders states by their net change with health coverage a
     .map((node) => node.textContent)
     .filter((text) => text in deltas);
   expect(drawn).toEqual(withHealth);
-  // Teal gains, orange loses.
+  // Teal gains, gray loses: the kit's gain and loss tokens.
   const fills = [...ranking.querySelectorAll(".recharts-rectangle")].map(
     (node) => node.getAttribute("fill"),
   );
   expect(fills).toEqual(
     withHealth.map((code) =>
-      deltas[code].state_net_change_b >= 0 ? "#227773" : "#DD6B20",
+      deltas[code].state_net_change_b >= 0 ? GAIN : LOSS,
     ),
   );
+});
+
+// Each legend entry's colour, by name, from the swatch Recharts draws beside
+// it, and each band's fill in the order the chart stacks them.
+function legendColours(chart) {
+  return Object.fromEntries(
+    [...chart.querySelectorAll(".recharts-legend-item")].map((item) => [
+      item.textContent,
+      item.querySelector("path")?.getAttribute("stroke"),
+    ]),
+  );
+}
+
+function bandFills(chart) {
+  return [...chart.querySelectorAll(".recharts-area-area")].map((node) =>
+    node.getAttribute("fill"),
+  );
+}
+
+test("bands take the kit's series colours, and a state's match the federal chart's", () => {
+  renderRevenue();
+  const federalChart = chartUnder(/federal revenue decomposition/i);
+  expect(bandFills(federalChart)).toEqual(SERIES.slice(0, 4));
+  const federal = legendColours(federalChart);
+  fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
+    target: { value: "CA" },
+  });
+  const stateChart = chartUnder(/ca state revenue decomposition/i);
+  expect(bandFills(stateChart)).toEqual(SERIES.slice(0, 4));
+  const state = legendColours(stateChart);
+  expect(state["Net state income tax (after refundable credits)"]).toBe(
+    federal["Net federal income tax (after refundable credits)"],
+  );
+  expect(state["State benefits other than TANF (negated)"]).toBe(
+    federal["Federal benefits other than TANF (negated)"],
+  );
+  expect(state["State health coverage (negated)"]).toBe(
+    federal["Federal health coverage (negated)"],
+  );
+  expect(federal["Net (sum of components)"]).toBe(TEXT.primary);
 });
