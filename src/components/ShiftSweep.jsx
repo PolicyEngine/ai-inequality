@@ -7,6 +7,7 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
+  DefaultLegendContent,
   Legend,
   Line,
   LineChart,
@@ -21,6 +22,7 @@ import { IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import defaultSweepData from "../data/shiftSweepData.json";
 import {
   AXIS_STYLE,
+  BAND_EDGE,
   GAIN,
   GRID_STYLE,
   LEGEND_STYLE,
@@ -220,6 +222,17 @@ const FED_INCOME_TAX_BUCKETS = [
 const legendText = (value) => (
   <span style={{ color: TEXT.muted }}>{value}</span>
 );
+
+// Recharts colours an area's legend swatch with its stroke, which for a band is
+// BAND_EDGE, so a band's swatch takes its fill instead.
+function BandLegend(props) {
+  const payload = (props.payload ?? []).map((entry) =>
+    entry.payload?.stroke === BAND_EDGE.stroke
+      ? { ...entry, color: entry.payload.fill }
+      : entry,
+  );
+  return <DefaultLegendContent {...props} payload={payload} />;
+}
 
 const billionFmt = (value, { precision = 0, currencySymbol = "$" } = {}) => {
   const sign = value >= 0 ? "+" : "";
@@ -428,6 +441,41 @@ function decompositionDataForJurisdiction(
         : stateRow(row._scenario, jurisdiction, withHealthTanf);
     return { ...row, ...extras };
   });
+}
+
+// Every revenue decomposition chart the page can draw from a sweep file, as
+// the page builds it: its bands in stacking order and the rows it reads.
+// Tests use it to find the bands the data draws next to each other.
+export function decompositionCharts(sweepData) {
+  const countryId = sweepData.metadata?.country_id;
+  const withHealthTanf = countsHealthTanf(sweepData);
+  const chartData = dataForChart(sweepData);
+  const charts = [
+    {
+      name: "federal",
+      buckets: federalBuckets(countryId, withHealthTanf),
+      rows: decompositionDataForJurisdiction(
+        chartData,
+        "federal",
+        withHealthTanf,
+      ),
+    },
+  ];
+  if (countryId === "uk") return charts;
+  charts.push({
+    name: "federal income tax",
+    buckets: FED_INCOME_TAX_BUCKETS,
+    rows: chartData,
+  });
+  const last = sweepData.scenarios[sweepData.scenarios.length - 1];
+  for (const code of Object.keys(last?.state_deltas ?? {}).sort()) {
+    charts.push({
+      name: code,
+      buckets: stateBuckets(withHealthTanf),
+      rows: decompositionDataForJurisdiction(chartData, code, withHealthTanf),
+    });
+  }
+  return charts;
 }
 
 function metricConfig(measures, measureKey, conceptKey) {
@@ -792,17 +840,24 @@ function RevenueDecompositionChart({
               `${value}% shift`
             }
           />
-          <Legend {...LEGEND_STYLE} formatter={legendText} />
-          {/* Band i takes SERIES[i]; no bucket list holds more than six. */}
+          <Legend
+            {...LEGEND_STYLE}
+            formatter={legendText}
+            content={BandLegend}
+          />
+          {/* Band i fills with SERIES[i]; no bucket list holds more than six.
+              Each band draws BAND_EDGE along its outer edge, because a band
+              near zero lets two bands that are not list neighbours touch. */}
           {buckets.map((bucket, i) => (
             <Area
               key={bucket.key}
               type="linear"
               dataKey={bucket.key}
               stackId="decomposition"
-              stroke={SERIES[i]}
+              {...BAND_EDGE}
               fill={SERIES[i]}
               fillOpacity={0.75}
+              activeDot={{ fill: SERIES[i], stroke: BAND_EDGE.stroke }}
               name={bucket.label}
               isAnimationActive={false}
             />

@@ -57,6 +57,12 @@ export const COMPARISON_DASH = "6 4";
 // gray-600 so gains and losses read against it.
 export const ZERO_LINE = { stroke: "var(--foreground)", strokeWidth: 1.5 };
 
+// The edge every stacked band and bar draws, in the page's background colour.
+// Bands that touch need it: the kit has no four series colours that clear a
+// ΔE of 15 against each other, and in a stack a band between two others can
+// shrink to nothing and let them meet.
+export const BAND_EDGE = { stroke: "var(--background)", strokeWidth: 1 };
+
 // Text inside a chart: labels and values stay in ink, never a series colour.
 export const TEXT = {
   primary: "var(--foreground)",
@@ -87,6 +93,7 @@ export function tokensUsed() {
     FALL_IS_GOOD,
     LINE,
     ZERO_LINE,
+    BAND_EDGE,
     TEXT,
   ]);
   return [...found].sort();

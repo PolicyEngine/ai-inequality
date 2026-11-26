@@ -1,11 +1,19 @@
 import { cloneElement } from "react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 
-import { GAIN, LOSS, SERIES, TEXT } from "../charts/kitTheme";
+import { BAND_EDGE, GAIN, LOSS, SERIES, TEXT } from "../charts/kitTheme";
+import {
+  colourDistance,
+  tokenHex,
+  touchingPairs,
+} from "../charts/stackNeighbours";
 import sweepData from "../data/shiftSweepData.json";
-import ShiftSweep from "./ShiftSweep";
+import ukSweepData from "../data/ukShiftSweepData.json";
+import ShiftSweep, { decompositionCharts } from "./ShiftSweep";
 
 // jsdom gives ResponsiveContainer no size, so Recharts draws no bands or bars
 // there. A fixed size lets these tests read what the charts draw from the
@@ -175,4 +183,59 @@ test("bands take the kit's series colours, and a state's match the federal chart
     federal["Federal health coverage (negated)"],
   );
   expect(federal["Net (sum of components)"]).toBe(TEXT.primary);
+});
+
+const KIT_TOKENS = readFileSync(
+  join(process.cwd(), "node_modules/@policyengine/ui-kit/src/theme/tokens.css"),
+  "utf8",
+);
+const distance = (a, b) =>
+  colourDistance(tokenHex(KIT_TOKENS, a), tokenHex(KIT_TOKENS, b));
+
+// Bands meet wherever the data stacks them next to each other, which is not
+// only where they sit next to each other in the bucket list: a band near zero
+// lets the two either side of it touch.
+test("bands that touch never share a colour, and each band draws an edge between close ones", () => {
+  const close = [];
+  for (const data of [sweepData, ukSweepData]) {
+    for (const chart of decompositionCharts(data)) {
+      const keys = chart.buckets.map((bucket) => bucket.key);
+      for (const [a, b] of touchingPairs(chart.rows, keys)) {
+        expect(SERIES[a]).not.toBe(SERIES[b]);
+        if (distance(SERIES[a], SERIES[b]) < 15) {
+          close.push(`${chart.name}: ${keys[a]} / ${keys[b]}`);
+        }
+      }
+    }
+  }
+  // The kit has no four series colours that all clear a ΔE of 15 against each
+  // other, and the data puts close ones together: TANF on health coverage in
+  // Alaska's chart, for one.
+  expect(close).toContain("AK: rev_state_tanf / rev_state_health");
+
+  // So every band draws BAND_EDGE along its outer edge, and the legend keeps
+  // each band's fill as its swatch.
+  renderRevenue();
+  fireEvent.change(screen.getByLabelText(/jurisdiction/i), {
+    target: { value: "AK" },
+  });
+  const chart = chartUnder(/ak state revenue decomposition/i);
+  const edges = [...chart.querySelectorAll(".recharts-area-curve")];
+  expect(edges).toHaveLength(4);
+  for (const edge of edges) {
+    expect(edge.getAttribute("stroke")).toBe(BAND_EDGE.stroke);
+    expect(edge.getAttribute("stroke-width")).toBe(
+      String(BAND_EDGE.strokeWidth),
+    );
+  }
+  expect(bandFills(chart)).toEqual(SERIES.slice(0, 4));
+  const swatches = legendColours(chart);
+  expect(
+    [
+      "Net state income tax (after refundable credits)",
+      "TANF (negated)",
+      "State benefits other than TANF (negated)",
+      "State health coverage (negated)",
+    ].map((name) => swatches[name]),
+  ).toEqual(SERIES.slice(0, 4));
 });
