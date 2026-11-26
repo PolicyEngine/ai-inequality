@@ -45,9 +45,14 @@ export function formatAmount(value) {
 
 // One chart of lines over the shift, in $B, with straight segments between
 // the sweep's points, the y-axis on the given ticks and a heavier line at
-// zero. `series` lists each line as { key, name, style }, where key names
-// the field in each row of `data` and style is "main" or "comparison".
+// zero. `series` lists each line as { key, name, style, format }, where key
+// names the field in each row of `data`, style is "main" or "comparison" and
+// format, if given, prints the line's value in the tooltip from the hovered
+// row; otherwise the tooltip prints the signed amount.
 export default function LinePanel({ data, series, ticks, height = 300 }) {
+  const formats = Object.fromEntries(
+    series.map(({ key, format }) => [key, format]),
+  );
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
@@ -78,7 +83,10 @@ export default function LinePanel({ data, series, ticks, height = 300 }) {
           labelStyle={TOOLTIP_LABEL_STYLE}
           itemStyle={TOOLTIP_ITEM_STYLE}
           labelFormatter={shiftLabel}
-          formatter={(value, name) => [formatAmount(value), name]}
+          formatter={(value, name, item) => {
+            const format = formats[item.dataKey];
+            return [format ? format(item.payload) : formatAmount(value), name];
+          }}
         />
         {series.map(({ key, name, style }) => {
           const { stroke, strokeDasharray } = LINE_STYLES[style];

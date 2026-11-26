@@ -11,6 +11,9 @@
 //   counting it LINE.comparison dashed;
 // * the page prints the gated copy, with numbers from the file, and the UK
 //   page renders neither figure;
+// * the states' line not counting health coverage reads "about even" in the
+//   caption and the tooltip wherever it is smaller than the workers' state
+//   payroll taxes the line leaves out, and as an amount elsewhere;
 // * the new chart files hold no colour literal and name no CSS variable
 //   kitTheme.js doesn't.
 
@@ -51,6 +54,7 @@ import {
   healthCoverageCopy,
   linesAt,
   statesAboutEven,
+  statesNotCounting,
 } from "./healthCoverageCopy";
 
 // jsdom gives ResponsiveContainer no size, so Recharts draws nothing there. A
@@ -300,39 +304,77 @@ describe("the revenue-by-government figure", () => {
     }
   });
 
-  it("shows both lines' values at the hovered shift, on a kit crosshair", async () => {
-    // Recharts reads the pointer on the next animation frame.
-    vi.useFakeTimers();
-    const { container } = renderFigure(RevenueByGovernment);
-    for (const panel of PANELS) {
-      const node = container.querySelector(`[data-panel="${panel.id}"]`);
-      const { plot } = drawn(node);
-      // The pointer over the 10% shift.
-      const x = plot.x + plot.width * 0.1;
-      fireEvent.mouseMove(node.querySelector(".recharts-wrapper"), {
-        clientX: x,
-        clientY: plot.y + plot.height / 2,
-      });
-      await act(async () => {
-        vi.advanceTimersByTime(100);
-      });
-      const tooltip = node.querySelector(".recharts-default-tooltip");
-      expect(tooltip.querySelector(".recharts-tooltip-label").textContent).toBe(
-        "10% shift",
-      );
-      const at = linesAt(revenueLines, 10);
-      expect(
-        [...tooltip.querySelectorAll(".recharts-tooltip-item")].map((item) => [
+  // Moves the pointer over a shift in one panel and reads its tooltip's
+  // label and items. Recharts reads the pointer on the next animation frame,
+  // so the caller runs on fake timers.
+  async function hover(node, shift) {
+    const { plot } = drawn(node);
+    fireEvent.mouseMove(node.querySelector(".recharts-wrapper"), {
+      clientX: plot.x + (plot.width * shift) / 100,
+      clientY: plot.y + plot.height / 2,
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+    });
+    const tooltip = node.querySelector(".recharts-default-tooltip");
+    return {
+      label: tooltip.querySelector(".recharts-tooltip-label").textContent,
+      items: [...tooltip.querySelectorAll(".recharts-tooltip-item")].map(
+        (item) => [
           item.querySelector(".recharts-tooltip-item-name").textContent,
           item.querySelector(".recharts-tooltip-item-value").textContent,
-        ]),
-      ).toEqual([
-        [GATED.series[0], billions(at[panel.counting], { sign: true })],
-        [GATED.series[1], billions(at[panel.notCounting], { sign: true })],
-      ]);
+        ],
+      ),
+    };
+  }
+
+  it("shows both lines' values at the hovered shift, on a kit crosshair", async () => {
+    vi.useFakeTimers();
+    const { container } = renderFigure(RevenueByGovernment);
+    const at = linesAt(revenueLines, 10);
+    // The states' line not counting health coverage reads as its caption
+    // does: about even at 10%, inside the workers' state payroll taxes it
+    // leaves out.
+    const expected = {
+      federal: billions(at.federal_not_counting_health_change_b, {
+        sign: true,
+      }),
+      states: "about even",
+    };
+    for (const panel of PANELS) {
+      const node = container.querySelector(`[data-panel="${panel.id}"]`);
+      expect(await hover(node, 10)).toEqual({
+        label: "10% shift",
+        items: [
+          [GATED.series[0], billions(at[panel.counting], { sign: true })],
+          [GATED.series[1], expected[panel.id]],
+        ],
+      });
       const cursor = node.querySelector(".recharts-tooltip-cursor");
       expect(cursor.getAttribute("stroke")).toBe(TEXT.muted);
     }
+    vi.useRealTimers();
+  });
+
+  it("prints the states' amount not counting health coverage where it passes the left-out taxes", async () => {
+    vi.useFakeTimers();
+    const { container } = renderFigure(RevenueByGovernment);
+    const node = container.querySelector('[data-panel="states"]');
+    const at = linesAt(revenueLines, 20);
+    expect(statesAboutEven(at)).toBe(false);
+    expect(await hover(node, 20)).toEqual({
+      label: "20% shift",
+      items: [
+        [
+          GATED.series[0],
+          billions(at.states_counting_health_change_b, { sign: true }),
+        ],
+        [
+          GATED.series[1],
+          billions(at.states_not_counting_health_change_b, { sign: true }),
+        ],
+      ],
+    });
     vi.useRealTimers();
   });
 
@@ -497,6 +539,20 @@ describe("the copy", () => {
     expect(copy.revenueByGovernment.captions.states).toBe(
       "At a 10% shift: -$16B counting health coverage, +$4.2B not counting it",
     );
+  });
+
+  it("calls the states about even at each shift by the same rule", () => {
+    // Today only the 10% shift falls inside workers' state payroll taxes.
+    expect(lines.filter(statesAboutEven).map((line) => line.shift_pct)).toEqual(
+      [10],
+    );
+    for (const line of lines) {
+      expect(statesNotCounting(line)).toBe(
+        statesAboutEven(line)
+          ? "about even"
+          : billions(line.states_not_counting_health_change_b, { sign: true }),
+      );
+    }
   });
 });
 

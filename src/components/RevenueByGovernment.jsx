@@ -3,10 +3,12 @@ import React from "react";
 import Figure, { LineLegend } from "../charts/Figure";
 import LinePanel, { LINE_STYLES } from "../charts/LinePanel";
 import { niceTicks } from "../utils/chartTicks";
-import { healthCoverageCopy } from "./healthCoverageCopy";
+import { healthCoverageCopy, statesNotCounting } from "./healthCoverageCopy";
 
 // The federal government and the states combined, each counting and not
-// counting health coverage, as analysis/revenue_lines.py stores them.
+// counting health coverage, as analysis/revenue_lines.py stores them. The
+// states' tooltip prints its line not counting health coverage as the
+// caption does, so it says "about even" wherever the caption would.
 export const PANELS = [
   {
     id: "federal",
@@ -17,6 +19,7 @@ export const PANELS = [
     id: "states",
     counting: "states_counting_health_change_b",
     notCounting: "states_not_counting_health_change_b",
+    formatNotCounting: statesNotCounting,
   },
 ];
 
@@ -70,6 +73,7 @@ export default function RevenueByGovernment({ revenueLines, metadata, year }) {
                   key: panel.notCounting,
                   name: copy.series.notCounting,
                   style: "comparison",
+                  format: panel.formatNotCounting,
                 },
               ]}
             />
