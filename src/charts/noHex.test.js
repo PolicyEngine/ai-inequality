@@ -4,25 +4,44 @@ import { join, relative } from "node:path";
 import { parse } from "espree";
 
 // Chart code draws every colour from kitTheme.js, so it holds no colour
-// literal of its own: no hex, rgb(), rgba(), hsl() or hsla(), and no named
-// colour such as "white" in a stroke, fill or color prop. Comments don't
-// count; kitTheme.js names each token's hex value in one.
+// literal of its own: no hex, rgb(), rgba(), hsl() or hsla(), including one
+// a template literal builds, no CSS named colour such as "white" anywhere,
+// and no bare word in a colour prop, however its value is written. Comments
+// don't count; kitTheme.js names each token's hex value in one.
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
 
 const COLOUR_LITERAL = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\s*\(/gi;
-const COLOUR_PROPS = new Set([
-  "stroke",
-  "fill",
-  "color",
-  "background",
-  "backgroundColor",
-  "borderColor",
-  "stopColor",
-  "floodColor",
-  "lightingColor",
-]);
+// A prop that takes a colour: fill, stroke, color, background and any name
+// ending in one of them, such as stopColor, textFill or backgroundColor.
+const COLOUR_PROP = /(?:fill|stroke|colou?r|background)$/i;
+// The CSS named colours (CSS Color 4, as the color-name package lists them).
+const NAMED_COLOURS = new Set(
+  `aliceblue antiquewhite aqua aquamarine azure beige bisque black
+  blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse
+  chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan
+  darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta
+  darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen
+  darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink
+  deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen
+  fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey
+  honeydew hotpink indianred indigo ivory khaki lavender lavenderblush
+  lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow
+  lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen
+  lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime
+  limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid
+  mediumpurple mediumseagreen mediumslateblue mediumspringgreen
+  mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin
+  navajowhite navy oldlace olive olivedrab orange orangered orchid
+  palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff
+  peru pink plum powderblue purple rebeccapurple red rosybrown royalblue
+  saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue
+  slateblue slategray slategrey snow springgreen steelblue tan teal thistle
+  tomato turquoise violet wheat white whitesmoke yellow yellowgreen`.split(
+    /\s+/,
+  ),
+);
 // Values a colour prop may take that name no colour.
 const KEYWORDS = new Set([
   "none",
@@ -81,22 +100,66 @@ export function colourLiterals(source) {
   const found = [...code.matchAll(COLOUR_LITERAL)].map(
     (match) => `${lineOf(source, match.index)}: ${match[0]}`,
   );
-  const namedColour = (node, prop) => {
-    if (!COLOUR_PROPS.has(prop)) return;
-    const value =
-      node?.type === "JSXExpressionContainer" ? node.expression : node;
-    if (value?.type !== "Literal" || typeof value.value !== "string") return;
-    const word = value.value.trim();
-    if (/^[a-z]+$/i.test(word) && !KEYWORDS.has(word.toLowerCase())) {
-      found.push(`${value.loc.start.line}: ${prop}="${word}"`);
+  // Each string in the code: string literals and the fixed parts of
+  // template literals.
+  const strings = (root) => {
+    const out = [];
+    walk(root, (node) => {
+      if (node.type === "Literal" && typeof node.value === "string") {
+        out.push([node, node.value]);
+      }
+      if (node.type === "TemplateElement") {
+        out.push([node, node.value.cooked ?? ""]);
+      }
+    });
+    return out;
+  };
+  const reported = new Set();
+  // A bare word anywhere in a colour prop's value names a colour, whether the
+  // value is a literal, a conditional or a fallback.
+  const colourProp = (value, prop) => {
+    if (typeof prop !== "string" || !COLOUR_PROP.test(prop)) return;
+    for (const [node, text] of strings(value)) {
+      const word = text.trim();
+      if (/^[a-z]+$/i.test(word) && !KEYWORDS.has(word.toLowerCase())) {
+        found.push(`${node.loc.start.line}: ${prop}="${word}"`);
+        reported.add(node);
+      }
     }
   };
   walk(ast, (node) => {
-    if (node.type === "JSXAttribute") namedColour(node.value, node.name.name);
+    if (node.type === "JSXAttribute") colourProp(node.value, node.name.name);
     if (node.type === "Property" && !node.computed) {
-      namedColour(node.value, node.key.name ?? node.key.value);
+      colourProp(node.value, node.key.name ?? node.key.value);
+    }
+    // A template literal can build a colour the plain-text scan misses:
+    // fill in its literal parts, and treat any other part after "#" as a
+    // hex value made at run time.
+    if (node.type === "TemplateLiteral" && node.expressions.length > 0) {
+      let text = "";
+      node.quasis.forEach((quasi, i) => {
+        text += quasi.value.cooked ?? "";
+        const part = node.expressions[i];
+        if (!part) return;
+        if (part.type === "Literal") {
+          text += String(part.value);
+        } else {
+          if (text.endsWith("#")) found.push(`${node.loc.start.line}: #\${…}`);
+          text += " ";
+        }
+      });
+      for (const match of text.matchAll(COLOUR_LITERAL)) {
+        found.push(`${node.loc.start.line}: \`${match[0]}\``);
+      }
     }
   });
+  // A CSS named colour anywhere, as a whole string.
+  for (const [node, text] of strings(ast)) {
+    const word = text.trim().toLowerCase();
+    if (!reported.has(node) && NAMED_COLOURS.has(word)) {
+      found.push(`${node.loc.start.line}: "${text.trim()}"`);
+    }
+  }
   return found;
 }
 
@@ -121,6 +184,13 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     'const d = <Line stroke="white" fill="none" />;',
     "const e = { fill: 'orange', stroke: 'var(--chart-1)' };",
     'const f = "https://example.org/#about";',
+    'const g = <Bar fill={x ? "red" : "green"} />;',
+    'const h = { fill: x || "Canvas" };',
+    'const i = <Line stroke={`#${"227773"}`} />;',
+    "const j = `#${hex}`;",
+    'const k = { textFill: "red", labelColor: "blue" };',
+    'const l = ["teal", "Navy"];',
+    'const m = { label: "Teal gains, gray loses.", fill: TEXT.primary };',
   ].join("\n");
   expect(colourLiterals(sample)).toEqual([
     "3: #227773",
@@ -128,6 +198,15 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     "5: hsl(",
     '6: stroke="white"',
     '7: fill="orange"',
+    '9: fill="red"',
+    '9: fill="green"',
+    '10: fill="Canvas"',
+    "11: `#227773`",
+    "12: #${…}",
+    '13: textFill="red"',
+    '13: labelColor="blue"',
+    '14: "teal"',
+    '14: "Navy"',
   ]);
 });
 
