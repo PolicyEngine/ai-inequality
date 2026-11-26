@@ -63,6 +63,7 @@ export default function RevenueByGovernment({ revenueLines, metadata, year }) {
             <LinePanel
               data={revenueLines.lines}
               ticks={ticks}
+              label={copy.panels[panel.id]}
               series={[
                 {
                   key: panel.counting,

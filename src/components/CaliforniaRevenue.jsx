@@ -42,6 +42,7 @@ export default function CaliforniaRevenue({ revenueLines, metadata, year }) {
         <LinePanel
           data={revenueLines.lines}
           ticks={californiaTicks(revenueLines.lines)}
+          label={copy.title}
           series={[
             {
               key: SERIES_KEYS.incomeTax,

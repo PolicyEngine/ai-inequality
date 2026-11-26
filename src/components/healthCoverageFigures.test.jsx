@@ -26,6 +26,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, vi } from "vitest";
 
 import { billions } from "../charts/billions";
+import { KEYBOARD_HINT } from "../charts/LinePanel";
 import {
   COMPARISON_DASH,
   LINE,
@@ -621,6 +622,54 @@ describe("the policy-analysis page", () => {
       })),
     };
     expect(showsHealthCoverageFigures("us", withoutStates)).toBe(false);
+  });
+
+  it("names each of the section's charts for screen readers, which reach it as a keyboard stop", () => {
+    const { container } = renderPage();
+    const section = container.querySelector(".health-coverage");
+    const surfaces = [...section.querySelectorAll("svg.recharts-surface")];
+    expect(surfaces).toHaveLength(3);
+    const names = [...GATED.panels, GATED.californiaTitle];
+    surfaces.forEach((svg, i) => {
+      expect(svg.getAttribute("role")).toBe("application");
+      expect(svg.getAttribute("tabindex")).toBe("0");
+      expect(svg).toHaveAccessibleName(names[i]);
+      // jsdom's accessibility API skips an SVG's <desc>; browsers read it.
+      expect(svg.querySelector(":scope > desc").textContent).toBe(
+        KEYBOARD_HINT,
+      );
+    });
+  });
+});
+
+describe("the charts' keyboard stops", () => {
+  it("step through the shifts with the arrow keys, as their description says", async () => {
+    vi.useFakeTimers();
+    const { container } = renderFigure(RevenueByGovernment);
+    const node = container.querySelector('[data-panel="states"]');
+    const svg = node.querySelector("svg.recharts-surface");
+    const label = async () => {
+      await act(async () => {
+        vi.advanceTimersByTime(100);
+      });
+      return node.querySelector(".recharts-tooltip-label").textContent;
+    };
+    act(() => svg.focus());
+    expect(await label()).toBe("Baseline");
+    const seen = [];
+    for (let step = 0; step < 3; step += 1) {
+      fireEvent.keyDown(svg, { key: "ArrowRight" });
+      seen.push(await label());
+    }
+    expect(seen).toEqual(["10% shift", "20% shift", "30% shift"]);
+    fireEvent.keyDown(svg, { key: "ArrowLeft" });
+    fireEvent.keyDown(svg, { key: "ArrowLeft" });
+    expect(await label()).toBe("10% shift");
+    // The tooltip, which screen readers announce, says what the caption says.
+    const tooltip = node.querySelector(".recharts-default-tooltip");
+    expect(tooltip.getAttribute("role")).toBe("status");
+    expect(tooltip.textContent).toContain(`${GATED.series[1]} : about even`);
+    vi.useRealTimers();
   });
 });
 

@@ -43,19 +43,35 @@ export function formatAmount(value) {
   return billions(value, { sign: true });
 }
 
+// Recharts' accessibility layer makes each chart a keyboard stop whose arrow
+// keys move the tooltip from shift to shift. This tells screen readers so.
+export const KEYBOARD_HINT = "Use the arrow keys to step through the shifts.";
+
 // One chart of lines over the shift, in $B, with straight segments between
 // the sweep's points, the y-axis on the given ticks and a heavier line at
 // zero. `series` lists each line as { key, name, style, format }, where key
 // names the field in each row of `data`, style is "main" or "comparison" and
 // format, if given, prints the line's value in the tooltip from the hovered
-// row; otherwise the tooltip prints the signed amount.
-export default function LinePanel({ data, series, ticks, height = 300 }) {
+// row; otherwise the tooltip prints the signed amount. `label` names the
+// chart for screen readers, which reach it as a keyboard stop.
+export default function LinePanel({
+  data,
+  series,
+  ticks,
+  label,
+  height = 300,
+}) {
   const formats = Object.fromEntries(
     series.map(({ key, format }) => [key, format]),
   );
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: 0 }}>
+      <LineChart
+        data={data}
+        margin={{ top: 8, right: 16, bottom: 4, left: 0 }}
+        aria-label={label}
+        desc={KEYBOARD_HINT}
+      >
         <CartesianGrid {...GRID_STYLE} vertical={false} />
         <XAxis
           dataKey="shift_pct"
