@@ -12,6 +12,18 @@ import {
 } from "recharts";
 import { IconChartBar, IconInfoCircle } from "@tabler/icons-react";
 import incomeDistributionData from "../data/incomeDistributionData.json";
+import {
+  AXIS_STYLE,
+  GAIN,
+  GRID_STYLE,
+  LEGEND_STYLE,
+  LOSS,
+  SERIES,
+  TEXT,
+  TOOLTIP_ITEM_STYLE,
+  TOOLTIP_LABEL_STYLE,
+  ZERO_LINE,
+} from "../charts/kitTheme";
 import { TOOLTIP_STYLE } from "../utils/chartStyles";
 import { niceTicks } from "../utils/chartTicks";
 
@@ -53,6 +65,41 @@ const VIEWS = {
     note: "Shows each component's contribution as a percent of national total income for the selected concept.",
   },
 };
+
+// Each segment's colour, by key, from the UI kit. The data file's own colours
+// are ignored. Market income's segments take the first three series colours
+// in order. In net income, taxes take the kit's loss gray and benefits its
+// gain teal; the other two take the series colours that stay distinct from
+// their neighbours in the stack: refundable credits teal-700 beside benefits,
+// and market income sky beside the zero line.
+export const SEGMENT_COLOURS = {
+  labor: SERIES[0],
+  capital: SERIES[1],
+  otherMarket: SERIES[2],
+  market: SERIES[2],
+  refundableCredits: SERIES[1],
+  benefits: GAIN,
+  taxes: LOSS,
+};
+
+// The order each concept stacks its segments, outward from zero. Benefits
+// stack last so their teal touches only the refundable credits' teal-700.
+const STACK_ORDER = {
+  net: ["market", "refundableCredits", "benefits", "taxes"],
+};
+
+export function stackedComponents(conceptKey, components) {
+  const order = STACK_ORDER[conceptKey];
+  if (!order) return components;
+  return [...components].sort(
+    (a, b) => order.indexOf(a.key) - order.indexOf(b.key),
+  );
+}
+
+// Legend names stay in ink; the swatch beside each carries the segment colour.
+const legendText = (label) => (
+  <span style={{ color: TEXT.muted }}>{label}</span>
+);
 
 const TOP_SHARE_KEYS = ["top10", "top1", "top01"];
 
@@ -238,7 +285,7 @@ function IncomeDistributionBreakdown() {
                   <div key={component.key} className="income-component-item">
                     <span
                       className="income-component-swatch"
-                      style={{ background: component.color }}
+                      style={{ background: SEGMENT_COLOURS[component.key] }}
                     />
                     <div>
                       <strong>{component.label}</strong>
@@ -257,13 +304,13 @@ function IncomeDistributionBreakdown() {
               margin={{ left: 28, right: 30, top: 20, bottom: 15 }}
               stackOffset="sign"
             >
-              <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+              <CartesianGrid {...GRID_STYLE} />
               <XAxis
                 type="number"
                 ticks={ticks}
                 domain={[ticks[0], ticks[ticks.length - 1]]}
                 tickFormatter={view.formatter}
-                tick={{ fontSize: 12 }}
+                tick={AXIS_STYLE}
                 label={{
                   value: view.axisLabel,
                   position: "insideBottom",
@@ -275,11 +322,13 @@ function IncomeDistributionBreakdown() {
                 type="category"
                 dataKey="group"
                 width={92}
-                tick={{ fontSize: 12 }}
+                tick={AXIS_STYLE}
               />
-              <ReferenceLine x={0} stroke="#4a5568" strokeWidth={1.3} />
+              <ReferenceLine x={0} {...ZERO_LINE} />
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
+                labelStyle={TOOLTIP_LABEL_STYLE}
+                itemStyle={TOOLTIP_ITEM_STYLE}
                 formatter={(value, name) => {
                   const component = concept.components.find(
                     (item) => item.key === name,
@@ -288,21 +337,26 @@ function IncomeDistributionBreakdown() {
                 }}
               />
               <Legend
+                {...LEGEND_STYLE}
                 formatter={(value) =>
-                  concept.components.find(
-                    (component) => component.key === value,
-                  )?.label ?? value
+                  legendText(
+                    concept.components.find(
+                      (component) => component.key === value,
+                    )?.label ?? value,
+                  )
                 }
               />
-              {concept.components.map((component) => (
-                <Bar
-                  key={component.key}
-                  dataKey={component.key}
-                  stackId="income"
-                  fill={component.color}
-                  radius={[4, 4, 4, 4]}
-                />
-              ))}
+              {stackedComponents(conceptKey, concept.components).map(
+                (component) => (
+                  <Bar
+                    key={component.key}
+                    dataKey={component.key}
+                    stackId="income"
+                    fill={SEGMENT_COLOURS[component.key]}
+                    radius={[4, 4, 4, 4]}
+                  />
+                ),
+              )}
             </BarChart>
           </ResponsiveContainer>
 
