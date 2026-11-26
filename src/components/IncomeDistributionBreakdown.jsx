@@ -14,6 +14,7 @@ import { IconChartBar, IconInfoCircle } from "@tabler/icons-react";
 import incomeDistributionData from "../data/incomeDistributionData.json";
 import {
   AXIS_STYLE,
+  BAND_EDGE,
   GAIN,
   GRID_STYLE,
   LEGEND_STYLE,
@@ -69,32 +70,20 @@ const VIEWS = {
 // Each segment's colour, by key, from the UI kit. The data file's own colours
 // are ignored. Market income's segments take the first three series colours
 // in order. In net income, taxes take the kit's loss gray and benefits its
-// gain teal; the other two take the series colours that stay distinct from
-// their neighbours in the stack: refundable credits teal-700 beside benefits,
-// and market income sky beside the zero line.
+// gain teal. Market income sits on benefits in most groups and on taxes in
+// the bottom 10%, so it takes blue-700 (ΔE 14.8 from the teal, 10.2 from the
+// gray); teal-700 would clear the teal but sit 4.8 from the gray. Refundable
+// credits take sky, 26.5 from the gray. No four kit colours clear a ΔE of 15
+// against each other, so every segment also draws BAND_EDGE.
 export const SEGMENT_COLOURS = {
   labor: SERIES[0],
   capital: SERIES[1],
   otherMarket: SERIES[2],
-  market: SERIES[2],
-  refundableCredits: SERIES[1],
+  market: SERIES[3],
+  refundableCredits: SERIES[2],
   benefits: GAIN,
   taxes: LOSS,
 };
-
-// The order each concept stacks its segments, outward from zero. Benefits
-// stack last so their teal touches only the refundable credits' teal-700.
-const STACK_ORDER = {
-  net: ["market", "refundableCredits", "benefits", "taxes"],
-};
-
-export function stackedComponents(conceptKey, components) {
-  const order = STACK_ORDER[conceptKey];
-  if (!order) return components;
-  return [...components].sort(
-    (a, b) => order.indexOf(a.key) - order.indexOf(b.key),
-  );
-}
 
 // Legend names stay in ink; the swatch beside each carries the segment colour.
 const legendText = (label) => (
@@ -107,7 +96,7 @@ function formatBenchmarkPercent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function chartRows(conceptKey, viewKey) {
+export function chartRows(conceptKey, viewKey) {
   const concept = incomeDistributionData[conceptKey];
   const view = VIEWS[viewKey];
   return concept.groups.map((group) => {
@@ -336,8 +325,11 @@ function IncomeDistributionBreakdown() {
                   return [view.formatter(value), component?.label ?? name];
                 }}
               />
+              {/* The legend keeps the stacking order, which is the order of
+                  the Components list, instead of sorting by key. */}
               <Legend
                 {...LEGEND_STYLE}
+                itemSorter={null}
                 formatter={(value) =>
                   legendText(
                     concept.components.find(
@@ -346,17 +338,16 @@ function IncomeDistributionBreakdown() {
                   )
                 }
               />
-              {stackedComponents(conceptKey, concept.components).map(
-                (component) => (
-                  <Bar
-                    key={component.key}
-                    dataKey={component.key}
-                    stackId="income"
-                    fill={SEGMENT_COLOURS[component.key]}
-                    radius={[4, 4, 4, 4]}
-                  />
-                ),
-              )}
+              {concept.components.map((component) => (
+                <Bar
+                  key={component.key}
+                  dataKey={component.key}
+                  stackId="income"
+                  {...BAND_EDGE}
+                  fill={SEGMENT_COLOURS[component.key]}
+                  radius={[4, 4, 4, 4]}
+                />
+              ))}
             </BarChart>
           </ResponsiveContainer>
 
