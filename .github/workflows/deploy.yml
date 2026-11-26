@@ -65,8 +65,8 @@ jobs:
       - name: Install Playwright browsers
         run: bunx playwright install chromium
 
-      - name: Run E2E image tests
-        run: bunx playwright test tests/e2e/images.spec.js --project=chromium
+      - name: Run E2E image and health-figure tests
+        run: bunx playwright test tests/e2e/images.spec.js tests/e2e/healthFigures.spec.js --project=chromium
 
   build-and-deploy:
     runs-on: ubuntu-24.04
