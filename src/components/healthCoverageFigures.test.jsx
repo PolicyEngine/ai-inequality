@@ -715,7 +715,7 @@ describe("the new chart files", () => {
         .filter(
           (text) =>
             /var\(--/.test(text) ||
-            new RegExp(`^\\s*${NAMED}\\s*$`, "i").test(text),
+            new RegExp(NAMED, "i").test(text),
         )
         .map((text) => `${path}: "${text}"`);
     });
