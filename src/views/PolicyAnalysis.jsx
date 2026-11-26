@@ -1,14 +1,19 @@
 import React from "react";
 import { useSearchParams } from "react-router-dom";
 import BaselineDistributionSummary from "../components/BaselineDistributionSummary";
+import CaliforniaRevenue from "../components/CaliforniaRevenue";
 import IncomeDistributionBreakdown from "../components/IncomeDistributionBreakdown";
+import RevenueByGovernment from "../components/RevenueByGovernment";
 import ShiftSweep from "../components/ShiftSweep";
+import { healthCoverageCopy } from "../components/healthCoverageCopy";
+import revenueLines from "../data/revenueLines.json";
 import {
   COUNTRIES,
   countryFromSearchParams,
   incomeShiftUrl,
 } from "../utils/countryConfig";
 import { policyEngineLabel } from "../utils/modelMetadata";
+import { showsHealthCoverageFigures } from "../utils/sweepRevenue";
 
 function formatTrillions(value, currencySymbol) {
   return value == null ? "—" : `${currencySymbol}${value.toFixed(1)}T`;
@@ -16,6 +21,28 @@ function formatTrillions(value, currencySymbol) {
 
 function formatShare(value) {
   return value == null ? "—" : `${Math.round(value * 100)}%`;
+}
+
+function HealthCoverageSection({ metadata, year }) {
+  const copy = healthCoverageCopy(revenueLines).section;
+  return (
+    <section className="section health-coverage">
+      <div className="analysis-header">
+        <h2>{copy.heading}</h2>
+        <p className="analysis-subtitle">{copy.intro}</p>
+      </div>
+      <RevenueByGovernment
+        revenueLines={revenueLines}
+        metadata={metadata}
+        year={year}
+      />
+      <CaliforniaRevenue
+        revenueLines={revenueLines}
+        metadata={metadata}
+        year={year}
+      />
+    </section>
+  );
 }
 
 function PolicyAnalysis() {
@@ -116,6 +143,12 @@ function PolicyAnalysis() {
         </div>
       </div>
 
+      {showsHealthCoverageFigures(countryKey, sweepData) && (
+        <HealthCoverageSection
+          metadata={metadata}
+          year={metadata.year ?? sweepData.year}
+        />
+      )}
       {country.incomeDistributionData && <IncomeDistributionBreakdown />}
       <ShiftSweep sweepData={sweepData} />
     </>

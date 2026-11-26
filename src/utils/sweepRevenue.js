@@ -27,6 +27,23 @@ export function countsHealthTanf(sweepData) {
   );
 }
 
+// True when some shift in the sweep carries a state-by-state breakdown.
+export function hasStateDeltas(sweepData) {
+  return (sweepData?.scenarios ?? []).some(
+    (scenario) => Object.keys(scenario.state_deltas ?? {}).length > 0,
+  );
+}
+
+// True when the policy-analysis page shows its health-coverage figures: a US
+// sweep that counts health coverage and splits revenue by state.
+export function showsHealthCoverageFigures(countryKey, sweepData) {
+  return (
+    countryKey === "us" &&
+    countsHealthTanf(sweepData) &&
+    hasStateDeltas(sweepData)
+  );
+}
+
 // Federal chart bands in $B, positive when federal revenue rises.
 export function federalRow(scenario, withHealthTanf = false) {
   const rev_fed_income_tax_net =
