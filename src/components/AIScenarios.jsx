@@ -16,6 +16,14 @@ import {
 } from "recharts";
 import { IconInfoCircle, IconTimeline } from "@tabler/icons-react";
 import defaultScenariosData from "../data/aiScenariosData.json";
+import {
+  FALL_IS_GOOD,
+  GRID_STYLE,
+  LINE,
+  SERIES,
+  TEXT,
+  ZERO_LINE,
+} from "../charts/kitTheme";
 import { TOOLTIP_STYLE } from "../utils/chartStyles";
 import { microcosmBuildLabel } from "../utils/modelMetadata";
 import { useRovingRadioGroup } from "../utils/useRovingRadioGroup";
@@ -45,15 +53,16 @@ const VARIANT_PHRASES = {
   expansive: "wages spreading",
 };
 
-// Palette reuses values already in the repo: pe-blue-dark for the
-// shares-fixed counterfactual, pe-teal-600 for the forecast tilt, semantic
-// success/error only where a sign is genuinely good or bad for households.
-const COLOR_FIXED = "#17354F";
-const COLOR_FORECAST = "#227773";
-const COLOR_GRID = "#e2e8f0";
-const COLOR_ZERO = "#718096";
-const COLOR_GOOD = "#22c55e";
-const COLOR_BAD = "#ef4444";
+// Colours from the UI kit (src/charts/kitTheme.js). The shares-fixed bars are
+// the blue bars and the forecast tilt the teal bars that the text below the
+// chart names. Poverty takes the kit's fall-is-good pair: teal when it falls,
+// gray when it rises. The breakeven line is a reference mark, not a loss.
+const COLOR_FIXED = SERIES[3];
+const COLOR_FORECAST = SERIES[0];
+const COLOR_GRID = GRID_STYLE.stroke;
+const COLOR_GOOD = FALL_IS_GOOD.fall;
+const COLOR_BAD = FALL_IS_GOOD.rise;
+const COLOR_BREAKEVEN = LINE.comparison;
 
 const fmtBillions = (value) =>
   `${value >= 0 ? "+" : "−"}$${Math.abs(value).toFixed(0)}B`;
@@ -202,7 +211,7 @@ function VariantPairCharts({ scenarios, scenarioName }) {
               tickFormatter={(v) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}pp`}
               tick={{ fontSize: 12 }}
             />
-            <ReferenceLine y={0} stroke={COLOR_ZERO} strokeDasharray="4 4" />
+            <ReferenceLine y={0} {...ZERO_LINE} />
             <Tooltip
               contentStyle={TOOLTIP_STYLE}
               formatter={(value) => [fmtPp(value), "Poverty change"]}
@@ -268,17 +277,17 @@ function RealizationChart({ rows, breakeven }) {
               style: { fontSize: 13 },
             }}
           />
-          <ReferenceLine y={0} stroke={COLOR_ZERO} strokeDasharray="4 4" />
+          <ReferenceLine y={0} {...ZERO_LINE} />
           {breakeven != null && (
             <ReferenceLine
               x={breakeven * 100}
-              stroke={COLOR_BAD}
+              stroke={COLOR_BREAKEVEN}
               strokeDasharray="4 4"
               label={{
                 value: `Breakeven ≈ ${(breakeven * 100).toFixed(0)}%`,
                 position: "insideTopLeft",
                 fontSize: 12,
-                fill: COLOR_BAD,
+                fill: TEXT.muted,
               }}
             />
           )}
