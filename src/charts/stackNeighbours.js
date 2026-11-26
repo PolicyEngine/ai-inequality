@@ -57,11 +57,11 @@ export function tokenHex(css, colour) {
 // The distance between two colours in OKLab, times 100: the ΔE the dataviz
 // palette validator reports, where 15 is the floor for neighbours.
 export function colourDistance(hexA, hexB) {
-  const [a, b] = [hexA, hexB].map(oklab);
+  const [a, b] = [hexA, hexB].map(toOklab);
   return 100 * Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
 
-function oklab(hex) {
+function toOklab(hex) {
   const [r, g, b] = [1, 3, 5].map((start) => {
     const c = parseInt(hex.slice(start, start + 2), 16) / 255;
     return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;

@@ -17,10 +17,9 @@ import {
   BAND_EDGE,
   GAIN,
   GRID_STYLE,
-  LEGEND_STYLE,
+  LEGEND_PROPS,
   LOSS,
   SERIES,
-  TEXT,
   TOOLTIP_ITEM_STYLE,
   TOOLTIP_LABEL_STYLE,
   ZERO_LINE,
@@ -84,11 +83,6 @@ export const SEGMENT_COLOURS = {
   benefits: GAIN,
   taxes: LOSS,
 };
-
-// Legend names stay in ink; the swatch beside each carries the segment colour.
-const legendText = (label) => (
-  <span style={{ color: TEXT.muted }}>{label}</span>
-);
 
 const TOP_SHARE_KEYS = ["top10", "top1", "top01"];
 
@@ -328,14 +322,12 @@ function IncomeDistributionBreakdown() {
               {/* The legend keeps the stacking order, which is the order of
                   the Components list, instead of sorting by key. */}
               <Legend
-                {...LEGEND_STYLE}
+                {...LEGEND_PROPS}
                 itemSorter={null}
                 formatter={(value) =>
-                  legendText(
-                    concept.components.find(
-                      (component) => component.key === value,
-                    )?.label ?? value,
-                  )
+                  concept.components.find(
+                    (component) => component.key === value,
+                  )?.label ?? value
                 }
               />
               {concept.components.map((component) => (

@@ -25,7 +25,7 @@ import {
   BAND_EDGE,
   GAIN,
   GRID_STYLE,
-  LEGEND_STYLE,
+  LEGEND_PROPS,
   LINE,
   LOSS,
   SERIES,
@@ -219,10 +219,6 @@ const FED_INCOME_TAX_BUCKETS = [
 ];
 
 // Legend names stay in ink; the swatch beside each carries the series colour.
-const legendText = (value) => (
-  <span style={{ color: TEXT.muted }}>{value}</span>
-);
-
 // Recharts colours an area's legend swatch with its stroke, which for a band is
 // BAND_EDGE, so a band's swatch takes its fill instead.
 function BandLegend(props) {
@@ -840,11 +836,7 @@ function RevenueDecompositionChart({
               `${value}% shift`
             }
           />
-          <Legend
-            {...LEGEND_STYLE}
-            formatter={legendText}
-            content={BandLegend}
-          />
+          <Legend {...LEGEND_PROPS} content={BandLegend} />
           {/* Band i fills with SERIES[i]; no bucket list holds more than six.
               Each band draws BAND_EDGE along its outer edge, because a band
               near zero lets two bands that are not list neighbours touch. */}

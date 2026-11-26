@@ -132,7 +132,7 @@ def main():
     ax.annotate(
         f"{money(ten)} at a 10% shift",
         xy=(10, ten),
-        xytext=(16, ten * 0.35),
+        xytext=(16, ten * 0.72),
         fontsize=19,
         fontweight="bold",
         color=text_primary,

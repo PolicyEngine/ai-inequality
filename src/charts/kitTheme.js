@@ -69,6 +69,20 @@ export const TEXT = {
   muted: "var(--muted-foreground)",
 };
 
+// Spread onto every Recharts Legend and Tooltip. Recharts otherwise writes
+// legend names and tooltip rows in each series' colour, and var(--chart-1) on
+// white falls below the 4.5:1 that text this size needs. The swatch beside
+// each name still carries the series colour.
+export const LEGEND_PROPS = {
+  ...LEGEND_STYLE,
+  labelStyle: { color: TEXT.muted },
+};
+export const TOOLTIP_PROPS = {
+  contentStyle: TOOLTIP_CONTENT_STYLE,
+  labelStyle: TOOLTIP_LABEL_STYLE,
+  itemStyle: TOOLTIP_ITEM_STYLE,
+};
+
 // Every CSS variable a chart can reach through this module, including the
 // ones inside the kit's axis, grid, legend and tooltip styles.
 export function tokensUsed() {
@@ -95,6 +109,8 @@ export function tokensUsed() {
     ZERO_LINE,
     BAND_EDGE,
     TEXT,
+    LEGEND_PROPS,
+    TOOLTIP_PROPS,
   ]);
   return [...found].sort();
 }

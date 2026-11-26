@@ -4,15 +4,19 @@ import { join, relative } from "node:path";
 import { parse } from "espree";
 
 // Chart code draws every colour from kitTheme.js, so it holds no colour
-// literal of its own: no hex, rgb(), rgba(), hsl() or hsla(), including one
-// a template literal builds, no CSS named colour such as "white" anywhere,
-// and no bare word in a colour prop, however its value is written. Comments
-// don't count; kitTheme.js names each token's hex value in one.
+// literal of its own: no hex and no CSS colour function such as rgb(), hsl()
+// or oklch(), including one a template literal builds; no var() with a
+// fallback, which could name a colour of its own; no CSS named colour such as
+// "white" anywhere; and no bare word in a colour prop, however its value is
+// written. Comments don't count; kitTheme.js names each token's hex value in
+// one.
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
+const APP = join(ROOT, "app");
 
-const COLOUR_LITERAL = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?)\s*\(/gi;
+const COLOUR_LITERAL =
+  /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\s*\(|var\(\s*--[\w-]+\s*,/gi;
 // A prop that takes a colour: fill, stroke, color, background and any name
 // ending in one of them, such as stopColor, textFill or backgroundColor.
 const COLOUR_PROP = /(?:fill|stroke|colou?r|background)$/i;
@@ -167,7 +171,7 @@ const importsRecharts = (source) =>
   /from\s+["']recharts["']/.test(source) ||
   /require\(\s*["']recharts["']\s*\)/.test(source);
 
-const CHART_FILES = sourceFiles(SRC).filter(
+const CHART_FILES = [...sourceFiles(SRC), ...sourceFiles(APP)].filter(
   (path) =>
     importsRecharts(readFileSync(path, "utf8")) ||
     path === join(SRC, "utils", "chartStyles.js") ||
@@ -191,11 +195,19 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     'const k = { textFill: "red", labelColor: "blue" };',
     'const l = ["teal", "Navy"];',
     'const m = { label: "Teal gains, gray loses.", fill: TEXT.primary };',
+    'const n = <Line stroke="oklch(60% 0.2 30)" />;',
+    'const o = <Line stroke="var(--chart-1, red)" />;',
+    'const p = { color: "color(display-p3 1 0 0)", fill: `lab(${l} 0 0)` };',
+    'const q = { stroke: "var(--chart-1)", text: getColor(x), label: y };',
   ].join("\n");
   expect(colourLiterals(sample)).toEqual([
     "3: #227773",
     "4: rgba(",
     "5: hsl(",
+    "16: oklch(",
+    "17: var(--chart-1,",
+    "18: color(",
+    "18: lab(",
     '6: stroke="white"',
     '7: fill="orange"',
     '9: fill="red"',
@@ -205,6 +217,7 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     "12: #${…}",
     '13: textFill="red"',
     '13: labelColor="blue"',
+    "18: `lab(`",
     '14: "teal"',
     '14: "Navy"',
   ]);
@@ -217,6 +230,9 @@ test("the scan covers every file that draws a chart", () => {
   expect(names).toContain("src/components/IncomeDistributionBreakdown.jsx");
   expect(names).toContain("src/utils/chartStyles.js");
   expect(names).toContain("src/charts/kitTheme.js");
+  // The app/ directory draws no chart today; the scan reads it all the same,
+  // so a chart added there is checked.
+  expect(sourceFiles(APP).length).toBeGreaterThan(0);
 });
 
 test.each(CHART_FILES.map((path) => [relative(ROOT, path), path]))(

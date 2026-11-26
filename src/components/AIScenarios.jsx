@@ -19,12 +19,13 @@ import defaultScenariosData from "../data/aiScenariosData.json";
 import {
   FALL_IS_GOOD,
   GRID_STYLE,
+  LEGEND_PROPS,
   LINE,
   SERIES,
   TEXT,
+  TOOLTIP_PROPS,
   ZERO_LINE,
 } from "../charts/kitTheme";
-import { TOOLTIP_STYLE } from "../utils/chartStyles";
 import { microcosmBuildLabel } from "../utils/modelMetadata";
 import { useRovingRadioGroup } from "../utils/useRovingRadioGroup";
 
@@ -146,10 +147,10 @@ function TiltCostChart({ scenarios }) {
             }}
           />
           <Tooltip
-            contentStyle={TOOLTIP_STYLE}
+            {...TOOLTIP_PROPS}
             formatter={(value, seriesName) => [fmtBillions(value), seriesName]}
           />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
+          <Legend {...LEGEND_PROPS} />
           <Bar
             dataKey="fixed"
             name="Shares held at today's split"
@@ -190,7 +191,7 @@ function VariantPairCharts({ scenarios, scenarioName }) {
             <XAxis dataKey="variant" tick={{ fontSize: 11 }} />
             <YAxis tickFormatter={(v) => `$${v}B`} tick={{ fontSize: 12 }} />
             <Tooltip
-              contentStyle={TOOLTIP_STYLE}
+              {...TOOLTIP_PROPS}
               formatter={(value) => [fmtBillions(value), "Revenue change"]}
             />
             <Bar
@@ -213,7 +214,7 @@ function VariantPairCharts({ scenarios, scenarioName }) {
             />
             <ReferenceLine y={0} {...ZERO_LINE} />
             <Tooltip
-              contentStyle={TOOLTIP_STYLE}
+              {...TOOLTIP_PROPS}
               formatter={(value) => [fmtPp(value), "Poverty change"]}
             />
             <Bar dataKey="povertyPp" isAnimationActive={false}>
@@ -292,7 +293,7 @@ function RealizationChart({ rows, breakeven }) {
             />
           )}
           <Tooltip
-            contentStyle={TOOLTIP_STYLE}
+            {...TOOLTIP_PROPS}
             formatter={(value) => [fmtBillions(value), "Revenue change"]}
             labelFormatter={(value) => `${value}% realized`}
           />
