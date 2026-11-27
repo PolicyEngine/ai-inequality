@@ -26,7 +26,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   margin-bottom: var(--space-2);
 }
 
@@ -35,8 +35,8 @@
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: var(--space-8);
   padding: var(--space-5);
-  background: var(--pe-gray-50);
-  border: 1px solid var(--pe-gray-200);
+  background: var(--background-secondary);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
 
@@ -44,12 +44,12 @@
   font-size: 1rem;
   text-align: left;
   margin: 0 0 var(--space-2);
-  color: var(--pe-gray-900);
+  color: var(--foreground);
 }
 
 .income-definition-grid p {
   margin: 0;
-  color: var(--pe-gray-700);
+  color: var(--color-gray-700);
   line-height: 1.65;
 }
 
@@ -78,13 +78,13 @@
 }
 
 .income-component-item strong {
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   font-size: 0.92rem;
   margin-bottom: 0.1rem;
 }
 
 .income-component-item span {
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   font-size: 0.86rem;
   line-height: 1.45;
 }
@@ -94,7 +94,7 @@
 }
 
 .income-benchmark-disclosure {
-  border-top: 1px solid var(--pe-gray-200);
+  border-top: 1px solid var(--border);
   padding-top: var(--space-4);
 }
 
@@ -104,16 +104,16 @@
   justify-content: space-between;
   gap: var(--space-4);
   align-items: baseline;
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   font-weight: 700;
 }
 
 .income-benchmark-disclosure summary::marker {
-  color: var(--pe-blue);
+  color: var(--color-blue-700);
 }
 
 .income-benchmark-disclosure summary small {
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   font-size: 0.82rem;
   font-weight: 600;
 }
@@ -125,7 +125,7 @@
 }
 
 .income-benchmark-content > p {
-  color: var(--pe-gray-700);
+  color: var(--color-gray-700);
   line-height: 1.65;
   margin: 0;
   max-width: 62rem;
@@ -143,7 +143,7 @@
 
 .income-benchmark-table th,
 .income-benchmark-table td {
-  border-bottom: 1px solid var(--pe-gray-200);
+  border-bottom: 1px solid var(--border);
   padding: var(--space-3);
   text-align: right;
   vertical-align: top;
@@ -156,19 +156,19 @@
 }
 
 .income-benchmark-table th {
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   font-size: 0.78rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .income-benchmark-table td {
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   font-weight: 700;
 }
 
 .income-benchmark-table td span {
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   display: block;
   font-size: 0.84rem;
   font-weight: 500;
@@ -183,7 +183,7 @@
 }
 
 .income-benchmark-sources article {
-  border-left: 3px solid var(--pe-blue);
+  border-left: 3px solid var(--color-blue-700);
   padding-left: var(--space-3);
 }
 
@@ -194,7 +194,7 @@
 
 .income-benchmark-sources p,
 .income-benchmark-sources span {
-  color: var(--pe-gray-700);
+  color: var(--color-gray-700);
   display: block;
   font-size: 0.88rem;
   line-height: 1.5;
@@ -202,7 +202,7 @@
 }
 
 .income-benchmark-sources span {
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   margin-top: var(--space-2);
 }
 

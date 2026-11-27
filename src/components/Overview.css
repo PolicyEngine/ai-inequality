@@ -20,13 +20,17 @@
   transform: translateX(-50%);
   width: 60px;
   height: 3px;
-  background: linear-gradient(90deg, var(--pe-teal-500), var(--pe-teal-300));
+  background: linear-gradient(
+    90deg,
+    var(--color-teal-500),
+    var(--color-teal-200)
+  );
   border-radius: var(--radius-full);
 }
 
 .section-header h2 {
   font-size: clamp(2rem, 5vw, 2.75rem);
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   margin-bottom: var(--space-4);
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -34,7 +38,7 @@
 
 .section-subtitle {
   font-size: clamp(1rem, 2.5vw, 1.25rem);
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   max-width: 700px;
   margin: 0 auto;
   line-height: 1.6;
@@ -42,7 +46,7 @@
 
 .subsection-title {
   font-size: clamp(1.5rem, 3vw, 2rem);
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-4);
   text-align: center;
   font-weight: 600;
@@ -54,7 +58,7 @@
   max-width: 800px;
   margin: 0 auto var(--space-8);
   font-size: 1.05rem;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   line-height: 1.7;
 }
 
@@ -76,7 +80,7 @@
   padding: var(--space-10) var(--space-6);
   background: white;
   border-radius: var(--radius-xl);
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
   transition: all var(--transition-slow);
   overflow: hidden;
 }
@@ -88,14 +92,18 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--pe-teal-500), var(--pe-teal-300));
+  background: linear-gradient(
+    90deg,
+    var(--color-teal-500),
+    var(--color-teal-200)
+  );
   transform: scaleX(0);
   transform-origin: left;
   transition: transform var(--transition-slow);
 }
 
 .icon-card:hover {
-  border-color: var(--pe-teal-300);
+  border-color: var(--color-teal-200);
   box-shadow: var(--shadow-teal-lg);
   transform: translateY(-8px);
 }
@@ -109,25 +117,25 @@
   align-items: center;
   justify-content: center;
   margin-bottom: var(--space-4);
-  color: var(--pe-teal-600);
+  color: var(--primary);
   transition: transform var(--transition-spring);
 }
 
 .icon-card:hover .icon-large {
   transform: scale(1.15);
-  color: var(--pe-teal-700);
+  color: var(--color-teal-700);
 }
 
 .icon-card h4 {
   font-size: 1.1rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-2);
   font-weight: 600;
 }
 
 .icon-card p {
   font-size: 0.9rem;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   line-height: 1.5;
   margin: 0;
 }
@@ -137,7 +145,7 @@
   margin-bottom: var(--space-20);
   background: linear-gradient(
     135deg,
-    var(--pe-teal-50) 0%,
+    var(--color-teal-50) 0%,
     rgba(240, 249, 255, 0.5) 100%
   );
   padding: var(--space-16) var(--space-10);
@@ -176,7 +184,7 @@
   background: white;
   padding: var(--space-5) var(--space-6);
   border-radius: var(--radius-lg);
-  border: 2px solid var(--pe-teal-200);
+  border: 2px solid var(--color-teal-100);
   box-shadow: var(--shadow-md);
   transition: all var(--transition-slow);
   min-width: 220px;
@@ -184,7 +192,7 @@
 }
 
 .process-step:hover {
-  border-color: var(--pe-teal-500);
+  border-color: var(--color-teal-500);
   box-shadow: var(--shadow-teal);
   transform: translateY(-4px) scale(1.02);
 }
@@ -193,7 +201,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   color: white;
-  background: linear-gradient(135deg, var(--pe-teal-500), var(--pe-teal-600));
+  background: linear-gradient(135deg, var(--color-teal-500), var(--primary));
   width: 48px;
   height: 48px;
   border-radius: var(--radius-lg);
@@ -206,21 +214,21 @@
 
 .step-content h4 {
   font-size: 1rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-1);
   font-weight: 600;
 }
 
 .step-content p {
   font-size: 0.85rem;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   margin: 0;
   line-height: 1.4;
 }
 
 .flow-arrow {
   font-size: 1.5rem;
-  color: var(--pe-teal-600); /* Darkened for WCAG AA contrast */
+  color: var(--primary); /* Darkened for WCAG AA contrast */
   font-weight: 600;
 }
 
@@ -229,7 +237,7 @@
   max-width: 800px;
   margin: var(--space-10) auto 0;
   font-size: 0.95rem;
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   padding: var(--space-5) var(--space-6);
   background: white;
   border-radius: var(--radius-lg);
@@ -238,12 +246,12 @@
 }
 
 .integration-note strong {
-  color: var(--pe-teal-600);
+  color: var(--primary);
 }
 
 /* Uncertainty Section - Feature Box */
 .uncertainty-box {
-  background: linear-gradient(135deg, var(--pe-teal-600) 0%, #1a4a4a 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #1a4a4a 100%);
   color: white;
   padding: var(--space-16);
   border-radius: var(--radius-2xl);
@@ -357,7 +365,7 @@
   background: white;
   padding: var(--space-8);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
   text-align: center;
   transition: all var(--transition-slow);
   position: relative;
@@ -379,7 +387,7 @@
 }
 
 .impact-card:hover {
-  border-color: var(--pe-teal-300);
+  border-color: var(--color-teal-200);
   box-shadow: var(--shadow-lg);
   transform: translateY(-6px);
 }
@@ -393,25 +401,25 @@
   align-items: center;
   justify-content: center;
   margin-bottom: var(--space-4);
-  color: var(--pe-teal-600);
+  color: var(--primary);
   transition: transform var(--transition-spring);
 }
 
 .impact-card:hover .impact-icon {
   transform: scale(1.1) rotate(-5deg);
-  color: var(--pe-teal-700);
+  color: var(--color-teal-700);
 }
 
 .impact-card h4 {
   font-size: 1.1rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-2);
   font-weight: 600;
 }
 
 .impact-card p {
   font-size: 0.9rem;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   line-height: 1.6;
   margin: 0;
 }

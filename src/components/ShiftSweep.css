@@ -3,7 +3,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   margin-bottom: var(--space-2);
 }
 
@@ -27,11 +27,11 @@
   margin: 0;
   font-size: 0.9rem;
   line-height: 1.6;
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
 }
 
 .shift-sweep-link {
-  color: var(--pe-teal-600);
+  color: var(--primary);
   text-decoration: none;
 }
 
@@ -41,16 +41,16 @@
 
 .shift-sweep-select {
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--pe-gray-300);
+  border: 1px solid var(--border-dark);
   border-radius: var(--radius-md, 6px);
   background: white;
   font-size: 0.9rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   cursor: pointer;
 }
 
 .shift-sweep-select:focus {
-  outline: 2px solid var(--pe-teal-500);
+  outline: 2px solid var(--ring);
   outline-offset: 1px;
 }
 
@@ -58,7 +58,7 @@
 .shift-sweep-mtr-chart {
   margin-top: var(--space-8);
   padding-top: var(--space-6);
-  border-top: 1px solid var(--pe-gray-200);
+  border-top: 1px solid var(--border);
 }
 
 .shift-sweep-state-header {

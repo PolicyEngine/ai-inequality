@@ -17,17 +17,17 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--pe-teal-600);
+  color: var(--primary);
   margin-bottom: var(--space-3);
   padding: var(--space-1) var(--space-4);
-  background: var(--pe-teal-50);
+  background: var(--color-teal-50);
   border-radius: var(--radius-full);
-  border: 1px solid var(--pe-teal-200);
+  border: 1px solid var(--color-teal-100);
 }
 
 .challenge-section .section-header h2 {
   font-size: clamp(2rem, 5vw, 2.75rem);
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   margin-bottom: var(--space-4);
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -35,7 +35,7 @@
 
 .challenge-section .section-intro {
   font-size: clamp(1rem, 2.5vw, 1.15rem);
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   max-width: 800px;
   margin: 0 auto;
   line-height: 1.7;
@@ -53,7 +53,7 @@
   background: white;
   border-radius: var(--radius-xl);
   padding: var(--space-10) var(--space-8);
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
   transition: all var(--transition-slow);
   position: relative;
   overflow: hidden;
@@ -66,14 +66,18 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, var(--pe-teal-500), var(--pe-teal-300));
+  background: linear-gradient(
+    90deg,
+    var(--color-teal-500),
+    var(--color-teal-200)
+  );
   transform: scaleX(0);
   transform-origin: left;
   transition: transform var(--transition-slow);
 }
 
 .mechanism-card:hover {
-  border-color: var(--pe-teal-300);
+  border-color: var(--color-teal-200);
   box-shadow: var(--shadow-teal-lg);
   transform: translateY(-8px);
 }
@@ -88,21 +92,21 @@
   justify-content: center;
   width: 56px;
   height: 56px;
-  background: var(--pe-teal-50);
+  background: var(--color-teal-50);
   border-radius: var(--radius-lg);
   margin-bottom: var(--space-5);
-  color: var(--pe-teal-600);
+  color: var(--primary);
   transition: all var(--transition-spring);
 }
 
 .mechanism-card:hover .mechanism-icon {
-  background: var(--pe-teal-100);
+  background: var(--color-teal-100);
   transform: scale(1.1);
 }
 
 .mechanism-card h3 {
   font-size: 1.25rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-3);
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -110,29 +114,29 @@
 
 .mechanism-card p {
   font-size: 0.95rem;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   line-height: 1.7;
   margin: 0;
 }
 
 /* Inline Source Links */
 .inline-source {
-  color: var(--pe-teal-600);
+  color: var(--primary);
   text-decoration: none;
   font-weight: 500;
-  border-bottom: 1px dotted var(--pe-teal-400);
+  border-bottom: 1px dotted var(--color-teal-300);
   transition: all var(--transition-fast);
 }
 
 .inline-source:hover {
-  color: var(--pe-teal-500);
+  color: var(--color-teal-500);
   border-bottom-style: solid;
 }
 
 /* Callout Box */
 .challenge-callout {
-  background: var(--pe-teal-50);
-  border: 1px solid var(--pe-teal-200);
+  background: var(--color-teal-50);
+  border: 1px solid var(--color-teal-100);
   border-radius: var(--radius-xl);
   padding: var(--space-8) var(--space-10);
   position: relative;
@@ -146,13 +150,17 @@
   top: 0;
   bottom: 0;
   width: 4px;
-  background: linear-gradient(180deg, var(--pe-teal-500), var(--pe-teal-300));
+  background: linear-gradient(
+    180deg,
+    var(--color-teal-500),
+    var(--color-teal-200)
+  );
   border-radius: var(--radius-full);
 }
 
 .challenge-callout p {
   font-size: 1.05rem;
-  color: var(--pe-gray-700);
+  color: var(--color-gray-700);
   line-height: 1.7;
   margin: 0;
   font-style: italic;

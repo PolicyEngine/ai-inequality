@@ -17,17 +17,17 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--pe-teal-600);
+  color: var(--primary);
   margin-bottom: var(--space-3);
   padding: var(--space-1) var(--space-4);
-  background: var(--pe-teal-50);
+  background: var(--color-teal-50);
   border-radius: var(--radius-full);
-  border: 1px solid var(--pe-teal-200);
+  border: 1px solid var(--color-teal-100);
 }
 
 .examples-section .section-header h2 {
   font-size: clamp(2rem, 5vw, 2.75rem);
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   margin-bottom: var(--space-4);
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -35,7 +35,7 @@
 
 .examples-subtitle {
   font-size: 1.1rem;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   max-width: 700px;
   margin: 0 auto;
   line-height: 1.6;
@@ -55,14 +55,14 @@ a.project-card {
   color: inherit;
   background: white;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
   overflow: hidden;
   transition: all var(--transition-slow);
   position: relative;
 }
 
 a.project-card:hover {
-  border-color: var(--pe-teal-300);
+  border-color: var(--color-teal-200);
   box-shadow: var(--shadow-md);
   transform: translateY(-4px);
 }
@@ -74,7 +74,11 @@ a.project-card::after {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--pe-teal-500), var(--pe-teal-300));
+  background: linear-gradient(
+    90deg,
+    var(--color-teal-500),
+    var(--color-teal-200)
+  );
   transform: scaleX(0);
   transform-origin: left;
   transition: transform var(--transition-slow);
@@ -88,7 +92,7 @@ a.project-card:hover::after {
   position: relative;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: var(--pe-gray-100);
+  background: var(--muted);
 }
 
 .project-image {
@@ -114,7 +118,7 @@ a.project-card:hover .project-image {
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(4px);
   border-radius: var(--radius-sm);
-  color: var(--pe-teal-700);
+  color: var(--color-teal-700);
 }
 
 .project-content {
@@ -124,13 +128,13 @@ a.project-card:hover .project-image {
 .project-content h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-2);
 }
 
 .project-content p {
   font-size: 0.85rem;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   line-height: 1.6;
   margin: 0 0 var(--space-3);
 }
@@ -138,12 +142,12 @@ a.project-card:hover .project-image {
 .project-link-arrow {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--pe-teal-600);
+  color: var(--primary);
   transition: color var(--transition-fast);
 }
 
 a.project-card:hover .project-link-arrow {
-  color: var(--pe-teal-500);
+  color: var(--color-teal-500);
 }
 
 /* Footer */
@@ -151,13 +155,13 @@ a.project-card:hover .project-link-arrow {
   text-align: center;
   margin-top: var(--space-10);
   padding: var(--space-6) var(--space-8);
-  background: var(--pe-gray-50);
+  background: var(--background-secondary);
   border-radius: var(--radius-lg);
 }
 
 .examples-footer p {
   font-size: 0.95rem;
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   line-height: 1.7;
   max-width: 800px;
   margin: 0 auto;

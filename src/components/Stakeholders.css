@@ -13,7 +13,7 @@
 
 .section-header h2 {
   font-size: clamp(2rem, 5vw, 2.75rem);
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   margin-bottom: var(--space-4);
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -21,7 +21,7 @@
 
 .section-subtitle {
   font-size: clamp(1rem, 2.5vw, 1.2rem);
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   max-width: 600px;
   margin: 0 auto;
   line-height: 1.6;
@@ -35,14 +35,14 @@
   justify-content: center;
   margin-bottom: var(--space-10);
   padding: var(--space-6);
-  background: var(--pe-gray-50);
+  background: var(--background-secondary);
   border-radius: var(--radius-xl);
-  border: 1px solid var(--pe-gray-100);
+  border: 1px solid var(--border);
 }
 
 .filter-btn {
   padding: var(--space-2) var(--space-5);
-  border: 2px solid var(--pe-gray-200);
+  border: 2px solid var(--border);
   border-radius: var(--radius-full);
   background: white;
   font-size: 0.85rem;
@@ -52,18 +52,18 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   font-family: inherit;
 }
 
 .filter-btn:hover {
-  border-color: var(--pe-gray-400);
+  border-color: var(--color-gray-500);
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
 .filter-btn.active {
-  background: linear-gradient(135deg, var(--pe-teal-50), white);
+  background: linear-gradient(135deg, var(--color-teal-50), white);
   box-shadow: var(--shadow-teal);
   font-weight: 600;
 }
@@ -88,7 +88,7 @@
   padding: var(--space-5) var(--space-6);
   background: white;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
   border-left: 4px solid;
   text-decoration: none;
   transition: all var(--transition-slow);
@@ -116,7 +116,7 @@
 .stakeholder-badge:hover {
   box-shadow: var(--shadow-lg);
   transform: translateX(4px);
-  border-color: var(--pe-gray-300);
+  border-color: var(--border-dark);
 }
 
 .stakeholder-badge:hover::before {
@@ -130,13 +130,13 @@
 .badge-name {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-1);
   transition: color var(--transition-fast);
 }
 
 .stakeholder-badge:hover .badge-name {
-  color: var(--pe-gray-900);
+  color: var(--foreground);
 }
 
 .badge-category {
@@ -146,12 +146,12 @@
 
 .badge-arrow {
   font-size: 1.25rem;
-  color: var(--pe-gray-500); /* Darkened for WCAG AA contrast */
+  color: var(--muted-foreground); /* Darkened for WCAG AA contrast */
   transition: all var(--transition-base);
 }
 
 .stakeholder-badge:hover .badge-arrow {
-  color: var(--pe-teal-500);
+  color: var(--color-teal-500);
   transform: translateX(4px);
 }
 
@@ -159,12 +159,12 @@
 .international-box {
   background: linear-gradient(
     135deg,
-    var(--pe-teal-50) 0%,
+    var(--color-teal-50) 0%,
     rgba(240, 249, 255, 0.5) 100%
   );
   padding: var(--space-10);
   border-radius: var(--radius-2xl);
-  border: 2px solid var(--pe-teal-200);
+  border: 2px solid var(--color-teal-100);
   position: relative;
   overflow: hidden;
 }
@@ -195,12 +195,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--pe-teal-600);
+  color: var(--primary);
 }
 
 .box-header h3 {
   font-size: 1.5rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin: 0;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -208,7 +208,7 @@
 
 .international-box > p {
   font-size: 1.05rem;
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   margin-bottom: var(--space-8);
   line-height: 1.7;
   position: relative;
@@ -228,14 +228,14 @@
   padding: var(--space-5);
   background: white;
   border-radius: var(--radius-lg);
-  border: 2px solid var(--pe-gray-200);
+  border: 2px solid var(--border);
   transition: all var(--transition-slow);
   text-decoration: none;
   cursor: pointer;
 }
 
 .country-card:hover {
-  border-color: var(--pe-teal-400);
+  border-color: var(--color-teal-300);
   box-shadow: var(--shadow-teal);
   transform: translateY(-4px);
 }
@@ -246,7 +246,7 @@
   justify-content: center;
   width: 48px;
   height: 48px;
-  background: var(--pe-teal-600);
+  background: var(--primary);
   color: white;
   font-size: 0.875rem;
   font-weight: 700;
@@ -258,13 +258,13 @@
 
 .country-card:hover .country-flag {
   transform: scale(1.05);
-  background: var(--pe-teal-700);
+  background: var(--color-teal-700);
 }
 
 .country-card strong {
   display: block;
   font-size: 1.05rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-2);
 }
 
