@@ -1,16 +1,18 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
-import { parse } from "espree";
+import { parseModule, sourceFiles, walk } from "./sourceTree";
 
 // Chart code draws every colour from kitTheme.js, so it holds no colour
 // literal of its own: no hex and no CSS colour function such as rgb(),
 // oklch() or color-mix() in any string, including one a template literal
 // builds; no var() with a fallback, which could name a colour of its own; no
-// CSS named colour such as "white" as a whole string; and no bare word in a
-// colour prop, however its value is written. The scan reads strings, not
-// code, so a function call such as color(dataKey) passes and comments don't
-// count; kitTheme.js names each token's hex value in one.
+// CSS named colour such as "white" as a whole string; no bare word in a
+// colour prop, however its value is written; and in the CSS a <style> element
+// holds, none of these and no named colour in a declaration's value. The scan
+// reads strings and <style> text, not code, so a function call such as
+// color(dataKey) passes and comments don't count; kitTheme.js names each
+// token's hex value in one.
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
@@ -59,35 +61,27 @@ const KEYWORDS = new Set([
   "unset",
 ]);
 
-function sourceFiles(dir) {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(path);
-    return /\.(js|jsx)$/.test(entry.name) && !/\.test\.(js|jsx)$/.test(path)
-      ? [path]
-      : [];
-  });
-}
-
-function parseModule(source) {
-  return parse(source, {
-    ecmaVersion: "latest",
-    sourceType: "module",
-    ecmaFeatures: { jsx: true },
-    comment: true,
-    loc: true,
-    range: true,
-  });
-}
-
-function walk(node, visit) {
-  if (!node || typeof node.type !== "string") return;
-  visit(node);
-  for (const [key, value] of Object.entries(node)) {
-    if (key === "loc" || key === "range") continue;
-    if (Array.isArray(value)) value.forEach((child) => walk(child, visit));
-    else if (value && typeof value === "object") walk(value, visit);
+// Each CSS named colour in a declaration's value, as [offset, "prop: word"].
+// Comments, quoted strings and url() name no colour, and neither do
+// selectors, which sit outside the braces.
+function cssNamedColours(css) {
+  const blank = (match) => match.replace(/[^\n]/g, " ");
+  const text = css
+    .replace(/\/\*[\s\S]*?\*\//g, blank)
+    .replace(/"[^"]*"|'[^']*'|url\([^)]*\)/gi, blank);
+  const found = [];
+  for (const block of text.matchAll(/\{([^{}]*)\}/g)) {
+    const blockStart = block.index + 1;
+    for (const decl of block[1].matchAll(/([-\w]+)\s*:([^;]*)/g)) {
+      const valueStart = blockStart + decl.index + decl[0].indexOf(":") + 1;
+      for (const word of decl[2].matchAll(/[a-z]+/gi)) {
+        if (NAMED_COLOURS.has(word[0].toLowerCase())) {
+          found.push([valueStart + word.index, `${decl[1]}: ${word[0]}`]);
+        }
+      }
+    }
   }
+  return found;
 }
 
 // Every colour literal in a module, as "line: text", in line order.
@@ -149,6 +143,45 @@ export function colourLiterals(source) {
         found.push([node.loc.start.line, `\`${match[0]}\``]);
       }
     }
+    // The CSS a <style> element holds. Its text reaches the code as JSX text,
+    // which no string scan reads; espree decodes its entities, so
+    // &#123; reads as "{". A string or template literal inside the element
+    // is scanned as a string above, so here it's read only for named colours.
+    if (
+      node.type === "JSXElement" &&
+      node.openingElement.name.type === "JSXIdentifier" &&
+      node.openingElement.name.name === "style"
+    ) {
+      for (const child of node.children) {
+        const at = (offset, text) =>
+          child.loc.start.line +
+          (text.slice(0, offset).match(/\n/g) ?? []).length;
+        let css = null;
+        if (child.type === "JSXText") {
+          css = child.value;
+          for (const match of css.matchAll(COLOUR_LITERAL)) {
+            found.push([at(match.index, css), `<style> ${match[0]}`]);
+          }
+        } else if (child.type === "JSXExpressionContainer") {
+          const { expression } = child;
+          if (
+            expression.type === "Literal" &&
+            typeof expression.value === "string"
+          ) {
+            css = expression.value;
+          }
+          if (expression.type === "TemplateLiteral") {
+            css = expression.quasis
+              .map((quasi) => quasi.value.cooked ?? "")
+              .join(" ");
+          }
+        }
+        if (css === null) continue;
+        for (const [offset, text] of cssNamedColours(css)) {
+          found.push([at(offset, css), `<style> ${text}`]);
+        }
+      }
+    }
     if (node.type === "JSXAttribute") colourProp(node.value, node.name.name);
     if (node.type === "Property" && !node.computed) {
       colourProp(node.value, node.key.name ?? node.key.value);
@@ -204,6 +237,10 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     "const t = <Line stroke={color(dataKey)} fill={rgb(x)} />;",
     'const u = { note: "The Budget Lab (2026)", fill: SERIES[0] };',
     "const v = `#fff`;",
+    "const w = <style>.series &#123; stroke: #227773; &#125;</style>;",
+    "const x = <style>{\".a { fill: red; font-family: 'Tan' }\"}</style>;",
+    "const y = <style>{`.b:hover { stroke: ${c}; color: Navy }`}</style>;",
+    "const z = <style>.c &#123; fill: var(--chart-1); &#125; /* red */</style>;",
   ].join("\n");
   expect(colourLiterals(sample)).toEqual([
     "3: #227773",
@@ -227,6 +264,9 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     "20: color-mix(",
     "21: light-dark(",
     "24: `#fff`",
+    "25: <style> #227773",
+    "26: <style> fill: red",
+    "27: <style> color: Navy",
   ]);
 });
 
