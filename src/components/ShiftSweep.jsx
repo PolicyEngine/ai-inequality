@@ -236,12 +236,21 @@ function BandLegend(props) {
 // Every signed amount in billions on the sweep's axes and tooltips: "-$172B",
 // "+$5.3B", with the sign before the currency symbol as the health-coverage
 // figures print it. Each chart keeps the decimals it has always printed, and
-// amounts keep no thousands separator.
+// amounts keep no thousands separator. A value that isn't a finite number,
+// such as one a regenerated data file left out, prints as a dash: billions()
+// throws on it, and a throw in a tooltip would empty the page.
 export const signedBillions = (
   value,
   { precision = 0, currencySymbol = "$" } = {},
 ) =>
-  billions(value, { sign: true, precision, currencySymbol, grouping: false });
+  Number.isFinite(value)
+    ? billions(value, {
+        sign: true,
+        precision,
+        currencySymbol,
+        grouping: false,
+      })
+    : "—";
 const axisPctFmt = (value) => {
   const pct = value * 100;
   if (Math.abs(pct) >= 10 || pct === 0) {

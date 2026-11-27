@@ -1,5 +1,5 @@
 import { cloneElement } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 
@@ -35,6 +35,13 @@ test("signs billions before the currency symbol, at each chart's precision", () 
   expect(signedBillions(0.004, { precision: 2 })).toBe("$0.00B");
 });
 
+// billions() throws on these. A tooltip that threw would empty the page.
+test("prints a dash for a value that isn't a finite number", () => {
+  for (const value of [NaN, Infinity, -Infinity, undefined, null]) {
+    expect(signedBillions(value, { precision: 1 })).toBe("—");
+  }
+});
+
 describe.each([
   ["US", sweepData, "$"],
   ["UK", ukSweepData, "£"],
@@ -64,4 +71,68 @@ describe.each([
     expect(ticks.some((tick) => tick.startsWith(`-${symbol}`))).toBe(true);
     expect(ticks.some((tick) => tick.startsWith(`+${symbol}`))).toBe(true);
   });
+});
+
+// Hover each revenue chart from corner to corner, so the pointer crosses every
+// bar and point whichever way the chart lies, and collect what its tooltip
+// prints.
+async function tooltipValues(wrapper) {
+  const plot = wrapper.querySelector("clipPath rect");
+  const [x, y, width, height] = ["x", "y", "width", "height"].map((key) =>
+    Number(plot.getAttribute(key)),
+  );
+  const values = new Set();
+  for (let step = 0; step < 80; step++) {
+    const along = (step + 0.5) / 80;
+    fireEvent.mouseMove(wrapper, {
+      clientX: x + width * along,
+      clientY: y + height * along,
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(50);
+    });
+    for (const value of wrapper.querySelectorAll(
+      ".recharts-default-tooltip .recharts-tooltip-item-value",
+    )) {
+      values.add(value.textContent);
+    }
+  }
+  return [...values];
+}
+
+// The decimals each revenue chart's tooltip has always printed, in page
+// order: the revenue breakdown, the US income tax breakdown, the deciles and
+// the US state ranking.
+describe.each([
+  ["US", sweepData, "$", [1, 1, 1, 2]],
+  ["UK", ukSweepData, "£", [1, 1]],
+])("the %s sweep's revenue tooltips", (_country, data, symbol, decimals) => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("write signed billions at each chart's decimals", async () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ShiftSweep sweepData={data} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(
+      screen.getByRole("radio", { name: /net government revenue change/i }),
+    );
+    const charts = [...container.querySelectorAll(".recharts-wrapper")];
+    expect(charts).toHaveLength(decimals.length);
+    for (const [index, chart] of charts.entries()) {
+      const values = await tooltipValues(chart);
+      expect(values.length).toBeGreaterThan(5);
+      const form = new RegExp(
+        `^([-+]?)[${symbol}](\\d+\\.\\d{${decimals[index]}})B$`,
+      );
+      for (const value of values) {
+        const [, sign, digits] = value.match(form) ?? [];
+        expect(digits, value).toBeDefined();
+        expect(sign === "", value).toBe(Number(digits) === 0);
+      }
+      expect(values.some((value) => value.startsWith(`-${symbol}`))).toBe(true);
+    }
+  }, 30000);
 });

@@ -40,7 +40,7 @@ export function billions(
   // toFixed rounds the number's exact binary value, as the sweep always has;
   // toLocaleString rounds its shortest decimal form, so 0.15 would print 0.2
   // where toFixed prints 0.1. The default path's shown is rounded already, so
-  // both print it the same.
+  // both print it the same up to 10^16 billion, far past any amount here.
   const fixed = shown.toFixed(digits);
   const amount = grouping
     ? fixed.replace(/^\d+/, (whole) =>
