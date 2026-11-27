@@ -144,6 +144,22 @@ test("on the US path, the memo's link opens the US experiment with no query", ()
   expect(screen.getByTestId("search")).toBeEmptyDOMElement();
 });
 
+// The UK figures come from licensed survey microdata, so the overview calls
+// the models and the data-processing code open source, not the data (Max's
+// ruling on d3496, 2026-11-27).
+test("the UK overview doesn't call the household data open source", () => {
+  renderAtUkPath("/", Home);
+  const text = document.body.textContent;
+
+  expect(text).toContain(
+    "Open-source UK tax-benefit model and data-processing code",
+  );
+  expect(text).toContain(
+    "We publish our tax-benefit models and data-processing code as open source, with the models under AGPL-3.0.",
+  );
+  expect(text).not.toMatch(/household microdata|models, data, and code/i);
+});
+
 // The copy the UK view shows once the UK path is its default.
 test("the UK income-shift page names the tax year and its limits, with no US wording", () => {
   renderAtUkPath("/income-shift", IncomeShift);

@@ -4,11 +4,15 @@ import { appUrl } from "./basePath";
 // policyengine.org serves /uk/ai-inequality and each page below it by
 // fetching this export's /us/ai-inequality page with ?country=uk
 // (policyengine-app-v2, website/src/data/appZoneRoutes.ts). The browser keeps
-// the UK path and its own query. A trailing slash first gets a 308 to the path
-// without it, as policyengine.org answered on 2026-11-27. The route below does
-// the same, and notes any upstream request that answers with anything but the
-// page itself, such as a redirect or a 404. A reload may get a 304, which
-// keeps the page it already has.
+// the UK path and its own query. The route below does the same, and notes any
+// upstream request that answers with anything but the page itself, such as a
+// redirect or a 404. A reload may get a 304, which keeps the page it already
+// has.
+//
+// policyengine.org answers a trailing slash with a 308 to the path without it
+// (checked on 2026-11-27), so its pages see a slashed UK path only on a host
+// that doesn't. The route serves the slashed spelling as it stands, and each
+// page must show the UK view under it too.
 const UK_PATH = "/uk/ai-inequality";
 const isUkPath = (url) =>
   url.pathname === UK_PATH || url.pathname.startsWith(`${UK_PATH}/`);
@@ -19,20 +23,8 @@ test.beforeEach(async ({ page }) => {
   upstreamFailures = [];
   await page.route(isUkPath, async (route) => {
     const url = new URL(route.request().url());
-    if (url.pathname.endsWith("/")) {
-      await route.fulfill({
-        status: 308,
-        headers: {
-          location: `${url.pathname.replace(/\/+$/, "")}${url.search}`,
-        },
-      });
-      return;
-    }
-    const rest = url.pathname.slice(UK_PATH.length);
-    const upstream = new URL(
-      rest ? appUrl(rest) : appUrl("").replace(/\/$/, ""),
-      url,
-    );
+    const rest = url.pathname.slice(UK_PATH.length).replace(/\/+$/, "");
+    const upstream = new URL(appUrl(rest).replace(/\/$/, ""), url);
     upstream.searchParams.set("country", "uk");
     const response = await route.fetch({
       url: upstream.href,
@@ -53,8 +45,8 @@ const radio = (page, name) => page.getByRole("radio", { name });
 const UNITED_STATES = /united states/i;
 const UNITED_KINGDOM = /united kingdom/i;
 
-// Each page under both spellings. The slashed one lands on the path without
-// the slash, still with no query.
+// Each page under both spellings. The browser keeps the path it asked for,
+// with no query.
 const PAGES = [
   { path: "", uk: "£144bn" },
   { path: "/income-shift", uk: "positive labour income" },
@@ -68,7 +60,7 @@ for (const { path, uk } of PAGES) {
       await expect(page.locator("body")).not.toContainText("Medicaid");
       await expect(page.locator("section.health-coverage")).toHaveCount(0);
       const { pathname, search } = new URL(page.url());
-      expect(pathname).toBe(`${UK_PATH}${path}`);
+      expect(pathname).toBe(visit);
       expect(search).toBe("");
     });
   }
