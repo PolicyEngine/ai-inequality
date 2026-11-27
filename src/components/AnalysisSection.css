@@ -158,8 +158,11 @@
     align-items: flex-start;
   }
 
+  /* A row of tabs wider than a phone wraps onto more lines, so it can't widen
+   * the section and make the page scroll sideways. */
   .analysis-tabs {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .analysis-tab {
