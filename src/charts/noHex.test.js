@@ -7,12 +7,19 @@ import { parseModule, sourceFiles, walk } from "./sourceTree";
 // literal of its own: no hex and no CSS colour function such as rgb(),
 // oklch() or color-mix() in any string, including one a template literal
 // builds; no var() with a fallback, which could name a colour of its own; no
-// CSS named colour such as "white" as a whole string; no bare word in a
-// colour prop, however its value is written; and in the CSS a <style> element
-// holds, none of these and no named colour in a declaration's value. The scan
-// reads strings and <style> text, not code, so a function call such as
-// color(dataKey) passes and comments don't count; kitTheme.js names each
-// token's hex value in one.
+// CSS named colour such as "white" as a whole string; and no bare word in a
+// colour prop, however its value is written. The scan reads strings, not
+// code, so a function call such as color(dataKey) passes and comments don't
+// count; kitTheme.js names each token's hex value in one.
+//
+// A <style> element's CSS is read as one text, its children joined, so a
+// colour split across them is still seen. Its declarations may hold none of
+// the above, no CSS named or system colour and no CSS escape. A child other
+// than JSX text, a string or a template with no ${} is code the scan can't
+// read, and fails. The scan finds <style> by its tag name: CSS that reaches a
+// <style> element through a tag held in a variable, createElement() or
+// dangerouslySetInnerHTML goes unread, as it did before. No chart file draws
+// a <style> element.
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
@@ -61,23 +68,45 @@ const KEYWORDS = new Set([
   "unset",
 ]);
 
-// Each CSS named colour in a declaration's value, as [offset, "prop: word"].
-// Comments, quoted strings and url() name no colour, and neither do
-// selectors, which sit outside the braces.
-function cssNamedColours(css) {
+// The CSS system colours (CSS Color 4), which paint from the user's theme.
+const SYSTEM_COLOURS = new Set(
+  `accentcolor accentcolortext activetext buttonborder buttonface buttontext
+  canvas canvastext field fieldtext graytext highlight highlighttext linktext
+  mark marktext selecteditem selecteditemtext visitedtext`.split(/\s+/),
+);
+
+// Each colour in a stylesheet's declarations, as [offset, text]. Comments and
+// quoted strings are blanked in one pass, so a quoted "/*" opens no comment,
+// and url() is blanked too. Text before a "{" is a selector or an at-rule's
+// prelude, which paints nothing; every other run between "{", "}" and ";" is
+// a declaration, at any depth of nesting and in a block left open at the end.
+function styleColours(css) {
   const blank = (match) => match.replace(/[^\n]/g, " ");
   const text = css
-    .replace(/\/\*[\s\S]*?\*\//g, blank)
-    .replace(/"[^"]*"|'[^']*'|url\([^)]*\)/gi, blank);
+    .replace(
+      /\/\*[\s\S]*?(?:\*\/|$)|"(?:[^"\\\n]|\\[\s\S])*(?:"|$)|'(?:[^'\\\n]|\\[\s\S])*(?:'|$)/g,
+      blank,
+    )
+    .replace(/url\([^)]*\)/gi, blank);
   const found = [];
-  for (const block of text.matchAll(/\{([^{}]*)\}/g)) {
-    const blockStart = block.index + 1;
-    for (const decl of block[1].matchAll(/([-\w]+)\s*:([^;]*)/g)) {
-      const valueStart = blockStart + decl.index + decl[0].indexOf(":") + 1;
-      for (const word of decl[2].matchAll(/[a-z]+/gi)) {
-        if (NAMED_COLOURS.has(word[0].toLowerCase())) {
-          found.push([valueStart + word.index, `${decl[1]}: ${word[0]}`]);
-        }
+  for (const escape of text.matchAll(/\\/g)) {
+    found.push([escape.index, "\\ escape"]);
+  }
+  for (const run of text.matchAll(/[^{};]+(?=[{};]|$)/g)) {
+    if (text[run.index + run[0].length] === "{") continue;
+    const colon = run[0].indexOf(":");
+    if (colon < 0) continue;
+    const property = run[0].slice(0, colon).trim();
+    const value = run[0].slice(colon + 1);
+    const valueStart = run.index + colon + 1;
+    for (const match of value.matchAll(COLOUR_LITERAL)) {
+      found.push([valueStart + match.index, match[0]]);
+    }
+    // Whole identifiers, so var(--color-gray-400) names no gray.
+    for (const word of value.matchAll(/(?:--|-?[a-z_])[\w-]*/gi)) {
+      const name = word[0].toLowerCase();
+      if (NAMED_COLOURS.has(name) || SYSTEM_COLOURS.has(name)) {
+        found.push([valueStart + word.index, `${property}: ${word[0]}`]);
       }
     }
   }
@@ -143,43 +172,49 @@ export function colourLiterals(source) {
         found.push([node.loc.start.line, `\`${match[0]}\``]);
       }
     }
-    // The CSS a <style> element holds. Its text reaches the code as JSX text,
-    // which no string scan reads; espree decodes its entities, so
-    // &#123; reads as "{". A string or template literal inside the element
-    // is scanned as a string above, so here it's read only for named colours.
+    // The CSS a <style> element holds, its children joined. JSX text reaches
+    // no string scan; espree decodes its entities, so &#123; reads as "{".
     if (
       node.type === "JSXElement" &&
       node.openingElement.name.type === "JSXIdentifier" &&
       node.openingElement.name.name === "style"
     ) {
+      let css = "";
+      // Where each child's text starts in css, and on which line.
+      const starts = [];
       for (const child of node.children) {
-        const at = (offset, text) =>
-          child.loc.start.line +
-          (text.slice(0, offset).match(/\n/g) ?? []).length;
-        let css = null;
-        if (child.type === "JSXText") {
-          css = child.value;
-          for (const match of css.matchAll(COLOUR_LITERAL)) {
-            found.push([at(match.index, css), `<style> ${match[0]}`]);
-          }
-        } else if (child.type === "JSXExpressionContainer") {
-          const { expression } = child;
-          if (
-            expression.type === "Literal" &&
-            typeof expression.value === "string"
-          ) {
-            css = expression.value;
-          }
-          if (expression.type === "TemplateLiteral") {
-            css = expression.quasis
-              .map((quasi) => quasi.value.cooked ?? "")
-              .join(" ");
-          }
+        const expression =
+          child.type === "JSXExpressionContainer" ? child.expression : null;
+        let text = null;
+        if (child.type === "JSXText") text = child.value;
+        else if (expression?.type === "JSXEmptyExpression") continue;
+        else if (
+          expression?.type === "Literal" &&
+          typeof expression.value === "string"
+        ) {
+          text = expression.value;
+        } else if (
+          expression?.type === "TemplateLiteral" &&
+          expression.expressions.length === 0
+        ) {
+          text = expression.quasis[0].value.cooked ?? "";
         }
-        if (css === null) continue;
-        for (const [offset, text] of cssNamedColours(css)) {
-          found.push([at(offset, css), `<style> ${text}`]);
+        if (text === null) {
+          found.push([
+            child.loc.start.line,
+            "<style> child the scan can't read",
+          ]);
+          continue;
         }
+        starts.push([css.length, child.loc.start.line]);
+        css += text;
+      }
+      const lineAt = (offset) => {
+        const [start, line] = starts.findLast(([at]) => at <= offset);
+        return line + (css.slice(start, offset).match(/\n/g) ?? []).length;
+      };
+      for (const [offset, text] of styleColours(css)) {
+        found.push([lineAt(offset), `<style> ${text}`]);
       }
     }
     if (node.type === "JSXAttribute") colourProp(node.value, node.name.name);
@@ -241,6 +276,22 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     "const x = <style>{\".a { fill: red; font-family: 'Tan' }\"}</style>;",
     "const y = <style>{`.b:hover { stroke: ${c}; color: Navy }`}</style>;",
     "const z = <style>.c &#123; fill: var(--chart-1); &#125; /* red */</style>;",
+    'const aa = <style>.a &#123; color: #{"227773"} &#125;</style>;',
+    'const ab = <style>{".a { color: "}{"red }"}</style>;',
+    "const ac = <style><>.a &#123; fill: teal &#125;</></style>;",
+    'const ad = <style>{`.a { color: r${""}ed }`}</style>;',
+    'const ae = <style>{".a { opacity: 1; &:hover { color: red } }"}</style>;',
+    "const af = <style>{\".a { content: '/*'; color: red } /* */\"}</style>;",
+    'const ag = <style>{".a { fill: Canvas; stroke: var(--color-gray-400)"}</style>;',
+    "const ah = <style>/* was #fff */ #add &#123; fill: url(#red); &#125;</style>;",
+    'const ai = <style>{".a { color: \\\\72 ed }"}</style>;',
+    "const aj = (",
+    "  <style>",
+    "    .a &#123;",
+    "      color: navy;",
+    "    &#125;",
+    "  </style>",
+    ");",
   ].join("\n");
   expect(colourLiterals(sample)).toEqual([
     "3: #227773",
@@ -266,7 +317,16 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     "24: `#fff`",
     "25: <style> #227773",
     "26: <style> fill: red",
-    "27: <style> color: Navy",
+    "27: <style> child the scan can't read",
+    "29: <style> #227773",
+    "30: <style> color: red",
+    "31: <style> child the scan can't read",
+    "32: <style> child the scan can't read",
+    "33: <style> color: red",
+    "34: <style> color: red",
+    "35: <style> fill: Canvas",
+    "37: <style> \\ escape",
+    "41: <style> color: navy",
   ]);
 });
 

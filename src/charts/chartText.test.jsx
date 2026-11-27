@@ -150,9 +150,24 @@ function expectKitAxes() {
 // some; its tick marks are off; its tick text takes AXIS_STYLE, alone or
 // spread into an object that sets no colour; and any title takes
 // AXIS_LABEL_STYLE. A spread the scan can't read could set any of these, so
-// it fails.
+// it fails, as does a child inside a paired tag (a <Label> draws its title in
+// Recharts' #808080), a style, tickTextProps or colour-named prop on the axis,
+// and a style key inside its tick or axis line, since an inline style beats
+// the kit's paint. The kit's names count only when the module imports them
+// from kitTheme and binds them nowhere else.
 const AXIS_COMPONENTS = new Set(["XAxis", "YAxis"]);
 const COLOUR_KEY = /(?:fill|stroke|colou?r|background)$/i;
+const KIT_NAMES = [
+  "AXIS_PROPS",
+  "AXIS_STYLE",
+  "AXIS_LABEL_STYLE",
+  "GRID_STYLE",
+];
+const paints = (key) =>
+  key === null ||
+  key === "style" ||
+  key === "tickTextProps" ||
+  COLOUR_KEY.test(key);
 const KIT = Symbol("AXIS_PROPS");
 const UNREAD = Symbol("unread spread");
 
@@ -208,8 +223,67 @@ export function axisProblems(source) {
       }
     }
   }
+  // Every name the module binds, to find a kit name bound twice.
+  const bound = new Map();
+  const bind = (pattern) => {
+    if (!pattern) return;
+    if (pattern.type === "Identifier") {
+      bound.set(pattern.name, (bound.get(pattern.name) ?? 0) + 1);
+    } else if (pattern.type === "ObjectPattern") {
+      pattern.properties.forEach((property) =>
+        bind(
+          property.type === "RestElement" ? property.argument : property.value,
+        ),
+      );
+    } else if (pattern.type === "ArrayPattern") {
+      pattern.elements.forEach(bind);
+    } else if (pattern.type === "RestElement") {
+      bind(pattern.argument);
+    } else if (pattern.type === "AssignmentPattern") {
+      bind(pattern.left);
+    }
+  };
+  walk(ast, (node) => {
+    if (node.type === "VariableDeclarator") bind(node.id);
+    if (/^(?:Function|ArrowFunction|Class)/.test(node.type)) {
+      bind(node.id);
+      node.params?.forEach(bind);
+    }
+    if (node.type === "CatchClause") bind(node.param);
+    if (/^Import\w*Specifier$/.test(node.type)) bind(node.local);
+  });
+  const trusted = new Set();
+  for (const statement of ast.body) {
+    if (
+      statement.type !== "ImportDeclaration" ||
+      !/(?:^|\/)kitTheme(?:\.js)?$/.test(statement.source.value)
+    ) {
+      continue;
+    }
+    for (const specifier of statement.specifiers) {
+      const local = specifier.local.name;
+      if (
+        specifier.type === "ImportSpecifier" &&
+        specifier.imported.name === local &&
+        KIT_NAMES.includes(local) &&
+        bound.get(local) === 1
+      ) {
+        trusted.add(local);
+      }
+    }
+  }
+  const isKit = (node, name) => isName(node, name) && trusted.has(name);
+  const isKitMember = (node, object, property) =>
+    isMember(node, object, property) && trusted.has(object);
+  // A module constant's value, unless a function binds its name again.
   const resolve = (node, seen = new Set()) => {
-    if (node?.type !== "Identifier" || !constants.has(node.name)) return node;
+    if (
+      node?.type !== "Identifier" ||
+      !constants.has(node.name) ||
+      bound.get(node.name) !== 1
+    ) {
+      return node;
+    }
     if (seen.has(node.name)) return node;
     seen.add(node.name);
     return resolve(constants.get(node.name), seen);
@@ -233,7 +307,7 @@ export function axisProblems(source) {
     node.properties.every((property) =>
       property.type === "SpreadElement"
         ? allowed(resolve(property.argument))
-        : !COLOUR_KEY.test(keyName(property) ?? "fill"),
+        : !paints(keyName(property)),
     ) &&
     node.properties.some(
       (property) =>
@@ -241,30 +315,30 @@ export function axisProblems(source) {
         allowed(resolve(property.argument)),
     );
   const kitTick = (node) =>
-    isName(node, "AXIS_STYLE") ||
-    isMember(node, "AXIS_PROPS", "tick") ||
+    isKit(node, "AXIS_STYLE") ||
+    isKitMember(node, "AXIS_PROPS", "tick") ||
     plainObject(node, kitTick);
   const kitTitleStyle = (node) =>
-    isName(node, "AXIS_LABEL_STYLE") || plainObject(node, kitTitleStyle);
+    isKit(node, "AXIS_LABEL_STYLE") || plainObject(node, kitTitleStyle);
   const CHECKS = {
     axisLine: [
       "an axis line in GRID_STYLE.stroke, or none",
       (node) =>
         isFalse(node) ||
-        isMember(node, "AXIS_PROPS", "axisLine") ||
+        isKitMember(node, "AXIS_PROPS", "axisLine") ||
         (node?.type === "ObjectExpression" &&
           node.properties.every(
             (property) =>
               property.type === "Property" &&
               (keyName(property) === "stroke"
-                ? isMember(resolve(property.value), "GRID_STYLE", "stroke")
-                : !COLOUR_KEY.test(keyName(property) ?? "fill")),
+                ? isKitMember(resolve(property.value), "GRID_STYLE", "stroke")
+                : !paints(keyName(property))),
           ) &&
           node.properties.some((property) => keyName(property) === "stroke")),
     ],
     tickLine: [
       "no tick marks",
-      (node) => isFalse(node) || isMember(node, "AXIS_PROPS", "tickLine"),
+      (node) => isFalse(node) || isKitMember(node, "AXIS_PROPS", "tickLine"),
     ],
     tick: ["tick text in AXIS_STYLE", kitTick],
     label: [
@@ -284,16 +358,20 @@ export function axisProblems(source) {
   };
 
   const axes = [];
-  walk(ast, (node) => {
-    if (node.type !== "JSXOpeningElement") return;
+  walk(ast, (element) => {
+    if (element.type !== "JSXElement") return;
+    const node = element.openingElement;
     const name = axisName(node.name);
     if (!name) return;
+    const line = node.loc.start.line;
+    // Props that can paint the axis and that no kit setting covers.
+    const painted = [];
     // Each checked prop's final value: KIT from AXIS_PROPS, UNREAD from a
     // spread the scan can't read, or the expression an attribute sets.
     const props = new Map();
     const spread = (argument) => {
       const value = resolve(argument);
-      if (isName(argument, "AXIS_PROPS")) {
+      if (isKit(argument, "AXIS_PROPS")) {
         for (const key of ["axisLine", "tickLine", "tick"]) props.set(key, KIT);
       } else if (value?.type === "ObjectExpression") {
         for (const property of value.properties) {
@@ -302,6 +380,8 @@ export function axisProblems(source) {
             props.set(keyName(property), resolve(property.value));
           } else if (keyName(property) === null) {
             for (const key of Object.keys(CHECKS)) props.set(key, UNREAD);
+          } else if (paints(keyName(property))) {
+            painted.push(keyName(property));
           }
         }
       } else {
@@ -314,7 +394,10 @@ export function axisProblems(source) {
         continue;
       }
       const key = attribute.name.name;
-      if (!(key in CHECKS)) continue;
+      if (!(key in CHECKS)) {
+        if (paints(key)) painted.push(key);
+        continue;
+      }
       const { value } = attribute;
       props.set(
         key,
@@ -325,7 +408,9 @@ export function axisProblems(source) {
             : value,
       );
     }
-    const problems = [];
+    const problems = painted.map(
+      (key) => `${line}: ${name} sets ${key}, which can paint the axis`,
+    );
     for (const [key, [wanted, passes]] of Object.entries(CHECKS)) {
       const value = props.get(key);
       // An axis with no title draws none; every other prop has a default
@@ -333,20 +418,27 @@ export function axisProblems(source) {
       if (value === undefined && key === "label") continue;
       if (value === KIT) continue;
       if (value === undefined) {
-        problems.push(
-          `${node.loc.start.line}: ${name} has no ${key}, so not ${wanted}`,
-        );
+        problems.push(`${line}: ${name} has no ${key}, so not ${wanted}`);
       } else if (value === UNREAD) {
         problems.push(
-          `${node.loc.start.line}: ${name} ${key} comes from a spread the scan can't read`,
+          `${line}: ${name} ${key} comes from a spread the scan can't read`,
         );
       } else if (!passes(value)) {
         problems.push(
-          `${node.loc.start.line}: ${name} ${key}=${value.range ? text(value) : value.raw}, not ${wanted}`,
+          `${line}: ${name} ${key}=${value.range ? text(value) : value.raw}, not ${wanted}`,
         );
       }
     }
-    axes.push({ line: node.loc.start.line, name, problems });
+    // A child of a paired tag, such as a <Label>, draws what the scan can't read.
+    const child = element.children.find(
+      (item) =>
+        !(item.type === "JSXText" && !item.value.trim()) &&
+        item.expression?.type !== "JSXEmptyExpression",
+    );
+    if (child) {
+      problems.push(`${line}: ${name} has a child the scan can't read`);
+    }
+    axes.push({ line, name, problems });
   });
   return axes;
 }
@@ -354,6 +446,7 @@ export function axisProblems(source) {
 describe("chart axes", () => {
   it("the axis scan reads each axis's final props", () => {
     const sample = [
+      'import { AXIS_LABEL_STYLE, AXIS_PROPS, AXIS_STYLE, GRID_STYLE } from "./kitTheme";',
       'import { XAxis as X, YAxis } from "recharts";',
       'import * as Recharts from "recharts";',
       "const SMALL = { ...AXIS_STYLE, fontSize: 11 };",
@@ -374,95 +467,192 @@ describe("chart axes", () => {
       "const n = <Recharts.YAxis {...AXIS_PROPS} axisLine={{ stroke: TEXT.primary }} />;",
       "const o = <YAxis {...AXIS_PROPS} {...{ tickLine: true }} />;",
       "const p = <XAxis {...AXIS_PROPS} label={{ value: 'B', style: AXIS_LABEL_STYLE, fill: TEXT.primary }} />;",
+      'const q = <XAxis {...AXIS_PROPS}><Label value="B" /></XAxis>;',
+      "const r = <YAxis {...AXIS_PROPS} style={{ fill: TEXT.primary }} />;",
+      "const s = <YAxis {...AXIS_PROPS} tickTextProps={{ fill: c }} stroke={c} />;",
+      "const t = <XAxis {...AXIS_PROPS} tick={{ ...AXIS_STYLE, style: { fill: c } }} />;",
+      "const u = <XAxis {...AXIS_PROPS} {...{ style: {} }} />;",
+      "const v = <XAxis {...AXIS_PROPS} axisLine={{ stroke: GRID_STYLE.stroke, style: {} }}>{/* note */}</XAxis>;",
     ].join("\n");
     expect(axisProblems(sample)).toEqual([
-      { line: 5, name: "XAxis", problems: [] },
-      {
-        line: 6,
-        name: "XAxis",
-        problems: [
-          "6: XAxis axisLine=true, not an axis line in GRID_STYLE.stroke, or none",
-          "6: XAxis has no tick, so not tick text in AXIS_STYLE",
-        ],
-      },
+      { line: 6, name: "XAxis", problems: [] },
       {
         line: 7,
-        name: "YAxis",
+        name: "XAxis",
         problems: [
-          "7: YAxis axisLine=true, not an axis line in GRID_STYLE.stroke, or none",
+          "7: XAxis axisLine=true, not an axis line in GRID_STYLE.stroke, or none",
+          "7: XAxis has no tick, so not tick text in AXIS_STYLE",
         ],
       },
       {
         line: 8,
         name: "YAxis",
-        problems: ["8: YAxis tickLine=true, not no tick marks"],
+        problems: [
+          "8: YAxis axisLine=true, not an axis line in GRID_STYLE.stroke, or none",
+        ],
       },
       {
         line: 9,
-        name: "XAxis",
-        problems: [
-          "9: XAxis tick={ fontSize: 11 }, not tick text in AXIS_STYLE",
-        ],
+        name: "YAxis",
+        problems: ["9: YAxis tickLine=true, not no tick marks"],
       },
       {
         line: 10,
         name: "XAxis",
         problems: [
-          "10: XAxis tick={ ...AXIS_STYLE, fill: TEXT.primary }, not tick text in AXIS_STYLE",
+          "10: XAxis tick={ fontSize: 11 }, not tick text in AXIS_STYLE",
         ],
       },
-      { line: 11, name: "XAxis", problems: [] },
       {
-        line: 12,
-        name: "YAxis",
+        line: 11,
+        name: "XAxis",
         problems: [
-          '12: YAxis label="Billions", not a title in AXIS_LABEL_STYLE',
+          "11: XAxis tick={ ...AXIS_STYLE, fill: TEXT.primary }, not tick text in AXIS_STYLE",
         ],
       },
+      { line: 12, name: "XAxis", problems: [] },
       {
         line: 13,
         name: "YAxis",
         problems: [
-          "13: YAxis label={ value: 'B', style: { fontSize: 13 } }, not a title in AXIS_LABEL_STYLE",
+          '13: YAxis label="Billions", not a title in AXIS_LABEL_STYLE',
         ],
       },
-      { line: 14, name: "YAxis", problems: [] },
       {
-        line: 15,
+        line: 14,
         name: "YAxis",
         problems: [
-          "15: YAxis axisLine comes from a spread the scan can't read",
-          "15: YAxis tickLine comes from a spread the scan can't read",
-          "15: YAxis tick comes from a spread the scan can't read",
-          "15: YAxis label comes from a spread the scan can't read",
+          "14: YAxis label={ value: 'B', style: { fontSize: 13 } }, not a title in AXIS_LABEL_STYLE",
         ],
       },
+      { line: 15, name: "YAxis", problems: [] },
       {
         line: 16,
-        name: "XAxis",
-        problems: [
-          "16: XAxis has no axisLine, so not an axis line in GRID_STYLE.stroke, or none",
-        ],
-      },
-      { line: 17, name: "YAxis", problems: [] },
-      {
-        line: 18,
         name: "YAxis",
         problems: [
-          "18: YAxis axisLine={ stroke: TEXT.primary }, not an axis line in GRID_STYLE.stroke, or none",
+          "16: YAxis axisLine comes from a spread the scan can't read",
+          "16: YAxis tickLine comes from a spread the scan can't read",
+          "16: YAxis tick comes from a spread the scan can't read",
+          "16: YAxis label comes from a spread the scan can't read",
         ],
       },
+      {
+        line: 17,
+        name: "XAxis",
+        problems: [
+          "17: XAxis has no axisLine, so not an axis line in GRID_STYLE.stroke, or none",
+          "17: XAxis has a child the scan can't read",
+        ],
+      },
+      { line: 18, name: "YAxis", problems: [] },
       {
         line: 19,
         name: "YAxis",
-        problems: ["19: YAxis tickLine=true, not no tick marks"],
+        problems: [
+          "19: YAxis axisLine={ stroke: TEXT.primary }, not an axis line in GRID_STYLE.stroke, or none",
+        ],
       },
       {
         line: 20,
+        name: "YAxis",
+        problems: ["20: YAxis tickLine=true, not no tick marks"],
+      },
+      {
+        line: 21,
         name: "XAxis",
         problems: [
-          "20: XAxis label={ value: 'B', style: AXIS_LABEL_STYLE, fill: TEXT.primary }, not a title in AXIS_LABEL_STYLE",
+          "21: XAxis label={ value: 'B', style: AXIS_LABEL_STYLE, fill: TEXT.primary }, not a title in AXIS_LABEL_STYLE",
         ],
+      },
+      {
+        line: 22,
+        name: "XAxis",
+        problems: ["22: XAxis has a child the scan can't read"],
+      },
+      {
+        line: 23,
+        name: "YAxis",
+        problems: ["23: YAxis sets style, which can paint the axis"],
+      },
+      {
+        line: 24,
+        name: "YAxis",
+        problems: [
+          "24: YAxis sets tickTextProps, which can paint the axis",
+          "24: YAxis sets stroke, which can paint the axis",
+        ],
+      },
+      {
+        line: 25,
+        name: "XAxis",
+        problems: [
+          "25: XAxis tick={ ...AXIS_STYLE, style: { fill: c } }, not tick text in AXIS_STYLE",
+        ],
+      },
+      {
+        line: 26,
+        name: "XAxis",
+        problems: ["26: XAxis sets style, which can paint the axis"],
+      },
+      {
+        line: 27,
+        name: "XAxis",
+        problems: [
+          "27: XAxis axisLine={ stroke: GRID_STYLE.stroke, style: {} }, not an axis line in GRID_STYLE.stroke, or none",
+        ],
+      },
+    ]);
+  });
+
+  it("the axis scan trusts the kit's names only from kitTheme", () => {
+    // A local AXIS_PROPS and AXIS_STYLE read as the objects they are.
+    const local = [
+      "const AXIS_STYLE = { fill: c };",
+      "const AXIS_PROPS = { tick: AXIS_STYLE, tickLine: false, axisLine: false };",
+      "const a = <XAxis {...AXIS_PROPS} />;",
+    ].join("\n");
+    expect(axisProblems(local)).toEqual([
+      {
+        line: 3,
+        name: "XAxis",
+        problems: ["3: XAxis tick={ fill: c }, not tick text in AXIS_STYLE"],
+      },
+    ]);
+    // An import from elsewhere, or a parameter that shadows the import,
+    // isn't the kit's, and a constant a function binds again isn't read.
+    const shadowed = [
+      'import { AXIS_PROPS } from "./theme";',
+      'import { AXIS_STYLE, GRID_STYLE } from "./kitTheme";',
+      "const b = <XAxis {...AXIS_PROPS} />;",
+      "function Chart({ AXIS_STYLE }) {",
+      "  return <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={{ stroke: GRID_STYLE.stroke }} />;",
+      "}",
+      "const SMALL = { ...AXIS_STYLE };",
+      "function Other() {",
+      "  const SMALL = { fill: c };",
+      "  return <YAxis tick={SMALL} tickLine={false} axisLine={false} />;",
+      "}",
+    ].join("\n");
+    expect(axisProblems(shadowed)).toEqual([
+      {
+        line: 3,
+        name: "XAxis",
+        problems: [
+          "3: XAxis axisLine comes from a spread the scan can't read",
+          "3: XAxis tickLine comes from a spread the scan can't read",
+          "3: XAxis tick comes from a spread the scan can't read",
+          "3: XAxis label comes from a spread the scan can't read",
+        ],
+      },
+      {
+        line: 5,
+        name: "YAxis",
+        problems: ["5: YAxis tick=AXIS_STYLE, not tick text in AXIS_STYLE"],
+      },
+      {
+        line: 10,
+        name: "YAxis",
+        problems: ["10: YAxis tick=SMALL, not tick text in AXIS_STYLE"],
       },
     ]);
   });
