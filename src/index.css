@@ -156,9 +156,31 @@ a {
 }
 
 /* Focus States */
-*:focus-visible {
+:where(.App) *:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* The kit's shell around .App (header, menus, footer) keeps the kit's own
+ * focus ring in --ring. That reads on the shell's white menus but barely on
+ * its dark-teal header and footer, so a band of --background inside the ring
+ * makes the focused element stand out on both. */
+:where(
+    a,
+    button,
+    [role="button"],
+    input,
+    select,
+    textarea,
+    summary,
+    [tabindex]
+  ):not(.App *):focus-visible {
+  box-shadow: 0 0 0 2px var(--background);
+}
+
+/* The kit's footer links change nothing on hover; underline them. */
+footer:not(.App *) a:hover {
+  text-decoration: underline;
 }
 
 /* Code */
