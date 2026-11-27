@@ -9,9 +9,11 @@ import {
   COUNTRIES,
   countryFromSearchParams,
   countrySearchParams,
+  EXPERIMENT_LIMITS,
 } from "../utils/countryConfig";
 import { forecastBand } from "../utils/forecastEquivalence";
 import {
+  baselineYearLabel,
   policyEngineLabel,
   predatesHeadStartCorrection,
 } from "../utils/modelMetadata";
@@ -99,6 +101,10 @@ function IncomeShift() {
   const currencySymbol = metadata.currency_symbol ?? "$";
   const laborTerm = metadata.labor_label ?? "labor";
   const overviewUrl = aiInequalityUrl(countryKey);
+  const yearLabel = baselineYearLabel(
+    metadata,
+    metadata.year ?? sweepData.year,
+  );
   const countryNav = useRovingRadioGroup(COUNTRY_KEYS, countryKey);
 
   const selectCountry = (key) => {
@@ -150,7 +156,7 @@ function IncomeShift() {
             ) : (
               <>
                 A direct view of the prototype experiment: remove positive{" "}
-                {laborTerm} income, route the same dollars through existing
+                {laborTerm} income, route the same amount through existing
                 positive capital income, and measure distributional and fiscal
                 effects under current law.
               </>
@@ -161,8 +167,7 @@ function IncomeShift() {
             <div className="policy-analysis-brief-card">
               <h2>Baseline facts</h2>
               <p>
-                The {metadata.year ?? sweepData.year} {country.label} baseline
-                contains{" "}
+                The {yearLabel} {country.label} baseline contains{" "}
                 <strong>
                   {formatTrillions(
                     baselineFacts.labor_income_t,
@@ -192,15 +197,14 @@ function IncomeShift() {
                 to 100% in 10-point steps, then add the same weighted total to
                 positive capital income. We scale every positive amount by one
                 common factor, so each person gains in proportion to the capital
-                income they already receive.
+                income they already receive. {EXPERIMENT_LIMITS[countryKey]}
               </p>
             </div>
             <div className="policy-analysis-brief-card">
               <h2>Model</h2>
               <p>
                 Results shown here come from <strong>{modelLabel}</strong> on a{" "}
-                <strong>{metadata.year ?? sweepData.year}</strong> baseline. See
-                the{" "}
+                <strong>{yearLabel}</strong> baseline. See the{" "}
                 <a href={docsUrl} target="_blank" rel="noreferrer">
                   PolicyEngine model documentation
                 </a>
@@ -262,7 +266,7 @@ function IncomeShift() {
               <div className="policy-analysis-brief-card">
                 <h2>Government revenue</h2>
                 <p>
-                  Net revenue bottoms at{" "}
+                  The change in net revenue bottoms out at{" "}
                   <strong>
                     {formatBillionsChange(
                       findings.troughRevenueB,
@@ -276,15 +280,20 @@ function IncomeShift() {
                 <div className="policy-analysis-brief-card">
                   <h2>Winners and losers</h2>
                   <p>
-                    At a 100% shift, the top decile&apos;s mean net income rises{" "}
+                    At a 100% shift, the top decile&apos;s mean net income{" "}
+                    {findings.topDecilePct >= 0 ? "rises" : "falls"}{" "}
                     <strong>
-                      {`${findings.topDecilePct >= 0 ? "+" : ""}${findings.topDecilePct.toFixed(0)}%`}
+                      {`${Math.abs(findings.topDecilePct).toFixed(0)}%`}
                     </strong>
                     {findings.worstPct != null && findings.worstDecile ? (
                       <>
                         {" "}
-                        while decile {findings.worstDecile} loses{" "}
-                        <strong>{formatPct1(findings.worstPct)}</strong>.
+                        while decile {findings.worstDecile}&apos;s{" "}
+                        {findings.worstPct < 0 ? "falls" : "rises"}{" "}
+                        <strong>
+                          {formatPct1(Math.abs(findings.worstPct))}
+                        </strong>
+                        .
                       </>
                     ) : (
                       "."

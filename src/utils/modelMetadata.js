@@ -6,6 +6,15 @@ export function policyEngineLabel(metadata) {
   return `PolicyEngine ${policyEngineVersion(metadata)}`;
 }
 
+// The baseline year as a reader names it. policyengine-uk's year 2026 is the
+// 2026-27 tax year, April 2026 to March 2027.
+export function baselineYearLabel(metadata, year = metadata.year) {
+  if (year == null) return year;
+  return metadata.country_id === "uk"
+    ? `${year}-${String(year + 1).slice(-2)}`
+    : `${year}`;
+}
+
 const MICROCOSM_US_BUILD_ID =
   /^(?:microcosm|populace)-us-(\d{4})-build([a-z0-9]+)-.+-(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/;
 

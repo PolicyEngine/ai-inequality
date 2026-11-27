@@ -86,3 +86,70 @@ test("on the UK path, the country selector reaches the US and comes back", () =>
   expect(radio(/united kingdom/i)).toHaveAttribute("aria-checked", "true");
   expect(screen.getByTestId("search")).toBeEmptyDOMElement();
 });
+
+// The copy the UK view shows once the UK path is its default.
+test("the UK income-shift page names the tax year and its limits, with no US wording", () => {
+  renderAtUkPath("/income-shift", IncomeShift);
+  const text = document.body.textContent;
+
+  expect(text).toContain("The 2026-27 United Kingdom baseline");
+  expect(text).toContain("on a 2026-27 baseline");
+  expect(text).toContain("PolicyEngine 4.4.4, 2026-27 baseline.");
+  expect(text).toContain(
+    "income they already receive. We model no behavioural responses.",
+  );
+  expect(text).toMatch(
+    /The change in net revenue bottoms out at -£130B at a 70% shift/,
+  );
+  expect(text).toMatch(
+    /the top decile's mean net income rises 38% while decile \d+'s falls \d+\.\d%\./,
+  );
+  expect(text).not.toMatch(/dollars|\+\d+%|loses -/);
+  // In the UK sweep the net-income Gini rises more than the market-income
+  // Gini, so the page doesn't say current law dampens the shock.
+  expect(text).toContain(
+    "Net income Gini coefficient rises from 0.375 at baseline to 0.752 at a 100% shift.",
+  );
+  expect(text).not.toContain("dampens");
+});
+
+test("the US income-shift page keeps its year, limits and Gini sentence", () => {
+  render(
+    <MemoryRouter initialEntries={["/income-shift"]}>
+      <IncomeShift />
+    </MemoryRouter>,
+  );
+  const text = document.body.textContent;
+
+  expect(text).toContain("on a 2026 baseline");
+  expect(text).not.toContain("2026-27");
+  expect(text).toContain(
+    "Households' total market income stays the same. We don't pass employers' savings on payroll tax to anyone, and we model no behavioral responses.",
+  );
+  expect(text).toContain(
+    "Current law dampens the shock, but it does not come close to offsetting it.",
+  );
+});
+
+test("the UK revenue summary says which taxes it counts", () => {
+  renderAtUkPath("/income-shift", IncomeShift);
+  fireEvent.click(
+    screen.getByRole("radio", { name: /net government revenue change/i }),
+  );
+
+  expect(document.body).toHaveTextContent(
+    "These estimates count Income Tax, Capital Gains Tax, National Insurance and household benefits, so they leave out any change in Corporation Tax revenue.",
+  );
+  expect(document.body).not.toHaveTextContent(/corporate income tax/);
+});
+
+test("the baseline table says how each column ranks households", () => {
+  renderAtUkPath("/policy-analysis", PolicyAnalysis);
+
+  expect(document.body).toHaveTextContent(
+    "The market and positive capital income columns rank households by baseline market income, and the net income column ranks them by net income.",
+  );
+  expect(document.body).toHaveTextContent(
+    "The 2026-27 United Kingdom baseline",
+  );
+});

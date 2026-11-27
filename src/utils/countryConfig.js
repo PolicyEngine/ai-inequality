@@ -44,6 +44,14 @@ export function countrySearchParams(countryKey, pathname = browserPathname()) {
     : { country: countryKey };
 }
 
+// What each country's experiment card says the sweep leaves out. The UK
+// sweep records no check that market income stays the same, so its card
+// claims none.
+export const EXPERIMENT_LIMITS = {
+  us: "Households' total market income stays the same. We don't pass employers' savings on payroll tax to anyone, and we model no behavioral responses.",
+  uk: "We model no behavioural responses.",
+};
+
 export function aiInequalityUrl(countryKey) {
   return `https://www.policyengine.org/${countryKey}/ai-inequality`;
 }
