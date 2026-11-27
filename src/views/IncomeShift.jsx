@@ -8,6 +8,7 @@ import {
   aiInequalityUrl,
   COUNTRIES,
   countryFromSearchParams,
+  countrySearchParams,
 } from "../utils/countryConfig";
 import { forecastBand } from "../utils/forecastEquivalence";
 import {
@@ -101,7 +102,7 @@ function IncomeShift() {
   const countryNav = useRovingRadioGroup(COUNTRY_KEYS, countryKey);
 
   const selectCountry = (key) => {
-    setSearchParams(key === "us" ? {} : { country: key });
+    setSearchParams(countrySearchParams(key));
   };
 
   return (
