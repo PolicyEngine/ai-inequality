@@ -165,8 +165,12 @@
     flex-wrap: wrap;
   }
 
+  /* Tabs stretch to fill their row, so narrower side padding only gives the
+   * labels more room: on a 375px phone the five shift tabs and the three
+   * view tabs each fit on one row. */
   .analysis-tab {
     flex: 1;
+    padding-inline: var(--space-2);
     text-align: center;
   }
 

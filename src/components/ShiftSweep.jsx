@@ -1405,7 +1405,7 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
             <div className="shift-sweep-control-group">
               <div className="shift-sweep-label">Measure</div>
               <div
-                className="analysis-tabs shift-sweep-tabs"
+                className="analysis-tabs shift-sweep-tabs shift-sweep-measure-tabs"
                 role="radiogroup"
                 aria-label="Measure"
               >
