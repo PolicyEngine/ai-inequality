@@ -2,6 +2,11 @@ import React, { useState, useEffect, useMemo } from "react";
 import Papa from "papaparse";
 import { IconBulb } from "@tabler/icons-react";
 import { withBasePath } from "../utils/basePath";
+import {
+  POLICYENGINE_US_SNAPSHOT,
+  formatReleaseMonth,
+  policyengineUsSourceUrl,
+} from "../utils/policyengineUsSource";
 
 function UpratingViewer() {
   const [data, setData] = useState([]);
@@ -19,7 +24,12 @@ function UpratingViewer() {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            setData(results.data);
+            setData(
+              results.data.map((row) => ({
+                ...row,
+                sourceUrl: policyengineUsSourceUrl(row),
+              })),
+            );
             setLoading(false);
           },
           error: (err) => {
@@ -115,6 +125,14 @@ function UpratingViewer() {
     return { parameters, variables, total: parameters + variables };
   }, [filteredData]);
 
+  const datasetCounts = useMemo(
+    () => ({
+      parameters: data.filter((row) => row.type === "parameter").length,
+      variables: data.filter((row) => row.type === "variable").length,
+    }),
+    [data],
+  );
+
   const getCategoryDisplayName = (category) => {
     // Hard-coded mapping for clean display names
     const nameMap = {
@@ -176,10 +194,13 @@ function UpratingViewer() {
           fontSize: "1.1rem",
         }}
       >
-        Explore the <strong>294 parameters</strong> and{" "}
-        <strong>23 variables</strong> in PolicyEngine-US that grow over time
-        based on different economic indicators. These growth factors create
-        correlated uncertainty in long-term policy projections.
+        Explore <strong>{datasetCounts.parameters} parameters</strong> and{" "}
+        <strong>{datasetCounts.variables} variables</strong> from
+        PolicyEngine-US {POLICYENGINE_US_SNAPSHOT.version} (
+        {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}), each with the
+        uprating rule we recorded for it. Each source link opens the file as it
+        stood in that release. These growth factors create correlated
+        uncertainty in long-term policy projections.
       </p>
       <div
         style={{
@@ -340,6 +361,7 @@ function UpratingViewer() {
                     {allItems.slice(0, 50).map((param, idx) => (
                       <div
                         key={idx}
+                        data-uprating-item={param.path}
                         style={{
                           marginBottom: "1rem",
                           paddingBottom: "1rem",
@@ -399,21 +421,23 @@ function UpratingViewer() {
                         >
                           Uprating: <code>{param.uprating}</code>
                         </div>
-                        <a
-                          href={`https://github.com/PolicyEngine/policyengine-us/blob/master/policyengine_us/parameters/${param.file_path}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            fontSize: "0.85rem",
-                            color: "#319795",
-                            textDecoration: "none",
-                            marginTop: "0.5rem",
-                            display: "inline-block",
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          View source →
-                        </a>
+                        {param.sourceUrl && (
+                          <a
+                            href={param.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: "0.85rem",
+                              color: "#319795",
+                              textDecoration: "none",
+                              marginTop: "0.5rem",
+                              display: "inline-block",
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View source →
+                          </a>
+                        )}
                       </div>
                     ))}
                     {allItems.length > 50 && (
