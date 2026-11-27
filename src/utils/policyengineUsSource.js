@@ -1,9 +1,8 @@
 import snapshot from "../data/policyengineUsSnapshot.json";
 
-// The uprating table describes one PolicyEngine-US release, so each source
-// link opens the file at that release's commit. There the path exists and the
-// file shows the uprating its row reports, whatever the repository moves or
-// changes later.
+// Each source link opens its file at the commit the snapshot pins. Every path
+// the uprating table names exists at that commit, so the links keep working
+// whatever the repository moves or deletes later.
 export const POLICYENGINE_US_SNAPSHOT = snapshot;
 
 const SOURCE_ROOTS = {
@@ -12,9 +11,13 @@ const SOURCE_ROOTS = {
 };
 
 // The row's file as a repository path, or null when the row names no file or
-// has a type with no source folder.
+// has a type with no source folder. Only SOURCE_ROOTS' own keys count, so a
+// type such as "toString" or "__proto__" gets no folder from Object.prototype.
 export function policyengineUsSourcePath(row) {
-  const root = SOURCE_ROOTS[row?.type];
+  const type = row?.type;
+  const root = Object.prototype.hasOwnProperty.call(SOURCE_ROOTS, type)
+    ? SOURCE_ROOTS[type]
+    : null;
   return root && row.file_path ? `${root}/${row.file_path}` : null;
 }
 

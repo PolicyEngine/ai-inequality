@@ -88,6 +88,19 @@ describe("PolicyEngine-US source links in the uprating viewer", () => {
     expect(policyengineUsSourceUrl(undefined)).toBeNull();
   });
 
+  it("give no link to a type that only Object.prototype defines", () => {
+    for (const type of [
+      "__proto__",
+      "constructor",
+      "hasOwnProperty",
+      "toString",
+    ]) {
+      expect(
+        policyengineUsSourceUrl({ type, file_path: "gov/irs.yaml" }),
+      ).toBeNull();
+    }
+  });
+
   it("name the release month by its UTC date", () => {
     expect(POLICYENGINE_US_SNAPSHOT.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(formatReleaseMonth("2025-10-09")).toBe("October 2025");

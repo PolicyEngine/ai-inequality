@@ -195,10 +195,10 @@ function UpratingViewer() {
         }}
       >
         Explore <strong>{datasetCounts.parameters} parameters</strong> and{" "}
-        <strong>{datasetCounts.variables} variables</strong> that
+        <strong>{datasetCounts.variables} variables</strong> from
         PolicyEngine-US {POLICYENGINE_US_SNAPSHOT.version} (
-        {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time in
-        line with economic indicators. Each source link opens the file as it
+        {formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}), each with the
+        uprating rule we recorded for it. Each source link opens the file as it
         stood in that release. These growth factors create correlated
         uncertainty in long-term policy projections.
       </p>
@@ -361,6 +361,7 @@ function UpratingViewer() {
                     {allItems.slice(0, 50).map((param, idx) => (
                       <div
                         key={idx}
+                        data-uprating-item={param.path}
                         style={{
                           marginBottom: "1rem",
                           paddingBottom: "1rem",

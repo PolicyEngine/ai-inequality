@@ -41,17 +41,17 @@ afterEach(() => {
 
 test("names the release its links open", async () => {
   render(<UpratingViewer />);
-  const intro = await screen.findByText(/grows over time/);
+  const intro = await screen.findByText(/uprating rule we recorded/);
   const parameters = rows.filter((row) => row.type === "parameter").length;
   const variables = rows.filter((row) => row.type === "variable").length;
   expect(intro).toHaveTextContent(
-    `Explore ${parameters} parameters and ${variables} variables that PolicyEngine-US ${POLICYENGINE_US_SNAPSHOT.version} (${formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}) grows over time`,
+    `Explore ${parameters} parameters and ${variables} variables from PolicyEngine-US ${POLICYENGINE_US_SNAPSHOT.version} (${formatReleaseMonth(POLICYENGINE_US_SNAPSHOT.date)}), each with the uprating rule we recorded for it.`,
   );
 });
 
 test("links every item it shows to its own file at the pinned commit", async () => {
   render(<UpratingViewer />);
-  await screen.findByText(/grows over time/);
+  await screen.findByText(/uprating rule we recorded/);
   expect(urlByPath.size).toBe(rows.length);
 
   const cards = () => document.querySelectorAll(".grid > .card");
@@ -68,14 +68,29 @@ test("links every item it shows to its own file at the pinned commit", async () 
     itemsInCards += items;
 
     fireEvent.click(cards()[index]);
-    const links = sourceLinks(cards()[index]);
-    if (links.length !== Math.min(SHOWN_PER_CARD, items)) {
-      problems.push(`${heading}: ${links.length} links for ${items} items`);
+    const card = cards()[index];
+    const shown = [...card.querySelectorAll("[data-uprating-item]")];
+    if (shown.length !== Math.min(SHOWN_PER_CARD, items)) {
+      problems.push(`${heading}: shows ${shown.length} of ${items} items`);
     }
-    for (const link of links) {
-      // Each link sits in its item's block, beside the item's name.
-      const path = link.parentElement.querySelector("strong").textContent;
-      const href = link.getAttribute("href");
+    // Every link in the card sits in an item's block, and each block holds
+    // exactly one link, which opens that item's own file.
+    const links = sourceLinks(card);
+    if (links.length !== shown.length) {
+      problems.push(
+        `${heading}: ${links.length} links for ${shown.length} items`,
+      );
+    }
+    for (const item of shown) {
+      const path = item.dataset.upratingItem;
+      const name = item.querySelector("strong")?.textContent;
+      if (name !== path) problems.push(`${path}: block shows ${name}`);
+      const itemLinks = sourceLinks(item);
+      if (itemLinks.length !== 1) {
+        problems.push(`${path}: ${itemLinks.length} links`);
+        continue;
+      }
+      const href = itemLinks[0].getAttribute("href");
       if (href !== urlByPath.get(path)) problems.push(`${path}: ${href}`);
       seen.push(href);
     }
@@ -93,7 +108,7 @@ test("links every item it shows to its own file at the pinned commit", async () 
 
 test("links a variable to its Python file, not the parameters folder", async () => {
   render(<UpratingViewer />);
-  await screen.findByText(/grows over time/);
+  await screen.findByText(/uprating rule we recorded/);
 
   fireEvent.change(screen.getByPlaceholderText(/search/i), {
     target: { value: "household_weight" },
