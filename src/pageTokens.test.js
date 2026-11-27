@@ -4,9 +4,9 @@ import { join, relative } from "node:path";
 // The page takes its colours from @policyengine/ui-kit. Tailwind writes a
 // theme variable such as --color-teal-500 into the built CSS only when
 // something uses it, and a var() naming a missing token draws nothing. So
-// check that each exported page links CSS defining, outside dark mode, every
-// custom property the page's own styles and inline styles name.
-// kitTheme.test.js does the same for chart tokens.
+// check that each exported page links CSS defining, at the document root and
+// outside dark mode, every custom property the page's own styles and inline
+// styles name. kitTheme.test.js makes a looser check for chart tokens.
 
 const ROOT = process.cwd();
 
@@ -40,8 +40,9 @@ function withoutComments(text) {
 function tokensNamed() {
   const found = new Map();
   for (const { path, text } of SOURCES) {
+    // var(--x), and Tailwind's shorthand for it in class names, bg-(--x).
     for (const [, name] of withoutComments(text).matchAll(
-      /var\(\s*(--[\w-]+)/g,
+      /(?:\bvar|\w-)\(\s*(--[\w-]+)/g,
     )) {
       if (!found.has(name)) found.set(name, path);
     }
@@ -68,35 +69,50 @@ function exportedPages() {
     .filter(({ sheets }) => sheets.length > 0);
 }
 
-// A selector or @media prelude that applies only in dark mode. Nothing on the
-// site sets the kit's .dark class, so a token defined only there is missing.
-function darkOnly(prelude) {
-  if (prelude.startsWith("@media"))
-    return /prefers-color-scheme:\s*dark/.test(prelude);
-  return prelude
-    .split(",")
-    .every((part) => /\.dark\b|data-theme=["']?dark/.test(part));
+// A rule defines page-wide tokens when one of its selectors is the document
+// root (:root, :host, html or body, with :not() guards allowed). That leaves
+// out the kit's dark theme (:root.dark, .dark), which nothing on the site
+// turns on, and tokens scoped to a component.
+function rootRule(prelude) {
+  return prelude.split(",").some((part) => {
+    const bare = part.replace(/:not\([^)]*\)/g, "").trim();
+    return /^(:root|:host|html|body)$/.test(bare);
+  });
 }
 
-// Custom properties a stylesheet defines outside dark-only rules.
+// Custom properties a stylesheet defines page-wide: in a root rule wrapped in
+// nothing but @layer. @media, @supports and the like make a definition
+// conditional, so it doesn't count.
 function definedTokens(css) {
   const defined = new Set();
   const open = [];
   let text = "";
-  let quote = null;
-  for (const ch of css.replace(/\/\*[\s\S]*?\*\//g, "")) {
-    if (quote) {
-      text += ch;
-      if (ch === quote) quote = null;
+  for (let i = 0; i < css.length; i++) {
+    const ch = css[i];
+    if (ch === "\\") {
+      text += ch + (css[i + 1] ?? "");
+      i++;
+    } else if (ch === "/" && css[i + 1] === "*") {
+      const end = css.indexOf("*/", i + 2);
+      i = end < 0 ? css.length : end + 1;
     } else if (ch === '"' || ch === "'") {
-      quote = ch;
-      text += ch;
+      let j = i + 1;
+      while (j < css.length && css[j] !== ch) j += css[j] === "\\" ? 2 : 1;
+      text += css.slice(i, j + 1);
+      i = j;
     } else if (ch === "{") {
       open.push(text.trim());
       text = "";
     } else if (ch === ";" || ch === "}") {
       const name = /^(--[\w-]+)\s*:/.exec(text.trim())?.[1];
-      if (name && !open.some(darkOnly)) defined.add(name);
+      const wrappers = open.slice(0, -1);
+      if (
+        name &&
+        open.length > 0 &&
+        rootRule(open[open.length - 1]) &&
+        wrappers.every((prelude) => prelude.startsWith("@layer"))
+      )
+        defined.add(name);
       if (ch === "}") open.pop();
       text = "";
     } else {
@@ -132,7 +148,7 @@ test("the site's sources build no custom property name at runtime", () => {
   // The scan below reads var() names from the source text, so it can't see a
   // name assembled at runtime.
   const built = SOURCES.filter(({ text }) =>
-    /var\(\s*--[\w-]*(\$\{|["'`]\s*\+)/.test(withoutComments(text)),
+    /var\(\s*(--[\w-]*)?(\$\{|["'`]\s*\+)/.test(withoutComments(text)),
   ).map(({ path }) => path);
   expect(built).toEqual([]);
 });
@@ -140,12 +156,25 @@ test("the site's sources build no custom property name at runtime", () => {
 const PAGES = exportedPages();
 
 describe.skipIf(!PAGES && !process.env.CI)("the export", () => {
-  test("exists and is newer than the sources it was built from", () => {
+  test("exists and is newer than what it was built from", () => {
     expect(PAGES, "build the export (bun run build) first").not.toBeNull();
     const built = statSync(join(OUT, "index.html")).mtimeMs;
-    const newer = SOURCES.filter(
-      ({ path }) => statSync(join(ROOT, path)).mtimeMs > built,
-    ).map(({ path }) => path);
+    // The sources that name tokens, the kit and the build's own config.
+    const inputs = [
+      ...SOURCES.filter(({ text }) => /\bvar\(|\w-\(--/.test(text)).map(
+        ({ path }) => path,
+      ),
+      "app/globals.css",
+      "package.json",
+      "bun.lock",
+      "node_modules/@policyengine/ui-kit",
+      ...readdirSync(ROOT).filter((name) =>
+        /^(next|postcss)\.config\.[cm]?js$/.test(name),
+      ),
+    ].filter((path) => existsSync(join(ROOT, path)));
+    const newer = inputs.filter(
+      (path) => statSync(join(ROOT, path)).mtimeMs > built,
+    );
     expect(newer, "rebuild the export (bun run build)").toEqual([]);
   });
 

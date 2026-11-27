@@ -64,11 +64,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: white;
-  color: var(--muted-foreground);
   line-height: 1.6;
   font-size: 16px;
   overflow-x: hidden;
   padding-top: 0;
+}
+
+/* The page's base text colour. The kit's shell around .App keeps the kit's
+ * own (its body rule sets --foreground). */
+.App {
+  color: var(--muted-foreground);
 }
 
 /* Typography System */
@@ -164,18 +169,22 @@ a {
 /* The kit's shell around .App (header, menus, footer) keeps the kit's own
  * focus ring in --ring. That reads on the shell's white menus but barely on
  * its dark-teal header and footer, so a band of --background inside the ring
- * makes the focused element stand out on both. */
-:where(
-    a,
-    button,
-    [role="button"],
-    input,
-    select,
-    textarea,
-    summary,
-    [tabindex]
-  ):not(.App *):focus-visible {
-  box-shadow: 0 0 0 2px var(--background);
+ * makes the focused element stand out on both. The rule sits in the kit's
+ * components layer, so a shell control whose kit markup sets its own shadow
+ * or ring (a utility class) keeps it. */
+@layer components {
+  :where(
+      a,
+      button,
+      [role="button"],
+      input,
+      select,
+      textarea,
+      summary,
+      [tabindex]
+    ):not(.App *):focus-visible {
+    box-shadow: 0 0 0 2px var(--background);
+  }
 }
 
 /* The kit's footer links change nothing on hover; underline them. */
