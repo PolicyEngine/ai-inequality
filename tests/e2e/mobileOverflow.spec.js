@@ -61,9 +61,11 @@ test("the policy-analysis page fits a 375px screen in every state", async ({
   await page.goto(appUrl("/policy-analysis"));
 
   // The page has drawn: both tables, the sweep's measure picker and a chart.
+  // count() doesn't wait, so wait for the first measure before counting.
   const measures = page.locator(
     "#shift-sweep [role=radiogroup][aria-label='Measure'] [role=radio]",
   );
+  await expect(measures.first()).toBeVisible();
   expect(await measures.count()).toBeGreaterThan(1);
   await expect(page.locator("table.baseline-distribution-table")).toBeVisible();
   await expect(
