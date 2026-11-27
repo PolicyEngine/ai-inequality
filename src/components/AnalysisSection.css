@@ -114,23 +114,7 @@
   margin-bottom: 0;
 }
 
-/* Toggle control (used by CapitalIncomeCliff) */
-.analysis-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 0.875rem;
-  color: var(--pe-gray-600);
-  cursor: pointer;
-}
-
-.analysis-toggle input[type="checkbox"] {
-  accent-color: var(--pe-teal-500);
-  width: 16px;
-  height: 16px;
-}
-
-/* Side-by-side chart grid (used by LaborShift overview) */
+/* Side-by-side chart grid (used by the AI scenarios' chart pair) */
 .analysis-charts-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
