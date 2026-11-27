@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
 import ukShiftSweepData from "../data/ukShiftSweepData.json";
+import BudgetLabMemo from "./BudgetLabMemo";
 import Home from "./Home";
 import IncomeShift from "./IncomeShift";
 import PolicyAnalysis from "./PolicyAnalysis";
@@ -84,6 +85,62 @@ test("on the UK path, the country selector reaches the US and comes back", () =>
   // The UK is this path's own country, so choosing it drops the query.
   fireEvent.click(radio(/united kingdom/i));
   expect(radio(/united kingdom/i)).toHaveAttribute("aria-checked", "true");
+  expect(screen.getByTestId("search")).toBeEmptyDOMElement();
+});
+
+// Names every plain object inherits name no country, so each page falls back
+// to its path's country.
+test.each(["constructor", "toString", "__proto__"])(
+  "?country=%s shows the path's country",
+  (key) => {
+    renderAtUkPath(`/income-shift?country=${key}`, IncomeShift);
+    expect(
+      screen.getByRole("radio", { name: /united kingdom/i }),
+    ).toHaveAttribute("aria-checked", "true");
+    cleanup();
+    renderAtUkPath(`/policy-analysis?country=${key}`, PolicyAnalysis);
+    expect(document.querySelector("section.health-coverage")).toBeNull();
+    expect(document.body).toHaveTextContent(
+      "We model no behavioural responses.",
+    );
+  },
+);
+
+// The Budget Lab memo covers the US scenarios, so its link opens the US
+// experiment from either country's path.
+function followMemoLink(path) {
+  window.history.replaceState(null, "", `${path}/budget-lab`);
+  render(
+    <MemoryRouter initialEntries={["/budget-lab"]}>
+      <Routes>
+        <Route path="/budget-lab" element={<BudgetLabMemo />} />
+        <Route path="/income-shift" element={<IncomeShift />} />
+      </Routes>
+      <Search />
+    </MemoryRouter>,
+  );
+  fireEvent.click(
+    screen.getByRole("link", { name: /interactive version of this analysis/i }),
+  );
+}
+
+test("on the UK path, the US memo's link opens the US experiment", () => {
+  followMemoLink("/uk/ai-inequality");
+
+  expect(screen.getByRole("radio", { name: /united states/i })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  expect(screen.getByTestId("search")).toHaveTextContent("?country=us");
+});
+
+test("on the US path, the memo's link opens the US experiment with no query", () => {
+  followMemoLink("/us/ai-inequality");
+
+  expect(screen.getByRole("radio", { name: /united states/i })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
   expect(screen.getByTestId("search")).toBeEmptyDOMElement();
 });
 

@@ -6,7 +6,15 @@ import { fireEvent, render } from "@testing-library/react";
 import { parse } from "espree";
 import { useMemo, useState } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from "vitest";
 
 import { memoMarkdown } from "./data/memoContent";
 import { COUNTRIES, countryFromSearchParams } from "./utils/countryConfig";
@@ -69,6 +77,11 @@ const SHELL_LINKS_TO_RETIRED_PAGES = [
 // Where policyengine.org serves the study, so links resolve as they do there.
 const STUDY_URL = "https://policyengine.org/us/ai-inequality";
 const STUDY_PATH = new URL(STUDY_URL).pathname;
+// policyengine.org also serves the study at the UK address, by rewriting it to
+// the US one with ?country=uk. The browser keeps the UK path, and the pages
+// take the UK as their country from it.
+const UK_STUDY_URL = "https://policyengine.org/uk/ai-inequality";
+const STUDY_URLS = [STUDY_URL, UK_STUDY_URL];
 
 const ROOT = process.cwd();
 
@@ -197,14 +210,27 @@ const BUILT_PAGES = existsSync(join(ROOT, OUT))
     )
   : null;
 
-// Each route in each country, written as a visitor reaches it.
-const DEFAULT_COUNTRY = countryFromSearchParams(new URLSearchParams());
-const PAGES = ROUTES.flatMap(({ path, View }) =>
-  Object.keys(COUNTRIES).map((country) => [
-    country === DEFAULT_COUNTRY ? path : `${path}?country=${country}`,
-    View,
-  ]),
+// Each route in each country, written as a visitor reaches it: at the US
+// address with each country's query, and at the UK address with none.
+const DEFAULT_COUNTRY = countryFromSearchParams(
+  new URLSearchParams(),
+  STUDY_PATH,
 );
+const PAGES = [
+  ...ROUTES.flatMap(({ path, View }) =>
+    Object.keys(COUNTRIES).map((country) => {
+      const entry =
+        country === DEFAULT_COUNTRY ? path : `${path}?country=${country}`;
+      return { label: entry, entry, View, study: STUDY_URL };
+    }),
+  ),
+  ...ROUTES.map(({ path, View }) => ({
+    label: `${new URL(UK_STUDY_URL).pathname}${path}`,
+    entry: path,
+    View,
+    study: UK_STUDY_URL,
+  })),
+];
 
 // The one module that recognizes the frozen release-id prefix, and the one
 // token in it that may spell the old name.
@@ -238,10 +264,13 @@ function opensUnrenderedPage(url) {
   );
 }
 
-// True for a request for a file public/ serves at the study's address.
+// True for a request for a file public/ serves at either of the study's
+// addresses. The UK address serves each file the US one does.
 function servesFile(url) {
-  const prefix = `${STUDY_URL}/`;
-  if (!url.startsWith(prefix)) return false;
+  const prefix = STUDY_URLS.map((study) => `${study}/`).find((start) =>
+    url.startsWith(start),
+  );
+  if (!prefix) return false;
   const path = url.slice(prefix.length).replace(/[?#].*$/, "");
   return publicFiles.includes(`public/${decodeURIComponent(path)}`);
 }
@@ -1020,14 +1049,11 @@ function noteAnchor(anchor) {
 // Each base a link on a page can resolve against. policyengine.org drops a
 // trailing slash, so the home page sits at the study's address with none,
 // while other hosts keep one, so the test resolves against both forms.
-function pageUrls(entry) {
+function pageUrls(entry, study = STUDY_URL) {
   const [path, query] = entry.split("?");
   const search = query === undefined ? "" : `?${query}`;
   const trimmed = path.replace(/\/+$/, "");
-  return [
-    `${STUDY_URL}${trimmed}${search}`,
-    `${STUDY_URL}${trimmed}/${search}`,
-  ];
+  return [`${study}${trimmed}${search}`, `${study}${trimmed}/${search}`];
 }
 
 // The data: and blob: addresses in an attribute value: the whole value, or a
@@ -1055,9 +1081,10 @@ const breathe = async (signal) => {
 // loop a turn before each render, so a long sweep never holds up Vitest's
 // messages to its workers past their 60-second timeout, and it stops when the
 // test's signal aborts.
-async function sweep(entry, View, signal) {
+async function sweep(entry, View, signal, study = STUDY_URL) {
   const body = document.body;
-  const [page, slashed] = pageUrls(entry);
+  const studyPath = new URL(study).pathname;
+  const [page, slashed] = pageUrls(entry, study);
   requested.length = 0;
   opened.length = 0;
   handed.length = 0;
@@ -1076,8 +1103,8 @@ async function sweep(entry, View, signal) {
   const mount = () => {
     const { unmount, container } = render(
       <MemoryRouter
-        basename={STUDY_PATH}
-        initialEntries={[`${STUDY_PATH}${entry}`]}
+        basename={studyPath}
+        initialEntries={[`${studyPath}${entry}`]}
       >
         <View />
       </MemoryRouter>,
@@ -2212,12 +2239,26 @@ describe("retired dataset names", () => {
   // The longest sweeps take about 30 seconds alone and several minutes on a
   // loaded machine.
   it.for(PAGES)(
-    "%s shows none in any state and links no page that does",
-    async ([entry, View], { signal }) => {
+    "$label shows none in any state and links no page that does",
+    async ({ entry, View, study }, { signal }) => {
+      // Pages take their country from the browser's path, so a sweep at the
+      // UK address puts the browser there. basePath.js fixed its base when
+      // this file imported it, so the files pages ask for resolve under the US
+      // address, where policyengine.org sends the UK address's requests.
+      if (study !== STUDY_URL) {
+        const before = window.location.href;
+        window.history.replaceState(
+          null,
+          "",
+          `${new URL(study).pathname}${entry}`,
+        );
+        onTestFinished(() => window.history.replaceState(null, "", before));
+      }
       const { text, shown, links, studyLinks, requests, fields } = await sweep(
         entry,
         View,
         signal,
+        study,
       );
       expect(text.length).toBeGreaterThan(200);
       expect([...shown]).toEqual([]);

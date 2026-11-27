@@ -35,6 +35,14 @@ test("?country= names the country when it names one, and the path decides otherw
   expect(countryFromSearchParams(query("country=ca"), US)).toBe("us");
 });
 
+// Names every plain object inherits name no country.
+const INHERITED = ["constructor", "toString", "__proto__", "hasOwnProperty"];
+
+test.each(INHERITED)("?country=%s names no country", (key) => {
+  expect(countryFromSearchParams(query(`country=${key}`), UK)).toBe("uk");
+  expect(countryFromSearchParams(query(`country=${key}`), US)).toBe("us");
+});
+
 test("the path defaults to the browser's", () => {
   window.history.replaceState(null, "", UK);
   expect(countryFromPath()).toBe("uk");

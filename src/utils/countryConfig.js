@@ -27,13 +27,17 @@ export function countryFromPath(pathname = browserPathname()) {
   return isUkStudyPath(pathname) ? "uk" : "us";
 }
 
-// The country a page shows: the one ?country= names, else the path's.
+// The country a page shows: the one ?country= names, else the path's. Only
+// COUNTRIES' own keys name a country, so ?country=constructor or toString
+// falls back to the path like any other unknown value.
 export function countryFromSearchParams(
   searchParams,
   pathname = browserPathname(),
 ) {
   const requested = searchParams.get("country");
-  return COUNTRIES[requested] ? requested : countryFromPath(pathname);
+  return requested !== null && Object.hasOwn(COUNTRIES, requested)
+    ? requested
+    : countryFromPath(pathname);
 }
 
 // The query that selects a country on this path: none when the path already
