@@ -80,7 +80,6 @@ h5,
 h6 {
   font-weight: 600;
   line-height: 1.25;
-  color: var(--foreground);
   letter-spacing: -0.02em;
 }
 
@@ -104,16 +103,30 @@ h4 {
 p {
   line-height: 1.7;
   margin-bottom: 1rem;
-  color: var(--muted-foreground);
 }
 
 a {
-  color: var(--primary);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
-a:hover {
+/* Text colours apply inside .App only. The kit's shell (header and footer)
+ * sits outside it and colours its own text with layered utility classes,
+ * which these unlayered rules would otherwise beat. :where() keeps each
+ * selector's specificity at that of the bare element. */
+:where(.App) :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--foreground);
+}
+
+:where(.App) p {
+  color: var(--muted-foreground);
+}
+
+:where(.App) a {
+  color: var(--primary);
+}
+
+:where(.App) a:hover {
   color: var(--color-teal-500);
 }
 
