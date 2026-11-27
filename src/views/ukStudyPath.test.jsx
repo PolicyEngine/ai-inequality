@@ -42,6 +42,12 @@ test("the UK path shows the UK overview", () => {
     "https://www.policyengine.org/uk/ai-inequality/income-shift",
   );
   expect(screen.queryByText(/MIT Iceberg Index/i)).not.toBeInTheDocument();
+  // Project images load from the UK path, which policyengine.org serves.
+  const images = [...document.querySelectorAll("img.project-image")];
+  expect(images.length).toBeGreaterThan(0);
+  for (const image of images) {
+    expect(image.getAttribute("src")).toMatch(/^\/uk\/ai-inequality\/images\//);
+  }
 });
 
 test("the UK path shows the UK income-shift experiment", () => {
@@ -158,6 +164,22 @@ test("the UK overview doesn't call the household data open source", () => {
     "We publish our tax-benefit models and data-processing code as open source, with the models under AGPL-3.0.",
   );
   expect(text).not.toMatch(/household microdata|models, data, and code/i);
+
+  // No block that says "open source" mentions data, other than the
+  // data-processing code.
+  const openSourceBlocks = [...document.body.querySelectorAll("*")].filter(
+    (element) =>
+      /open[- ]source/i.test(element.textContent) &&
+      ![...element.children].some((child) =>
+        /open[- ]source/i.test(child.textContent),
+      ),
+  );
+  expect(openSourceBlocks.length).toBeGreaterThan(2);
+  expect(
+    openSourceBlocks
+      .map((element) => element.textContent)
+      .filter((block) => /\b(?:micro)?data\b(?!-processing)/i.test(block)),
+  ).toEqual([]);
 });
 
 // The copy the UK view shows once the UK path is its default.

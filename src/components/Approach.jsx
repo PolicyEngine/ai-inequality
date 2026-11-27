@@ -48,7 +48,7 @@ function Approach({ countryKey = "us" }) {
         <>
           We publish our tax-benefit models and data-processing code as open
           source, with the models under{" "}
-          <Source href="https://github.com/PolicyEngine/policyengine-core">
+          <Source href="https://github.com/PolicyEngine/policyengine-core/blob/master/LICENSE">
             AGPL-3.0
           </Source>
           . 10,000+ policy parameters encoded across country tax-benefit

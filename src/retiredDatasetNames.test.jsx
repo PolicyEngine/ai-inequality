@@ -210,27 +210,21 @@ const BUILT_PAGES = existsSync(join(ROOT, OUT))
     )
   : null;
 
-// Each route in each country, written as a visitor reaches it: at the US
-// address with each country's query, and at the UK address with none.
-const DEFAULT_COUNTRY = countryFromSearchParams(
-  new URLSearchParams(),
-  STUDY_PATH,
-);
-const PAGES = [
-  ...ROUTES.flatMap(({ path, View }) =>
+// Each route in each country at each of the study's addresses, written as a
+// visitor reaches it: with no query for the country the address implies, and
+// with ?country= for the other.
+const PAGES = STUDY_URLS.flatMap((study) => {
+  const studyPath = new URL(study).pathname;
+  const ownCountry = countryFromSearchParams(new URLSearchParams(), studyPath);
+  return ROUTES.flatMap(({ path, View }) =>
     Object.keys(COUNTRIES).map((country) => {
       const entry =
-        country === DEFAULT_COUNTRY ? path : `${path}?country=${country}`;
-      return { label: entry, entry, View, study: STUDY_URL };
+        country === ownCountry ? path : `${path}?country=${country}`;
+      const label = study === STUDY_URL ? entry : `${studyPath}${entry}`;
+      return { label, entry, View, study };
     }),
-  ),
-  ...ROUTES.map(({ path, View }) => ({
-    label: `${new URL(UK_STUDY_URL).pathname}${path}`,
-    entry: path,
-    View,
-    study: UK_STUDY_URL,
-  })),
-];
+  );
+});
 
 // The one module that recognizes the frozen release-id prefix, and the one
 // token in it that may spell the old name.
@@ -2241,10 +2235,9 @@ describe("retired dataset names", () => {
   it.for(PAGES)(
     "$label shows none in any state and links no page that does",
     async ({ entry, View, study }, { signal }) => {
-      // Pages take their country from the browser's path, so a sweep at the
-      // UK address puts the browser there. basePath.js fixed its base when
-      // this file imported it, so the files pages ask for resolve under the US
-      // address, where policyengine.org sends the UK address's requests.
+      // Pages take their country and the base of the files they ask for from
+      // the browser's path, so a sweep at the UK address puts the browser
+      // there.
       if (study !== STUDY_URL) {
         const before = window.location.href;
         window.history.replaceState(

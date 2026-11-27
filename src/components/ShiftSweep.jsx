@@ -764,7 +764,6 @@ function RevenueDecompositionChart({
   denominatorB = null, // denominator in $B, used when unit === "share"
   laborTerm = "labor",
   note = null,
-  taxes = "income + payroll tax revenue",
 }) {
   // Share mode scales each bucket value by 100 / denominatorB.
   const scale = unit === "share" && denominatorB ? 100 / denominatorB : 1;
@@ -803,8 +802,10 @@ function RevenueDecompositionChart({
     unit === "share"
       ? `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`
       : `${currencySymbol}${v >= 0 ? "+" : ""}${v.toFixed(1)}B`;
+  // The units toggle names the taxes in full. The axis keeps a short title,
+  // centred on the axis, so it fits the chart in either country.
   const resolvedAxisLabel =
-    unit === "share" ? `Change vs baseline (% of ${taxes})` : axisLabel;
+    unit === "share" ? "Change vs baseline (% of tax revenue)" : axisLabel;
 
   return (
     <>
@@ -837,7 +838,7 @@ function RevenueDecompositionChart({
               angle: -90,
               position: "insideLeft",
               offset: -10,
-              style: AXIS_LABEL_STYLE,
+              style: { ...AXIS_LABEL_STYLE, textAnchor: "middle" },
             }}
           />
           <ReferenceLine y={0} {...ZERO_LINE} />
@@ -1538,7 +1539,6 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
             unit={unit}
             denominatorB={decompositionDenominatorB}
             laborTerm={laborTerm}
-            taxes={shareTaxes(metadata)}
             note={
               selectedJurisdiction !== "federal"
                 ? withHealthTanf

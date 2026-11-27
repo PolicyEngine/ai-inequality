@@ -9,16 +9,23 @@ export function isUkStudyPath(pathname) {
   return pathname === UK_STUDY_PATH || pathname.startsWith(`${UK_STUDY_PATH}/`);
 }
 
-export const basePath =
-  typeof window !== "undefined" && isUkStudyPath(window.location.pathname)
+// The base the browser shows: the UK path when policyengine.org serves the
+// study there, and the configured one otherwise. It reads the browser's path
+// on each call, not once when the module loads, so callers build URLs at
+// render time.
+export function currentBasePath() {
+  return typeof window !== "undefined" &&
+    isUkStudyPath(window.location.pathname)
     ? UK_STUDY_PATH
     : configuredBasePath;
+}
 
 export function withBasePath(path) {
+  const base = currentBasePath();
   if (!path) {
-    return basePath;
+    return base;
   }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${basePath}${normalizedPath}`;
+  return `${base}${normalizedPath}`;
 }

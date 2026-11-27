@@ -156,7 +156,10 @@ test("the UK path with ?country=us shows the US policy analysis", async ({
 });
 
 test("the US policy analysis still shows the US view", async ({ page }) => {
-  await page.goto(appUrl("/policy-analysis"));
+  const response = await page.goto(appUrl("/policy-analysis"));
+  // The US page loads directly, with no redirect.
+  expect(response.status()).toBe(200);
+  expect(response.request().redirectedFrom()).toBeNull();
   await expect(page.locator("section.health-coverage")).toHaveCount(1);
   await expect(page.locator("body")).not.toContainText(
     "We model no behavioural responses.",
