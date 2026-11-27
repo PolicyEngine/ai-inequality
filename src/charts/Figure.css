@@ -1,0 +1,91 @@
+/* Figures on the study pages (src/charts/Figure.jsx). Colours come only from
+ * UI kit tokens that src/charts/kitTheme.js names, so kitTheme.test.js
+ * confirms the export defines each one. */
+
+.study-figure {
+  margin: 0 0 2.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.study-figure:last-child {
+  margin-bottom: 0;
+}
+
+.section .study-figure-title {
+  color: var(--foreground);
+  font-size: 1.25rem;
+  line-height: 1.35;
+  margin: 0 0 0.5rem;
+}
+
+.study-figure-subtitle {
+  color: var(--muted-foreground);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 0.75rem;
+}
+
+.study-figure-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.study-figure-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.study-figure-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .study-figure-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.study-figure-panel {
+  min-width: 0;
+}
+
+.study-figure-panel-title {
+  color: var(--foreground);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.study-figure-caption {
+  color: var(--foreground);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0.5rem 0 0;
+}
+
+.study-figure-notes {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.study-figure-footnote,
+.study-figure-source {
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.study-figure-footnote + .study-figure-source {
+  margin-top: 0.5rem;
+}

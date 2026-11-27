@@ -8,6 +8,7 @@ class ResizeObserver {
   disconnect() {}
 }
 
-if (!window.ResizeObserver) {
+// Node-environment tests, such as the head-tag tests, have no window.
+if (typeof window !== "undefined" && !window.ResizeObserver) {
   window.ResizeObserver = ResizeObserver;
 }

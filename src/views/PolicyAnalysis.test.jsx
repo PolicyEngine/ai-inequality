@@ -17,7 +17,7 @@ const EXPERIMENT =
 test("the US experiment card says market income stays the same", () => {
   renderPolicyAnalysis();
   expect(document.body).toHaveTextContent(
-    `${EXPERIMENT} Total market income stays the same, and we model no behavioral responses.`,
+    `${EXPERIMENT} Households' total market income stays the same. We don't pass employers' savings on payroll tax to anyone, and we model no behavioral responses.`,
   );
   expect(document.body).not.toHaveTextContent(/behavioural/i);
 });

@@ -12,6 +12,19 @@ import {
 } from "recharts";
 import { IconChartBar, IconInfoCircle } from "@tabler/icons-react";
 import incomeDistributionData from "../data/incomeDistributionData.json";
+import {
+  AXIS_LABEL_STYLE,
+  AXIS_PROPS,
+  BAND_EDGE,
+  GAIN,
+  GRID_STYLE,
+  LEGEND_PROPS,
+  LOSS,
+  SERIES,
+  TOOLTIP_ITEM_STYLE,
+  TOOLTIP_LABEL_STYLE,
+  ZERO_LINE,
+} from "../charts/kitTheme";
 import { TOOLTIP_STYLE } from "../utils/chartStyles";
 import { niceTicks } from "../utils/chartTicks";
 
@@ -54,13 +67,31 @@ const VIEWS = {
   },
 };
 
+// Each segment's colour, by key, from the UI kit. The data file's own colours
+// are ignored. Market income's segments take the first three series colours
+// in order. In net income, taxes take the kit's loss gray and benefits its
+// gain teal. Market income sits on benefits in most groups and on taxes in
+// the bottom 10%, so it takes blue-700 (ΔE 14.8 from the teal, 10.2 from the
+// gray); teal-700 would clear the teal but sit 4.8 from the gray. Refundable
+// credits take sky, 26.5 from the gray. No four kit colours clear a ΔE of 15
+// against each other, so every segment also draws BAND_EDGE.
+export const SEGMENT_COLOURS = {
+  labor: SERIES[0],
+  capital: SERIES[1],
+  otherMarket: SERIES[2],
+  market: SERIES[3],
+  refundableCredits: SERIES[2],
+  benefits: GAIN,
+  taxes: LOSS,
+};
+
 const TOP_SHARE_KEYS = ["top10", "top1", "top01"];
 
 function formatBenchmarkPercent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function chartRows(conceptKey, viewKey) {
+export function chartRows(conceptKey, viewKey) {
   const concept = incomeDistributionData[conceptKey];
   const view = VIEWS[viewKey];
   return concept.groups.map((group) => {
@@ -238,7 +269,7 @@ function IncomeDistributionBreakdown() {
                   <div key={component.key} className="income-component-item">
                     <span
                       className="income-component-swatch"
-                      style={{ background: component.color }}
+                      style={{ background: SEGMENT_COLOURS[component.key] }}
                     />
                     <div>
                       <strong>{component.label}</strong>
@@ -257,29 +288,31 @@ function IncomeDistributionBreakdown() {
               margin={{ left: 28, right: 30, top: 20, bottom: 15 }}
               stackOffset="sign"
             >
-              <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+              <CartesianGrid {...GRID_STYLE} />
               <XAxis
+                {...AXIS_PROPS}
                 type="number"
                 ticks={ticks}
                 domain={[ticks[0], ticks[ticks.length - 1]]}
                 tickFormatter={view.formatter}
-                tick={{ fontSize: 12 }}
                 label={{
                   value: view.axisLabel,
                   position: "insideBottom",
                   offset: -8,
-                  style: { fontSize: 13 },
+                  style: AXIS_LABEL_STYLE,
                 }}
               />
               <YAxis
+                {...AXIS_PROPS}
                 type="category"
                 dataKey="group"
                 width={92}
-                tick={{ fontSize: 12 }}
               />
-              <ReferenceLine x={0} stroke="#4a5568" strokeWidth={1.3} />
+              <ReferenceLine x={0} {...ZERO_LINE} />
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
+                labelStyle={TOOLTIP_LABEL_STYLE}
+                itemStyle={TOOLTIP_ITEM_STYLE}
                 formatter={(value, name) => {
                   const component = concept.components.find(
                     (item) => item.key === name,
@@ -287,7 +320,11 @@ function IncomeDistributionBreakdown() {
                   return [view.formatter(value), component?.label ?? name];
                 }}
               />
+              {/* The legend keeps the stacking order, which is the order of
+                  the Components list, instead of sorting by key. */}
               <Legend
+                {...LEGEND_PROPS}
+                itemSorter={null}
                 formatter={(value) =>
                   concept.components.find(
                     (component) => component.key === value,
@@ -299,7 +336,8 @@ function IncomeDistributionBreakdown() {
                   key={component.key}
                   dataKey={component.key}
                   stackId="income"
-                  fill={component.color}
+                  {...BAND_EDGE}
+                  fill={SEGMENT_COLOURS[component.key]}
                   radius={[4, 4, 4, 4]}
                 />
               ))}

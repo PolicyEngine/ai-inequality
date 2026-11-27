@@ -16,7 +16,19 @@ import {
 } from "recharts";
 import { IconInfoCircle, IconTimeline } from "@tabler/icons-react";
 import defaultScenariosData from "../data/aiScenariosData.json";
-import { TOOLTIP_STYLE } from "../utils/chartStyles";
+import {
+  AXIS_LABEL_STYLE,
+  AXIS_PROPS,
+  AXIS_STYLE,
+  FALL_IS_GOOD,
+  GRID_STYLE,
+  LEGEND_PROPS,
+  LINE,
+  SERIES,
+  TEXT,
+  TOOLTIP_PROPS,
+  ZERO_LINE,
+} from "../charts/kitTheme";
 import { microcosmBuildLabel } from "../utils/modelMetadata";
 import { useRovingRadioGroup } from "../utils/useRovingRadioGroup";
 
@@ -45,15 +57,18 @@ const VARIANT_PHRASES = {
   expansive: "wages spreading",
 };
 
-// Palette reuses values already in the repo: pe-blue-dark for the
-// shares-fixed counterfactual, pe-teal-600 for the forecast tilt, semantic
-// success/error only where a sign is genuinely good or bad for households.
-const COLOR_FIXED = "#17354F";
-const COLOR_FORECAST = "#227773";
-const COLOR_GRID = "#e2e8f0";
-const COLOR_ZERO = "#718096";
-const COLOR_GOOD = "#22c55e";
-const COLOR_BAD = "#ef4444";
+// Colours from the UI kit (src/charts/kitTheme.js). The shares-fixed bars are
+// the blue bars and the forecast tilt the teal bars that the text below the
+// chart names. Poverty takes the kit's fall-is-good pair: teal when it falls,
+// gray when it rises. The breakeven line is a reference mark, not a loss.
+const COLOR_FIXED = SERIES[3];
+const COLOR_FORECAST = SERIES[0];
+const COLOR_GRID = GRID_STYLE.stroke;
+// The variant names run long, so their ticks drop a size.
+const SMALL_TICK = { ...AXIS_STYLE, fontSize: 11 };
+const COLOR_GOOD = FALL_IS_GOOD.fall;
+const COLOR_BAD = FALL_IS_GOOD.rise;
+const COLOR_BREAKEVEN = LINE.comparison;
 
 const fmtBillions = (value) =>
   `${value >= 0 ? "+" : "−"}$${Math.abs(value).toFixed(0)}B`;
@@ -124,23 +139,23 @@ function TiltCostChart({ scenarios }) {
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={data} margin={{ left: 20, right: 30, top: 10 }}>
           <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" />
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+          <XAxis {...AXIS_PROPS} dataKey="name" />
           <YAxis
+            {...AXIS_PROPS}
             tickFormatter={(v) => `$${v}B`}
-            tick={{ fontSize: 12 }}
             label={{
               value: "Revenue change ($B)",
               angle: -90,
               position: "insideLeft",
               offset: -8,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <Tooltip
-            contentStyle={TOOLTIP_STYLE}
+            {...TOOLTIP_PROPS}
             formatter={(value, seriesName) => [fmtBillions(value), seriesName]}
           />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
+          <Legend {...LEGEND_PROPS} />
           <Bar
             dataKey="fixed"
             name="Shares held at today's split"
@@ -178,10 +193,10 @@ function VariantPairCharts({ scenarios, scenarioName }) {
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={rows} margin={{ left: 12, right: 12, top: 10 }}>
             <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" />
-            <XAxis dataKey="variant" tick={{ fontSize: 11 }} />
-            <YAxis tickFormatter={(v) => `$${v}B`} tick={{ fontSize: 12 }} />
+            <XAxis {...AXIS_PROPS} dataKey="variant" tick={SMALL_TICK} />
+            <YAxis {...AXIS_PROPS} tickFormatter={(v) => `$${v}B`} />
             <Tooltip
-              contentStyle={TOOLTIP_STYLE}
+              {...TOOLTIP_PROPS}
               formatter={(value) => [fmtBillions(value), "Revenue change"]}
             />
             <Bar
@@ -197,14 +212,14 @@ function VariantPairCharts({ scenarios, scenarioName }) {
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={rows} margin={{ left: 12, right: 12, top: 10 }}>
             <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" />
-            <XAxis dataKey="variant" tick={{ fontSize: 11 }} />
+            <XAxis {...AXIS_PROPS} dataKey="variant" tick={SMALL_TICK} />
             <YAxis
+              {...AXIS_PROPS}
               tickFormatter={(v) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}pp`}
-              tick={{ fontSize: 12 }}
             />
-            <ReferenceLine y={0} stroke={COLOR_ZERO} strokeDasharray="4 4" />
+            <ReferenceLine y={0} {...ZERO_LINE} />
             <Tooltip
-              contentStyle={TOOLTIP_STYLE}
+              {...TOOLTIP_PROPS}
               formatter={(value) => [fmtPp(value), "Poverty change"]}
             />
             <Bar dataKey="povertyPp" isAnimationActive={false}>
@@ -244,46 +259,46 @@ function RealizationChart({ rows, breakeven }) {
         >
           <CartesianGrid stroke={COLOR_GRID} strokeDasharray="3 3" />
           <XAxis
+            {...AXIS_PROPS}
             type="number"
             dataKey="rate"
             domain={[0, 100]}
             ticks={[0, 25, 50, 75, 100]}
             tickFormatter={(v) => `${v}%`}
-            tick={{ fontSize: 12 }}
             label={{
               value: "Share of the AI capital flow reaching tax returns",
               position: "bottom",
               offset: 10,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <YAxis
+            {...AXIS_PROPS}
             tickFormatter={(v) => `$${v}B`}
-            tick={{ fontSize: 12 }}
             label={{
               value: "Revenue change ($B)",
               angle: -90,
               position: "insideLeft",
               offset: -8,
-              style: { fontSize: 13 },
+              style: AXIS_LABEL_STYLE,
             }}
           />
-          <ReferenceLine y={0} stroke={COLOR_ZERO} strokeDasharray="4 4" />
+          <ReferenceLine y={0} {...ZERO_LINE} />
           {breakeven != null && (
             <ReferenceLine
               x={breakeven * 100}
-              stroke={COLOR_BAD}
+              stroke={COLOR_BREAKEVEN}
               strokeDasharray="4 4"
               label={{
                 value: `Breakeven ≈ ${(breakeven * 100).toFixed(0)}%`,
                 position: "insideTopLeft",
                 fontSize: 12,
-                fill: COLOR_BAD,
+                fill: TEXT.muted,
               }}
             />
           )}
           <Tooltip
-            contentStyle={TOOLTIP_STYLE}
+            {...TOOLTIP_PROPS}
             formatter={(value) => [fmtBillions(value), "Revenue change"]}
             labelFormatter={(value) => `${value}% realized`}
           />
