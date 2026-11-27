@@ -108,12 +108,15 @@
 
 .policy-analysis-primary-link {
   background: var(--primary);
-  color: white;
+  color: var(--primary-foreground);
   padding: 0.8rem 1.1rem;
 }
 
+/* Name the text colour here too: index.css's a:hover outranks the rule
+ * above and would draw teal text on the teal fill. */
 .policy-analysis-primary-link:hover {
   background: var(--color-teal-700);
+  color: var(--primary-foreground);
 }
 
 .policy-analysis-back-link {
