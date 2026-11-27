@@ -26,10 +26,13 @@ test("renders the UK overview with UK-specific evidence", () => {
   expect(screen.queryByText(/MIT Iceberg Index/i)).not.toBeInTheDocument();
 });
 
-test.each(["us", "uk"])(
+test.each([
+  ["us", "/"],
+  ["uk", "/?country=uk"],
+])(
   "links the %s users and citations pages, with no 151M stat tile or past event",
-  (country) => {
-    renderHome(`/?country=${country}`);
+  (country, entry) => {
+    renderHome(entry);
 
     expect(
       screen.getByRole("link", { name: /government teams, research groups/i }),
