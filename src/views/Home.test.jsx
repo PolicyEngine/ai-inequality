@@ -27,7 +27,7 @@ test("renders the UK overview with UK-specific evidence", () => {
 });
 
 test.each(["us", "uk"])(
-  "links the %s users and citations pages, with no Iceberg tile or past event",
+  "links the %s users and citations pages, with no 151M stat tile or past event",
   (country) => {
     renderHome(`/?country=${country}`);
 
@@ -42,7 +42,10 @@ test.each(["us", "uk"])(
       "href",
       `https://www.policyengine.org/${country}/citations`,
     );
-    expect(screen.queryByText(/workers simulated/i)).not.toBeInTheDocument();
+    const stats = document.querySelector(".uncertainty-stats");
+    expect(stats).not.toBeNull();
+    expect(stats).not.toHaveTextContent("151M");
+    expect(stats).not.toHaveTextContent(/workers simulated/i);
     expect(screen.queryByText(/EA Global/i)).not.toBeInTheDocument();
   },
 );

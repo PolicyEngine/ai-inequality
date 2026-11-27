@@ -62,7 +62,7 @@ function Approach({ countryKey = "us" }) {
           <Source href={`https://www.policyengine.org/${countryKey}/users`}>
             Government teams, research groups and benefit services
           </Source>{" "}
-          in the US and UK use PolicyEngine.{" "}
+          use PolicyEngine.{" "}
           <Source href={`https://www.policyengine.org/${countryKey}/citations`}>
             Legislators and academic researchers
           </Source>{" "}
