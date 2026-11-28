@@ -12,14 +12,15 @@ import { parseModule, sourceFiles, walk } from "./sourceTree";
 // code, so a function call such as color(dataKey) passes and comments don't
 // count; kitTheme.js names each token's hex value in one.
 //
-// A <style> element's CSS is read as one text, its children joined, so a
-// colour split across them is still seen. Its declarations may hold none of
-// the above, no CSS named or system colour and no CSS escape. A child other
-// than JSX text, a string or a template with no ${} is code the scan can't
-// read, and fails. The scan finds <style> by its tag name: CSS that reaches a
-// <style> element through a tag held in a variable, createElement() or
-// dangerouslySetInnerHTML goes unread, as it did before. No chart file draws
-// a <style> element.
+// A <style> element's CSS is read as one text, its children joined as React
+// joins them: JSX text loses the whitespace lines around its line breaks, so
+// a colour split across children is still seen. Its declarations may hold
+// none of the above, no CSS named or system colour and no CSS escape. A child
+// other than JSX text, a string or a template with no ${} is code the scan
+// can't read, and fails, as does a spread, children or dangerouslySetInnerHTML
+// prop on the element. The scan finds <style> by its tag name: CSS that
+// reaches a <style> element through a tag held in a variable, a member tag or
+// createElement() goes unread (#64). No chart file draws a <style> element.
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
@@ -28,7 +29,7 @@ const APP = join(ROOT, "app");
 // CSS allows no space between a function's name and its parenthesis, so
 // prose such as "The Budget Lab (2026)" names no colour.
 const COLOUR_LITERAL =
-  /#[0-9a-f]{3,8}\b|\b(?:color-mix|light-dark|rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(|var\(\s*--[\w-]+\s*,/gi;
+  /#[0-9a-f]{3,8}\b|\b(?:color-mix|light-dark|rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(|var\(\s*--[^\s,()]*\s*,/gi;
 // A prop that takes a colour: fill, stroke, color, background and any name
 // ending in one of them, such as stopColor, textFill or backgroundColor.
 const COLOUR_PROP = /(?:fill|stroke|colou?r|background)$/i;
@@ -68,26 +69,64 @@ const KEYWORDS = new Set([
   "unset",
 ]);
 
-// The CSS system colours (CSS Color 4), which paint from the user's theme.
+// The CSS system colours (CSS Color 4), which paint from the user's theme,
+// with the deprecated ones browsers still paint, such as ButtonHighlight.
 const SYSTEM_COLOURS = new Set(
   `accentcolor accentcolortext activetext buttonborder buttonface buttontext
   canvas canvastext field fieldtext graytext highlight highlighttext linktext
-  mark marktext selecteditem selecteditemtext visitedtext`.split(/\s+/),
+  mark marktext selecteditem selecteditemtext visitedtext activeborder
+  activecaption appworkspace background buttonhighlight buttonshadow
+  captiontext inactiveborder inactivecaption inactivecaptiontext
+  infobackground infotext menu menutext scrollbar threeddarkshadow threedface
+  threedhighlight threedlightshadow threedshadow window windowframe
+  windowtext`.split(/\s+/),
+);
+// Properties that take no colour, whose words are names: a font such as
+// Arial Black, a property such as background in a transition, or a grid area.
+// A property missing here only fails a correct stylesheet, never passes a
+// colour.
+const NAME_ONLY = new Set(
+  `font font-family transition transition-property will-change animation
+  animation-name grid-area grid-template-areas grid-row grid-row-start
+  grid-row-end grid-column grid-column-start grid-column-end counter-reset
+  counter-increment counter-set content quotes list-style-type container
+  container-name view-transition-name anchor-name position-anchor`.split(/\s+/),
 );
 
-// Each colour in a stylesheet's declarations, as [offset, text]. Comments and
-// quoted strings are blanked in one pass, so a quoted "/*" opens no comment,
-// and url() is blanked too. Text before a "{" is a selector or an at-rule's
+// The text React renders for a JSX text child, one [text, line] per source
+// line it keeps: tabs read as spaces, a line break drops the spaces around
+// it, a line left empty drops out, and kept lines join with one space (as
+// Babel's and SWC's JSX transforms clean a child).
+function jsxTextLines(value, firstLine) {
+  const lines = value.split(/\r\n|\n|\r/);
+  let lastNonEmpty = 0;
+  lines.forEach((line, i) => {
+    if (/[^ \t]/.test(line)) lastNonEmpty = i;
+  });
+  const kept = [];
+  lines.forEach((line, i) => {
+    let text = line.replace(/\t/g, " ");
+    if (i > 0) text = text.replace(/^ +/, "");
+    if (i < lines.length - 1) text = text.replace(/ +$/, "");
+    if (!text) return;
+    kept.push([i === lastNonEmpty ? text : `${text} `, firstLine + i]);
+  });
+  return kept;
+}
+
+// Each colour in a stylesheet's declarations, as [offset, text]. Comments,
+// quoted strings and unquoted url() are blanked in one pass that takes the
+// leftmost first, as CSS reads them, so a quoted "/*" or one inside url(/a/*)
+// opens no comment. A string ends at a line break, as CSS ends a bad string;
+// a url() ends at its first ")", never later than CSS ends it. Text before a "{" is a selector or an at-rule's
 // prelude, which paints nothing; every other run between "{", "}" and ";" is
 // a declaration, at any depth of nesting and in a block left open at the end.
 function styleColours(css) {
   const blank = (match) => match.replace(/[^\n]/g, " ");
-  const text = css
-    .replace(
-      /\/\*[\s\S]*?(?:\*\/|$)|"(?:[^"\\\n]|\\[\s\S])*(?:"|$)|'(?:[^'\\\n]|\\[\s\S])*(?:'|$)/g,
-      blank,
-    )
-    .replace(/url\([^)]*\)/gi, blank);
+  const text = css.replace(
+    /\/\*[\s\S]*?(?:\*\/|$)|"(?:[^"\\\n]|\\[\s\S])*(?:"|(?=\n)|$)|'(?:[^'\\\n]|\\[\s\S])*(?:'|(?=\n)|$)|url\(\s*[^\s"'()][^)]*\)?/gi,
+    blank,
+  );
   const found = [];
   for (const escape of text.matchAll(/\\/g)) {
     found.push([escape.index, "\\ escape"]);
@@ -96,12 +135,13 @@ function styleColours(css) {
     if (text[run.index + run[0].length] === "{") continue;
     const colon = run[0].indexOf(":");
     if (colon < 0) continue;
-    const property = run[0].slice(0, colon).trim();
+    const property = run[0].slice(0, colon).trim().toLowerCase();
     const value = run[0].slice(colon + 1);
     const valueStart = run.index + colon + 1;
     for (const match of value.matchAll(COLOUR_LITERAL)) {
       found.push([valueStart + match.index, match[0]]);
     }
+    if (NAME_ONLY.has(property)) continue;
     // Whole identifiers, so var(--color-gray-400) names no gray.
     for (const word of value.matchAll(/(?:--|-?[a-z_])[\w-]*/gi)) {
       const name = word[0].toLowerCase();
@@ -132,6 +172,9 @@ export function colourLiterals(source) {
     return out;
   };
   const reported = new Set();
+  // Strings a <style> element's CSS holds: the stylesheet scan reads them, so
+  // a hex-like selector, comment or url() in one names no colour.
+  const stylesheet = new Set();
   // A bare word anywhere in a colour prop's value names a colour, whether the
   // value is a literal, a conditional or a fallback.
   const colourProp = (value, prop) => {
@@ -146,14 +189,18 @@ export function colourLiterals(source) {
   };
   walk(ast, (node) => {
     // A string literal, JSX attribute values included.
-    if (node.type === "Literal" && typeof node.value === "string") {
+    if (
+      node.type === "Literal" &&
+      typeof node.value === "string" &&
+      !stylesheet.has(node)
+    ) {
       for (const match of node.value.matchAll(COLOUR_LITERAL)) {
         found.push([node.loc.start.line, match[0]]);
       }
     }
     // A template literal, read whole: fill in its literal parts, and treat
     // any other part after "#" as a hex value made at run time.
-    if (node.type === "TemplateLiteral") {
+    if (node.type === "TemplateLiteral" && !stylesheet.has(node)) {
       let text = "";
       node.quasis.forEach((quasi, i) => {
         text += quasi.value.cooked ?? "";
@@ -179,38 +226,69 @@ export function colourLiterals(source) {
       node.openingElement.name.type === "JSXIdentifier" &&
       node.openingElement.name.name === "style"
     ) {
+      // Props that hand the element CSS the scan doesn't read.
+      for (const attribute of node.openingElement.attributes) {
+        const name = attribute.name?.name;
+        if (attribute.type === "JSXSpreadAttribute") {
+          found.push([
+            attribute.loc.start.line,
+            "<style> takes a spread the scan can't read",
+          ]);
+        } else if (name === "children" || name === "dangerouslySetInnerHTML") {
+          found.push([
+            attribute.loc.start.line,
+            `<style> sets ${name}, which the scan can't read`,
+          ]);
+        }
+      }
       let css = "";
-      // Where each child's text starts in css, and on which line.
+      // Where each piece of text starts in css, on which line, and whether
+      // its line breaks are source lines, as a template's are and a string's
+      // escaped ones aren't.
       const starts = [];
+      const add = (text, line, breaks = false) => {
+        starts.push([css.length, line, breaks]);
+        css += text;
+      };
       for (const child of node.children) {
         const expression =
           child.type === "JSXExpressionContainer" ? child.expression : null;
-        let text = null;
-        if (child.type === "JSXText") text = child.value;
-        else if (expression?.type === "JSXEmptyExpression") continue;
-        else if (
+        if (child.type === "JSXText") {
+          for (const [text, line] of jsxTextLines(
+            child.value,
+            child.loc.start.line,
+          )) {
+            add(text, line);
+          }
+        } else if (expression?.type === "JSXEmptyExpression") {
+          continue;
+        } else if (
           expression?.type === "Literal" &&
           typeof expression.value === "string"
         ) {
-          text = expression.value;
+          stylesheet.add(expression);
+          add(expression.value, child.loc.start.line);
         } else if (
           expression?.type === "TemplateLiteral" &&
           expression.expressions.length === 0
         ) {
-          text = expression.quasis[0].value.cooked ?? "";
-        }
-        if (text === null) {
+          stylesheet.add(expression);
+          stylesheet.add(expression.quasis[0]);
+          add(
+            expression.quasis[0].value.cooked ?? "",
+            child.loc.start.line,
+            true,
+          );
+        } else {
           found.push([
             child.loc.start.line,
             "<style> child the scan can't read",
           ]);
-          continue;
         }
-        starts.push([css.length, child.loc.start.line]);
-        css += text;
       }
       const lineAt = (offset) => {
-        const [start, line] = starts.findLast(([at]) => at <= offset);
+        const [start, line, breaks] = starts.findLast(([at]) => at <= offset);
+        if (!breaks) return line;
         return line + (css.slice(start, offset).match(/\n/g) ?? []).length;
       };
       for (const [offset, text] of styleColours(css)) {
@@ -225,7 +303,11 @@ export function colourLiterals(source) {
   // A CSS named colour anywhere, as a whole string.
   for (const [node, text] of strings(ast)) {
     const word = text.trim().toLowerCase();
-    if (!reported.has(node) && NAMED_COLOURS.has(word)) {
+    if (
+      !reported.has(node) &&
+      !stylesheet.has(node) &&
+      NAMED_COLOURS.has(word)
+    ) {
       found.push([node.loc.start.line, `"${text.trim()}"`]);
     }
   }
@@ -292,6 +374,22 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     "    &#125;",
     "  </style>",
     ");",
+    'const ak = <style children={".a { color: red }"} />;',
+    "const al = <style dangerouslySetInnerHTML={{ __html: css }} />;",
+    "const am = <style {...props}>.a &#123; opacity: 1 &#125;</style>;",
+    "const an = (",
+    "  <style>",
+    "    .a &#123; color: re",
+    '    {"d }"}',
+    "  </style>",
+    ");",
+    'const ao = <style>{".a { background: url(/a/*) } .b { color: red }"}</style>;',
+    'const ap = <style>{".a { content: \\"/*\\n} .b { color: red } /* */"}</style>;',
+    'const aq = <style>{".a { font-family: Arial Black; transition: background 1s }"}</style>;',
+    'const ar = <style>{".a { color: var(--α, currentcolor) }"}</style>;',
+    'const as = <style>{".a { outline-color: ButtonHighlight }"}</style>;',
+    'const at = <style>{"/* #fff */ #add { opacity: 1; mask: url(#f00) }"}</style>;',
+    'const au = <style>{`.a { opacity: 1 }`}{".b { color: #f00 }"}</style>;',
   ].join("\n");
   expect(colourLiterals(sample)).toEqual([
     "3: #227773",
@@ -327,6 +425,15 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     "35: <style> fill: Canvas",
     "37: <style> \\ escape",
     "41: <style> color: navy",
+    "45: <style> sets children, which the scan can't read",
+    "46: <style> sets dangerouslySetInnerHTML, which the scan can't read",
+    "47: <style> takes a spread the scan can't read",
+    "50: <style> color: red",
+    "54: <style> color: red",
+    "55: <style> color: red",
+    "57: <style> var(--α,",
+    "58: <style> outline-color: ButtonHighlight",
+    "60: <style> #f00",
   ]);
 });
 
