@@ -193,6 +193,9 @@ function CapitalBenchmarkDisclosure() {
 function IncomeDistributionBreakdown() {
   const [conceptKey, setConceptKey] = useState("market");
   const [viewKey, setViewKey] = useState("composition");
+  // The legend draws in an element below the chart. Drawn inside it, the
+  // legend began where the x-axis ended, so the axis title ran into it.
+  const [legendTarget, setLegendTarget] = useState(null);
   const concept = incomeDistributionData[conceptKey];
   const view = VIEWS[viewKey];
   const rows = chartRows(conceptKey, viewKey);
@@ -322,15 +325,18 @@ function IncomeDistributionBreakdown() {
               />
               {/* The legend keeps the stacking order, which is the order of
                   the Components list, instead of sorting by key. */}
-              <Legend
-                {...LEGEND_PROPS}
-                itemSorter={null}
-                formatter={(value) =>
-                  concept.components.find(
-                    (component) => component.key === value,
-                  )?.label ?? value
-                }
-              />
+              {legendTarget && (
+                <Legend
+                  {...LEGEND_PROPS}
+                  portal={legendTarget}
+                  itemSorter={null}
+                  formatter={(value) =>
+                    concept.components.find(
+                      (component) => component.key === value,
+                    )?.label ?? value
+                  }
+                />
+              )}
               {concept.components.map((component) => (
                 <Bar
                   key={component.key}
@@ -343,6 +349,7 @@ function IncomeDistributionBreakdown() {
               ))}
             </BarChart>
           </ResponsiveContainer>
+          <div ref={setLegendTarget} />
 
           <div className="analysis-callout income-breakdown-note">
             <IconInfoCircle size={20} stroke={1.5} />

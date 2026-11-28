@@ -765,6 +765,10 @@ function RevenueDecompositionChart({
   laborTerm = "labor",
   note = null,
 }) {
+  // A legend drawn inside the chart takes its height from the plot. On a
+  // phone it wraps onto many lines and left the axis too short for its
+  // title, so the legend draws in an element below the chart instead.
+  const [legendTarget, setLegendTarget] = useState(null);
   // Share mode scales each bucket value by 100 / denominatorB.
   const scale = unit === "share" && denominatorB ? 100 / denominatorB : 1;
   const scaledData = chartData.map((row) => {
@@ -838,7 +842,8 @@ function RevenueDecompositionChart({
               angle: -90,
               position: "insideLeft",
               offset: -10,
-              style: { ...AXIS_LABEL_STYLE, textAnchor: "middle" },
+              textAnchor: "middle",
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <ReferenceLine y={0} {...ZERO_LINE} />
@@ -852,7 +857,13 @@ function RevenueDecompositionChart({
               `${value}% shift`
             }
           />
-          <Legend {...LEGEND_PROPS} content={BandLegend} />
+          {legendTarget && (
+            <Legend
+              {...LEGEND_PROPS}
+              content={BandLegend}
+              portal={legendTarget}
+            />
+          )}
           {/* Band i fills with SERIES[i]; no bucket list holds more than six.
               Each band draws BAND_EDGE along its outer edge, because a band
               near zero lets two bands that are not list neighbours touch. */}
@@ -885,6 +896,7 @@ function RevenueDecompositionChart({
           )}
         </ComposedChart>
       </ResponsiveContainer>
+      <div ref={setLegendTarget} />
       {note && <p className="shift-sweep-description">{note}</p>}
     </>
   );
@@ -986,7 +998,7 @@ function DecileImpactChart({
       <ResponsiveContainer width="100%" height={360}>
         <BarChart
           data={rows}
-          margin={{ left: 10, right: 30, top: 10, bottom: 40 }}
+          margin={{ left: 20, right: 30, top: 10, bottom: 40 }}
         >
           <CartesianGrid {...GRID_STYLE} />
           <XAxis
@@ -1017,6 +1029,7 @@ function DecileImpactChart({
               angle: -90,
               position: "insideLeft",
               offset: -10,
+              textAnchor: "middle",
               style: AXIS_LABEL_STYLE,
             }}
           />
@@ -1589,6 +1602,7 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
                     angle: -90,
                     position: "insideLeft",
                     offset: -10,
+                    textAnchor: "middle",
                     style: AXIS_LABEL_STYLE,
                   }}
                 />

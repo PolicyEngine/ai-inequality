@@ -148,6 +148,7 @@ function TiltCostChart({ scenarios }) {
               angle: -90,
               position: "insideLeft",
               offset: -8,
+              textAnchor: "middle",
               style: AXIS_LABEL_STYLE,
             }}
           />
@@ -280,6 +281,7 @@ function RealizationChart({ rows, breakeven }) {
               angle: -90,
               position: "insideLeft",
               offset: -8,
+              textAnchor: "middle",
               style: AXIS_LABEL_STYLE,
             }}
           />

@@ -86,7 +86,10 @@ export const TOOLTIP_PROPS = {
 // Spread onto every XAxis and YAxis, as the kit's own charts set them: tick
 // text in the kit's axis style, the axis line in the grid's colour and no
 // tick marks. Recharts otherwise draws all three in #666. An axis title takes
-// AXIS_LABEL_STYLE, the same muted ink at 13px.
+// AXIS_LABEL_STYLE, the same muted ink at 13px. A y-axis title turned to read
+// upwards also sets textAnchor: "middle" on its label. Recharts' "insideLeft"
+// position anchors it at its start, at the axis's middle, so a long title
+// would otherwise run up past the chart's top edge.
 export const AXIS_PROPS = {
   tick: AXIS_STYLE,
   tickLine: false,
