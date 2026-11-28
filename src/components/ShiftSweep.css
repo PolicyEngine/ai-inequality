@@ -79,6 +79,13 @@
     width: 100%;
   }
 
+  /* Size each measure tab to its label before the row wraps, so the six
+   * measures break into rows of whole labels instead of narrow columns of
+   * words. */
+  .shift-sweep-measure-tabs .analysis-tab {
+    flex: 1 1 auto;
+  }
+
   .shift-sweep-state-header {
     flex-direction: column;
     align-items: flex-start;

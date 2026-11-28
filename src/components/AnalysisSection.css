@@ -158,13 +158,24 @@
     align-items: flex-start;
   }
 
+  /* A row of tabs wider than a phone wraps onto more lines, so it can't widen
+   * the section and make the page wider than the screen. */
   .analysis-tabs {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .analysis-tab {
     flex: 1;
     text-align: center;
+  }
+
+  /* Narrower side padding for tabs in a row, so on a 375px phone the five
+   * shift tabs and the three view tabs each fit in one row. A row that
+   * fills its card looks the same; a row that sizes to its labels gets
+   * narrower tabs. */
+  .analysis-tabs .analysis-tab {
+    padding-inline: var(--space-2);
   }
 
   .analysis-charts-grid {
