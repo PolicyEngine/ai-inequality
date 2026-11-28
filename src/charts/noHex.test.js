@@ -89,7 +89,7 @@ const NAME_ONLY = new Set(
   `font font-family transition transition-property will-change animation
   animation-name grid-area grid-template-areas grid-row grid-row-start
   grid-row-end grid-column grid-column-start grid-column-end counter-reset
-  counter-increment counter-set content quotes list-style-type container
+  counter-increment counter-set quotes list-style-type container
   container-name view-transition-name anchor-name position-anchor`.split(/\s+/),
 );
 
@@ -117,16 +117,22 @@ function jsxTextLines(value, firstLine) {
 // Each colour in a stylesheet's declarations, as [offset, text]. Comments,
 // quoted strings and unquoted url() are blanked in one pass that takes the
 // leftmost first, as CSS reads them, so a quoted "/*" or one inside url(/a/*)
-// opens no comment. A string ends at a line break, as CSS ends a bad string;
-// a url() ends at its first ")", never later than CSS ends it. Text before a "{" is a selector or an at-rule's
+// opens no comment. CSS reads \r, \r\n and \f as a line break, and a string
+// ends at a line break, as CSS ends a bad string; a url() ends at its first
+// ")", never later than CSS ends it, and a function such as --furl() is no
+// url(). Text before a "{" is a selector or an at-rule's
 // prelude, which paints nothing; every other run between "{", "}" and ";" is
 // a declaration, at any depth of nesting and in a block left open at the end.
 function styleColours(css) {
   const blank = (match) => match.replace(/[^\n]/g, " ");
-  const text = css.replace(
-    /\/\*[\s\S]*?(?:\*\/|$)|"(?:[^"\\\n]|\\[\s\S])*(?:"|(?=\n)|$)|'(?:[^'\\\n]|\\[\s\S])*(?:'|(?=\n)|$)|url\(\s*[^\s"'()][^)]*\)?/gi,
-    blank,
-  );
+  // Line breaks as CSS reads them, keeping each offset in place.
+  const text = css
+    .replace(/\r\n/g, " \n")
+    .replace(/[\r\f]/g, "\n")
+    .replace(
+      /\/\*[\s\S]*?(?:\*\/|$)|"(?:[^"\\\n]|\\[\s\S])*(?:"|(?=\n)|$)|'(?:[^'\\\n]|\\[\s\S])*(?:'|(?=\n)|$)|(?<![\w-])url\(\s*[^\s"'()][^)]*\)?/gi,
+      blank,
+    );
   const found = [];
   for (const escape of text.matchAll(/\\/g)) {
     found.push([escape.index, "\\ escape"]);
@@ -390,6 +396,8 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     'const as = <style>{".a { outline-color: ButtonHighlight }"}</style>;',
     'const at = <style>{"/* #fff */ #add { opacity: 1; mask: url(#f00) }"}</style>;',
     'const au = <style>{`.a { opacity: 1 }`}{".b { color: #f00 }"}</style>;',
+    'const av = <style>{".a { content: \\"x\\r} .b { color: red }"}</style>;',
+    'const aw = <style>{".a { content: red; background: --furl(red) }"}</style>;',
   ].join("\n");
   expect(colourLiterals(sample)).toEqual([
     "3: #227773",
@@ -434,6 +442,9 @@ test("the scan finds each kind of colour literal and skips comments", () => {
     "57: <style> var(--α,",
     "58: <style> outline-color: ButtonHighlight",
     "60: <style> #f00",
+    "61: <style> color: red",
+    "62: <style> content: red",
+    "62: <style> background: red",
   ]);
 });
 

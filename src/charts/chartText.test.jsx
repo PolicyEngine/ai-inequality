@@ -164,7 +164,12 @@ function expectKitAxes() {
 // call, a delete or an alias, fails its module, since code the scan can't
 // read could change the kit's objects. So does any use of XAxis, YAxis or the
 // recharts namespace outside a JSX tag, and any load of recharts other than
-// an import, since the scan finds axes by their tags.
+// an import of the package itself, since the scan finds axes by their tags.
+//
+// The scan reads one module at a time. It doesn't follow a component that
+// changes a prop it receives, another module that changes a constant this
+// one exports, or axes other than XAxis and YAxis, such as CartesianAxis and
+// the polar axes; no chart file draws those.
 const AXIS_COMPONENTS = new Set(["XAxis", "YAxis"]);
 const COLOUR_KEY = /(?:fill|stroke|colou?r|background)$/i;
 const KIT_NAMES = new Set([
@@ -203,6 +208,7 @@ const TITLE_STYLE_KEYS = new Set([
   "fontFamily",
   "fontStyle",
   "letterSpacing",
+  "textAnchor",
 ]);
 const LABEL_KEYS = new Set([
   "value",
@@ -211,6 +217,7 @@ const LABEL_KEYS = new Set([
   "angle",
   "dx",
   "dy",
+  "textAnchor",
   "style",
 ]);
 const AXIS_LINE_KEYS = new Set(["stroke", "strokeWidth", "strokeDasharray"]);
@@ -467,14 +474,20 @@ export function axisProblems(source, file = SAMPLE_FILE) {
       );
     }
   }
+  // recharts has no exports map, so recharts/lib/cartesian/XAxis loads too.
+  const loadsRecharts = (path) =>
+    typeof path === "string" && /^recharts(?:\/|$)/.test(path);
   walk(ast, (node) => {
     if (
       (node.type === "CallExpression" &&
         isName(node.callee, "require") &&
-        node.arguments[0]?.value === "recharts") ||
-      (node.type === "ImportExpression" && node.source?.value === "recharts") ||
+        loadsRecharts(node.arguments[0]?.value)) ||
+      (node.type === "ImportExpression" && loadsRecharts(node.source?.value)) ||
       (/^Export(?:Named|All)Declaration$/.test(node.type) &&
-        node.source?.value === "recharts")
+        loadsRecharts(node.source?.value)) ||
+      (node.type === "ImportDeclaration" &&
+        loadsRecharts(node.source.value) &&
+        node.source.value !== "recharts")
     ) {
       flag(node, "recharts", "loads recharts where the scan can't follow it");
     }
@@ -695,6 +708,8 @@ describe("chart axes", () => {
       'const aa = <XAxis {...AXIS_PROPS} className="axis" />;',
       "const ab = <XAxis {...AXIS_PROPS} tick={{ ...AXIS_STYLE, className: 't' }} />;",
       "const ac = <XAxis {...AXIS_PROPS} label={{ value: <tspan>B</tspan>, style: AXIS_LABEL_STYLE }} />;",
+      "const ad = <YAxis {...AXIS_PROPS} label={{ value: 'B', angle: -90, textAnchor: 'middle', style: AXIS_LABEL_STYLE }} />;",
+      "const ae = <YAxis {...AXIS_PROPS} label={{ value: 'B', style: { ...AXIS_LABEL_STYLE, textAnchor: 'middle' } }} />;",
     ].join("\n");
     expect(axisProblems(sample)).toEqual([
       { line: 6, name: "XAxis", problems: [] },
@@ -855,6 +870,8 @@ describe("chart axes", () => {
           "34: XAxis label={ value: <tspan>B</tspan>, style: AXIS_LABEL_STYLE }, not a title in AXIS_LABEL_STYLE",
         ],
       },
+      { line: 35, name: "YAxis", problems: [] },
+      { line: 36, name: "YAxis", problems: [] },
     ]);
   });
 
@@ -920,6 +937,7 @@ describe("chart axes", () => {
       "use({ style: AXIS_LABEL_STYLE });",
       'export { XAxis } from "recharts";',
       "const d = <Axis tickLine />;",
+      'import XAxisRaw from "recharts/lib/cartesian/XAxis";',
     ].join("\n");
     expect(axisProblems(followed)).toEqual([
       {
@@ -960,6 +978,11 @@ describe("chart axes", () => {
           "12: XAxis tickLine=true, not no tick marks",
           "12: XAxis has no tick, so not tick text in AXIS_STYLE",
         ],
+      },
+      {
+        line: 13,
+        name: "recharts",
+        problems: ["13: loads recharts where the scan can't follow it"],
       },
     ]);
     // Only src/charts/kitTheme counts, read from the importing file's folder.
