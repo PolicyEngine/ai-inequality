@@ -37,8 +37,7 @@ function GetInvolved({ countryKey = "us" }) {
       <div className="getinvolved-cta">
         <p>
           Interested in collaborating? Reach out at{" "}
-          <a href="mailto:hello@policyengine.org">hello@policyengine.org</a> or
-          connect at EA Global SF (Feb 2026).
+          <a href="mailto:hello@policyengine.org">hello@policyengine.org</a>.
         </p>
       </div>
     </div>

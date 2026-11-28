@@ -60,14 +60,14 @@ function Approach({ countryKey = "us" }) {
       title: "Proven infrastructure",
       description: (
         <>
-          Used by the{" "}
-          <Source href="https://policyengine.org/uk/research/autumn-budget-2024-policy-reform-impacts">
-            UK government
-          </Source>
-          , US congressional offices, and leading think tanks. Cited by{" "}
-          <Source href="https://www.cbo.gov/">CBO</Source>,{" "}
-          <Source href="https://home.treasury.gov/">Treasury</Source>, and
-          academic researchers.
+          <Source href={`https://www.policyengine.org/${countryKey}/users`}>
+            Government teams, research groups and benefit services
+          </Source>{" "}
+          use PolicyEngine.{" "}
+          <Source href={`https://www.policyengine.org/${countryKey}/citations`}>
+            Legislators and academic researchers
+          </Source>{" "}
+          cite its work.
         </>
       ),
     },
@@ -143,10 +143,6 @@ function Approach({ countryKey = "us" }) {
           <div className="uncertainty-stat">
             <div className="uncertainty-value">10,000+</div>
             <div className="uncertainty-label">Policy parameters encoded</div>
-          </div>
-          <div className="uncertainty-stat">
-            <div className="uncertainty-value">151M</div>
-            <div className="uncertainty-label">Workers simulated</div>
           </div>
         </div>
       </div>
