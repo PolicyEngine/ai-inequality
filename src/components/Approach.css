@@ -17,17 +17,17 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--pe-teal-600);
+  color: var(--primary);
   margin-bottom: var(--space-3);
   padding: var(--space-1) var(--space-4);
-  background: var(--pe-teal-50);
+  background: var(--color-teal-50);
   border-radius: var(--radius-full);
-  border: 1px solid var(--pe-teal-200);
+  border: 1px solid var(--color-teal-100);
 }
 
 .approach-section .section-header h2 {
   font-size: clamp(2rem, 5vw, 2.75rem);
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   margin-bottom: var(--space-4);
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -45,7 +45,7 @@
 .pipeline-step {
   position: relative;
   background: white;
-  border: 2px solid var(--pe-teal-200);
+  border: 2px solid var(--color-teal-100);
   border-radius: var(--radius-xl);
   padding: var(--space-8) var(--space-6);
   text-align: center;
@@ -53,7 +53,7 @@
 }
 
 .pipeline-step:hover {
-  border-color: var(--pe-teal-500);
+  border-color: var(--color-teal-500);
   box-shadow: var(--shadow-teal);
   transform: translateY(-4px);
 }
@@ -64,7 +64,7 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, var(--pe-teal-500), var(--pe-teal-600));
+  background: linear-gradient(135deg, var(--color-teal-500), var(--primary));
   color: white;
   font-size: 0.9rem;
   font-weight: 700;
@@ -75,7 +75,7 @@
 
 .pipeline-step h3 {
   font-size: 1.1rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-2);
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -83,7 +83,7 @@
 
 .pipeline-step p {
   font-size: 0.85rem;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   line-height: 1.6;
   margin: 0;
 }
@@ -93,7 +93,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--pe-teal-500);
+  color: var(--color-teal-500);
   font-size: 1.5rem;
   font-weight: 600;
   flex-shrink: 0;
@@ -105,12 +105,12 @@
   max-width: 900px;
   margin: 0 auto var(--space-16);
   font-size: 1.05rem;
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   line-height: 1.7;
   padding: var(--space-8);
   background: linear-gradient(
     135deg,
-    var(--pe-teal-50) 0%,
+    var(--color-teal-50) 0%,
     rgba(240, 249, 255, 0.5) 100%
   );
   border-radius: var(--radius-2xl);
@@ -134,7 +134,7 @@
   background: white;
   border-radius: var(--radius-xl);
   padding: var(--space-8);
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
   transition: all var(--transition-slow);
   position: relative;
   overflow: hidden;
@@ -147,14 +147,18 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--pe-teal-500), var(--pe-teal-300));
+  background: linear-gradient(
+    90deg,
+    var(--color-teal-500),
+    var(--color-teal-200)
+  );
   transform: scaleX(0);
   transform-origin: left;
   transition: transform var(--transition-slow);
 }
 
 .capability-card:hover {
-  border-color: var(--pe-teal-300);
+  border-color: var(--color-teal-200);
   box-shadow: var(--shadow-lg);
   transform: translateY(-6px);
 }
@@ -165,7 +169,7 @@
 
 .capability-card h3 {
   font-size: 1.15rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-3);
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -173,7 +177,7 @@
 
 .capability-card p {
   font-size: 0.95rem;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   line-height: 1.7;
   margin: 0;
 }
@@ -182,11 +186,7 @@
 .approach-section .uncertainty-box {
   margin-top: var(--space-16);
   padding: var(--space-8);
-  background: linear-gradient(
-    135deg,
-    var(--pe-teal-600) 0%,
-    #1a4a4a 100%
-  );
+  background: linear-gradient(135deg, var(--primary) 0%, #1a4a4a 100%);
   border-radius: var(--radius-2xl);
   border: 1px solid rgba(255, 255, 255, 0.16);
   text-align: center;

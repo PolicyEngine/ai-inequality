@@ -17,17 +17,17 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--pe-teal-600);
+  color: var(--primary);
   margin-bottom: var(--space-3);
   padding: var(--space-1) var(--space-4);
-  background: var(--pe-teal-50);
+  background: var(--color-teal-50);
   border-radius: var(--radius-full);
-  border: 1px solid var(--pe-teal-200);
+  border: 1px solid var(--color-teal-100);
 }
 
 .ecosystem-section .section-header h2 {
   font-size: clamp(2rem, 5vw, 2.75rem);
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   margin-bottom: var(--space-4);
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -40,11 +40,11 @@
 
 .ecosystem-category-title {
   font-size: 1.25rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   font-weight: 600;
   margin-bottom: var(--space-6);
   padding-bottom: var(--space-3);
-  border-bottom: 2px solid var(--pe-teal-200);
+  border-bottom: 2px solid var(--color-teal-100);
   letter-spacing: -0.01em;
 }
 
@@ -63,20 +63,20 @@ a.ecosystem-org-card {
   background: white;
   border-radius: var(--radius-lg);
   padding: var(--space-6);
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
   transition: all var(--transition-slow);
   position: relative;
   overflow: hidden;
 }
 
 .ecosystem-org-arrow {
-  color: var(--pe-gray-300);
+  color: var(--text-tertiary);
   transition: color var(--transition-fast);
   margin-left: var(--space-2);
 }
 
 a.ecosystem-org-card:hover .ecosystem-org-arrow {
-  color: var(--pe-teal-500);
+  color: var(--color-teal-500);
 }
 
 .ecosystem-org-card::after {
@@ -86,14 +86,18 @@ a.ecosystem-org-card:hover .ecosystem-org-arrow {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--pe-teal-500), var(--pe-teal-300));
+  background: linear-gradient(
+    90deg,
+    var(--color-teal-500),
+    var(--color-teal-200)
+  );
   transform: scaleX(0);
   transform-origin: left;
   transition: transform var(--transition-slow);
 }
 
 .ecosystem-org-card:hover {
-  border-color: var(--pe-teal-300);
+  border-color: var(--color-teal-200);
   box-shadow: var(--shadow-md);
   transform: translateY(-4px);
 }
@@ -105,13 +109,13 @@ a.ecosystem-org-card:hover .ecosystem-org-arrow {
 .ecosystem-org-name {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-2);
 }
 
 .ecosystem-org-desc {
   font-size: 0.85rem;
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   line-height: 1.6;
   margin: 0;
 }
@@ -157,21 +161,21 @@ a.ecosystem-org-card:hover .ecosystem-org-arrow {
 .international-box {
   margin-top: var(--space-12);
   padding: var(--space-8);
-  background: var(--pe-gray-50);
+  background: var(--background-secondary);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
 }
 
 .international-box h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   margin-bottom: var(--space-3);
 }
 
 .international-box > p {
   font-size: 0.95rem;
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   margin-bottom: var(--space-6);
   line-height: 1.6;
 }
@@ -189,22 +193,22 @@ a.country-card {
   padding: var(--space-4) var(--space-5);
   background: white;
   border-radius: var(--radius-md);
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
   text-decoration: none;
   color: inherit;
   transition: all var(--transition-base);
 }
 
 a.country-card:hover {
-  border-color: var(--pe-teal-300);
+  border-color: var(--color-teal-200);
   box-shadow: var(--shadow-sm);
 }
 
 .country-flag {
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--pe-teal-600);
-  background: var(--pe-teal-50);
+  color: var(--primary);
+  background: var(--color-teal-50);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
 }
@@ -212,7 +216,7 @@ a.country-card:hover {
 .country-card strong {
   display: block;
   font-size: 0.9rem;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
 }
 
 .status-tag {

@@ -1,39 +1,9 @@
-/* PolicyEngine AI & Inequality Research - Design System */
+/* PolicyEngine AI & Inequality Research - page styles.
+ *
+ * Colours come from @policyengine/ui-kit (app/globals.css imports its theme
+ * first), so this file sets no palette of its own. pageTokens.test.js checks
+ * that the export defines every token the page uses. */
 :root {
-  /* PolicyEngine Brand Colors */
-  --pe-teal: #39c6c0;
-  --pe-teal-dark: #227773;
-  --pe-teal-light: #f7fdfc;
-  --pe-blue: #2c6496;
-  --pe-blue-light: #d8e6f3;
-  --pe-blue-dark: #17354f;
-
-  /* Teal Scale (based on PE teal #39C6C0) */
-  --pe-teal-600: #227773;
-  --pe-teal-500: #39c6c0;
-  --pe-teal-400: #5dd4cf;
-  --pe-teal-300: #85e0dc;
-  --pe-teal-200: #b0ece9;
-  --pe-teal-100: #d7f6f4;
-  --pe-teal-50: #f7fdfc;
-
-  /* Gray Scale - WCAG AA compliant */
-  --pe-gray-900: #1a202c;
-  --pe-gray-800: #2d3748;
-  --pe-gray-700: #344054;
-  --pe-gray-600: #616161;
-  --pe-gray-500: #5a6578;
-  --pe-gray-400: #6b7280;
-  --pe-gray-300: #9ca3af;
-  --pe-gray-200: #e2e8f0;
-  --pe-gray-100: #f7fafc;
-  --pe-gray-50: #f9fafb;
-
-  /* Semantic Colors */
-  --pe-success: #22c55e;
-  --pe-error: #ef4444;
-  --pe-warning: #f59e0b;
-
   /* Typography */
   --font-body:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
@@ -94,11 +64,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: white;
-  color: var(--pe-gray-600);
   line-height: 1.6;
   font-size: 16px;
   overflow-x: hidden;
   padding-top: 0;
+}
+
+/* The page's base text colour. The kit's shell around .App keeps the kit's
+ * own (its body rule sets --foreground). */
+.App {
+  color: var(--muted-foreground);
 }
 
 /* Typography System */
@@ -110,7 +85,6 @@ h5,
 h6 {
   font-weight: 600;
   line-height: 1.25;
-  color: var(--pe-gray-900);
   letter-spacing: -0.02em;
 }
 
@@ -134,23 +108,37 @@ h4 {
 p {
   line-height: 1.7;
   margin-bottom: 1rem;
-  color: var(--pe-gray-600);
 }
 
 a {
-  color: var(--pe-teal-600);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
-a:hover {
-  color: var(--pe-teal-500);
+/* Text colours apply inside .App only. The kit's shell (header and footer)
+ * sits outside it and colours its own text with layered utility classes,
+ * which these unlayered rules would otherwise beat. :where() keeps each
+ * selector's specificity at that of the bare element. */
+:where(.App) :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--foreground);
+}
+
+:where(.App) p {
+  color: var(--muted-foreground);
+}
+
+:where(.App) a {
+  color: var(--primary);
+}
+
+:where(.App) a:hover {
+  color: var(--color-teal-500);
 }
 
 /* Selection */
 ::selection {
-  background: var(--pe-teal-200);
-  color: var(--pe-gray-900);
+  background: var(--color-teal-100);
+  color: var(--foreground);
 }
 
 /* Scrollbar */
@@ -160,22 +148,48 @@ a:hover {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--pe-gray-100);
+  background: var(--muted);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--pe-gray-300);
+  background: var(--border-dark);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--pe-gray-400);
+  background: var(--color-gray-500);
 }
 
 /* Focus States */
-*:focus-visible {
-  outline: 2px solid var(--pe-teal-500);
+:where(.App) *:focus-visible {
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* The kit's shell around .App (header, menus, footer) keeps the kit's own
+ * focus ring in --ring. That reads on the shell's white menus but barely on
+ * its dark-teal header and footer, so a band of --background inside the ring
+ * makes the focused element stand out on both. The rule sits in the kit's
+ * components layer, so a shell control whose kit markup sets its own shadow
+ * or ring (a utility class) keeps it. */
+@layer components {
+  :where(
+      a,
+      button,
+      [role="button"],
+      input,
+      select,
+      textarea,
+      summary,
+      [tabindex]
+    ):not(.App *):focus-visible {
+    box-shadow: 0 0 0 2px var(--background);
+  }
+}
+
+/* The kit's footer links change nothing on hover; underline them. */
+footer:not(.App *) a:hover {
+  text-decoration: underline;
 }
 
 /* Code */
@@ -183,7 +197,7 @@ code {
   font-family:
     "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
   font-size: 0.875em;
-  background: var(--pe-gray-100);
+  background: var(--muted);
   padding: 0.125em 0.375em;
   border-radius: var(--radius-sm);
 }

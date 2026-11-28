@@ -14,7 +14,7 @@ function ResearchPage() {
         <Link
           to="/"
           style={{
-            color: "var(--pe-teal-600)",
+            color: "var(--primary)",
             fontSize: "0.95rem",
             textDecoration: "none",
             fontWeight: 500,
@@ -32,7 +32,7 @@ function ResearchPage() {
             textAlign: "center",
             marginBottom: "1rem",
             fontSize: "clamp(2rem, 5vw, 3rem)",
-            color: "var(--pe-gray-900)",
+            color: "var(--foreground)",
             letterSpacing: "-0.03em",
           }}
         >
@@ -44,7 +44,7 @@ function ResearchPage() {
             fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
             maxWidth: "800px",
             margin: "0 auto 3rem",
-            color: "var(--pe-gray-500)",
+            color: "var(--muted-foreground)",
             lineHeight: 1.7,
           }}
         >
@@ -62,7 +62,7 @@ function ResearchPage() {
         <Link
           to="/"
           style={{
-            color: "var(--pe-teal-600)",
+            color: "var(--primary)",
             fontSize: "1.05rem",
             textDecoration: "none",
             fontWeight: 500,

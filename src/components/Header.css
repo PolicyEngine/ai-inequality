@@ -44,7 +44,7 @@
 }
 
 .header-divider {
-  color: var(--pe-gray-300);
+  color: var(--text-tertiary);
   font-weight: 300;
   font-size: 1.25rem;
   user-select: none;
@@ -57,14 +57,14 @@
 .header-title {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--pe-gray-800);
+  color: var(--foreground);
   letter-spacing: -0.02em;
   transition: color var(--transition-fast);
   white-space: nowrap;
 }
 
 .header-title-link:hover .header-title {
-  color: var(--pe-teal-dark);
+  color: var(--primary);
 }
 
 /* Navigation */
@@ -79,7 +79,7 @@
   padding: var(--space-2) var(--space-4);
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   text-decoration: none;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
@@ -97,14 +97,14 @@
   transform: translateX(-50%);
   width: 0;
   height: 2px;
-  background: var(--pe-teal);
+  background: var(--color-teal-500);
   border-radius: var(--radius-full);
   transition: width var(--transition-base);
 }
 
 .nav-link:hover {
-  color: var(--pe-gray-900);
-  background: var(--pe-gray-50);
+  color: var(--foreground);
+  background: var(--background-secondary);
 }
 
 .nav-link:hover::after {
@@ -112,13 +112,13 @@
 }
 
 .nav-link.active {
-  color: var(--pe-teal-dark);
-  background: var(--pe-teal-50);
+  color: var(--primary);
+  background: var(--color-teal-50);
 }
 
 .nav-link.active::after {
   width: 20px;
-  background: var(--pe-teal);
+  background: var(--color-teal-500);
 }
 
 /* Header right area */
@@ -137,12 +137,12 @@
   height: 40px;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   text-decoration: none;
 }
 
 .github-link:hover {
-  background: var(--pe-gray-100);
+  background: var(--muted);
   transform: scale(1.05);
 }
 
@@ -160,12 +160,12 @@
 .github-icon-svg {
   width: 22px;
   height: 22px;
-  fill: var(--pe-gray-600);
+  fill: var(--muted-foreground);
   transition: fill var(--transition-fast);
 }
 
 .github-link:hover .github-icon-svg {
-  fill: var(--pe-gray-900);
+  fill: var(--foreground);
 }
 
 /* Mobile hamburger */
@@ -180,7 +180,7 @@
 }
 
 .hamburger-btn:hover {
-  background: var(--pe-gray-100);
+  background: var(--muted);
 }
 
 .hamburger-icon {
@@ -193,7 +193,7 @@
 .hamburger-icon span {
   display: block;
   height: 2px;
-  background: var(--pe-gray-700);
+  background: var(--color-gray-700);
   border-radius: 1px;
   transition: all var(--transition-fast);
 }
@@ -220,7 +220,7 @@
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--pe-gray-200);
+  border-bottom: 1px solid var(--border);
   padding: var(--space-4) var(--space-6);
   box-shadow: var(--shadow-lg);
 }

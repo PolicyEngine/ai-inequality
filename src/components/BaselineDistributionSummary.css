@@ -1,6 +1,6 @@
 .baseline-distribution-summary {
   background: rgba(255, 255, 255, 0.84);
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
   display: grid;
@@ -11,14 +11,14 @@
 }
 
 .baseline-distribution-copy h2 {
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   font-size: 1.05rem;
   margin: 0 0 var(--space-2);
   text-align: left;
 }
 
 .baseline-distribution-copy p {
-  color: var(--pe-gray-700);
+  color: var(--color-gray-700);
   font-size: 0.95rem;
   line-height: 1.65;
   margin: 0;
@@ -36,8 +36,8 @@
 
 .baseline-distribution-table th,
 .baseline-distribution-table td {
-  border-bottom: 1px solid var(--pe-gray-200);
-  color: var(--pe-gray-800);
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
   font-size: 0.9rem;
   padding: 0.75rem 0.7rem;
   text-align: right;
@@ -49,7 +49,7 @@
 }
 
 .baseline-distribution-table thead th {
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -57,11 +57,11 @@
 }
 
 .baseline-distribution-table tbody th {
-  color: var(--pe-gray-900);
+  color: var(--foreground);
 }
 
 .baseline-distribution-table tbody td:last-child {
-  color: var(--pe-teal-700);
+  color: var(--color-teal-700);
   font-weight: 800;
 }
 

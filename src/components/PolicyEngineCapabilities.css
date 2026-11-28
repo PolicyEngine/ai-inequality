@@ -54,7 +54,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
-  color: var(--pe-teal-600);
+  color: var(--primary);
 }
 
 .capability-card h3 {
@@ -73,7 +73,7 @@
   background: white;
   padding: 3rem;
   border-radius: 16px;
-  border: 2px solid var(--pe-gray-200);
+  border: 2px solid var(--border);
   box-shadow: var(--shadow-md);
 }
 
@@ -81,13 +81,13 @@
   font-size: 1.8rem;
   margin-bottom: 1rem;
   font-weight: 500;
-  color: var(--pe-gray-900);
+  color: var(--foreground);
 }
 
 .open-source-box p {
   font-size: 1.1rem;
   line-height: 1.7;
-  color: var(--pe-gray-600);
+  color: var(--muted-foreground);
   margin-bottom: 2rem;
 }
 
@@ -100,18 +100,18 @@
 .capability-link {
   display: inline-block;
   padding: 0.75rem 1.5rem;
-  background: var(--pe-gray-50);
-  color: var(--pe-teal-600);
+  background: var(--background-secondary);
+  color: var(--primary);
   border-radius: 8px;
   text-decoration: none;
   font-weight: 500;
   transition: all 0.2s ease;
-  border: 1px solid var(--pe-gray-200);
+  border: 1px solid var(--border);
 }
 
 .capability-link:hover {
-  background: var(--pe-teal-50, #e6fffa);
-  border-color: var(--pe-teal-200, #b2dfdb);
+  background: var(--color-teal-50);
+  border-color: var(--color-teal-100);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }

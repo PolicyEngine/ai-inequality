@@ -4,7 +4,7 @@
   max-width: 760px;
   margin: 0 auto;
   padding: var(--space-10) var(--space-4) var(--space-16);
-  color: var(--pe-gray-900);
+  color: var(--foreground);
   line-height: 1.65;
 }
 
@@ -17,18 +17,18 @@
   font-size: clamp(1.7rem, 4vw, 2.2rem);
   line-height: 1.25;
   margin: 0 0 var(--space-2);
-  color: var(--pe-gray-900);
+  color: var(--foreground);
 }
 
 .memo-page h1 + p em {
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   font-style: normal;
 }
 
 .memo-page h2 {
   font-size: 1.25rem;
-  color: var(--pe-teal-600);
-  border-bottom: 1px solid var(--pe-gray-200);
+  color: var(--primary);
+  border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-1);
   margin: var(--space-8) 0 var(--space-3);
 }
@@ -43,7 +43,7 @@
 }
 
 .memo-page a {
-  color: var(--pe-blue);
+  color: var(--color-blue-700);
 }
 
 .memo-page table {
@@ -58,7 +58,7 @@
 
 .memo-page th,
 .memo-page td {
-  border-bottom: 1px solid var(--pe-gray-200);
+  border-bottom: 1px solid var(--border);
   padding: var(--space-2) var(--space-3);
   text-align: right;
   white-space: nowrap;
@@ -70,7 +70,7 @@
 }
 
 .memo-page thead th {
-  color: var(--pe-gray-500);
+  color: var(--muted-foreground);
   font-weight: 600;
   font-size: 0.8rem;
 }

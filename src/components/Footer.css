@@ -1,6 +1,6 @@
 /* Footer - Dark, clean design */
 .footer {
-  background: var(--pe-gray-900);
+  background: var(--color-gray-900);
   color: white;
   padding: 0;
   margin-top: var(--space-16);
@@ -14,7 +14,12 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--pe-teal), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-teal-500),
+    transparent
+  );
 }
 
 /* Footer Content */
@@ -34,7 +39,7 @@
   letter-spacing: 0.1em;
   margin-bottom: var(--space-6);
   font-weight: 600;
-  color: var(--pe-teal-300);
+  color: var(--color-teal-200);
 }
 
 .footer-section p {
@@ -66,12 +71,12 @@
   content: "";
   width: 0;
   height: 1px;
-  background: var(--pe-teal-400);
+  background: var(--color-teal-300);
   transition: width var(--transition-base);
 }
 
 .footer-section a:hover {
-  color: var(--pe-teal-200);
+  color: var(--color-teal-100);
   text-decoration: none;
 }
 
