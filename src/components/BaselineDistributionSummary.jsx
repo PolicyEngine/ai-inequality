@@ -74,9 +74,11 @@ function BaselineDistributionSummary({
         <h2>Baseline distribution</h2>
         <p>
           Before the experiment, positive capital income is already much more
-          concentrated than market or net income. These groups rank households
-          by baseline market income; positive capital income sets losses to zero
-          to match the dollars shifted in the experiment.
+          concentrated than market or net income. The market and positive
+          capital income columns rank households by baseline market income, and
+          the net income column ranks them by net income. Positive capital
+          income sets losses to zero to match the amount shifted in the
+          experiment.
         </p>
       </div>
 

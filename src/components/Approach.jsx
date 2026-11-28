@@ -23,7 +23,7 @@ function Approach({ countryKey = "us" }) {
       step: 2,
       title: "PolicyEngine microsimulation",
       description: isUK
-        ? "Open-source UK tax-benefit model and household microdata"
+        ? "Open-source UK tax-benefit model and data-processing code"
         : "Open-source tax-benefit models for US, UK, Canada",
     },
     {
@@ -46,9 +46,10 @@ function Approach({ countryKey = "us" }) {
       title: "Open source",
       description: (
         <>
-          All models, data, and code are{" "}
-          <Source href="https://github.com/PolicyEngine/policyengine-core">
-            open source (AGPL-3.0)
+          We publish our tax-benefit models and data-processing code as open
+          source, with the models under{" "}
+          <Source href="https://github.com/PolicyEngine/policyengine-core/blob/master/LICENSE">
+            AGPL-3.0
           </Source>
           . 10,000+ policy parameters encoded across country tax-benefit
           systems, including the UK.
