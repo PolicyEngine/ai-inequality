@@ -1,39 +1,20 @@
 import { test, expect } from "@playwright/test";
 import { appUrl } from "./basePath";
+import { UK_PATH, serveUkStudyPath } from "./ukStudyRoute";
 
-// policyengine.org serves /uk/ai-inequality and each page below it by
-// fetching this export's /us/ai-inequality page with ?country=uk
-// (policyengine-app-v2, website/src/data/appZoneRoutes.ts). The browser keeps
-// the UK path and its own query. The route below does the same, and notes any
-// upstream request that answers with anything but the page itself, such as a
-// redirect or a 404. A reload may get a 304, which keeps the page it already
-// has.
-//
-// policyengine.org answers a trailing slash with a 308 to the path without it
-// (checked on 2026-11-27), so its pages see a slashed UK path only on a host
-// that doesn't. The route serves the slashed spelling as it stands, and each
-// page must show the UK view under it too.
-const UK_PATH = "/uk/ai-inequality";
-const isUkPath = (url) =>
-  url.pathname === UK_PATH || url.pathname.startsWith(`${UK_PATH}/`);
-
+// The route in ukStudyRoute.js serves the UK path as policyengine.org does.
+// Each test notes any upstream request that answers with anything but the
+// page itself, such as a redirect or a 404. A reload may get a 304, which
+// keeps the page it already has. Each page must show the UK view under the
+// slashed spelling too.
 let upstreamFailures = [];
 
 test.beforeEach(async ({ page }) => {
   upstreamFailures = [];
-  await page.route(isUkPath, async (route) => {
-    const url = new URL(route.request().url());
-    const rest = url.pathname.slice(UK_PATH.length).replace(/\/+$/, "");
-    const upstream = new URL(appUrl(rest).replace(/\/$/, ""), url);
-    upstream.searchParams.set("country", "uk");
-    const response = await route.fetch({
-      url: upstream.href,
-      maxRedirects: 0,
-    });
+  await serveUkStudyPath(page, (upstream, response) => {
     if (![200, 304].includes(response.status())) {
       upstreamFailures.push(`${upstream.pathname}: ${response.status()}`);
     }
-    await route.fulfill({ response });
   });
 });
 
