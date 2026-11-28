@@ -765,10 +765,6 @@ function RevenueDecompositionChart({
   laborTerm = "labor",
   note = null,
 }) {
-  // The legend draws in this element below the chart, not inside it. Inside,
-  // Recharts takes the legend's height from the plot. On a phone the legend
-  // wraps to about 230px, which left a 420px chart a plot about 110px tall.
-  const [legendHost, setLegendHost] = useState(null);
   // Share mode scales each bucket value by 100 / denominatorB.
   const scale = unit === "share" && denominatorB ? 100 / denominatorB : 1;
   const scaledData = chartData.map((row) => {
@@ -814,10 +810,7 @@ function RevenueDecompositionChart({
   return (
     <>
       <h3 className="analysis-chart-title">{title}</h3>
-      {/* 352px leaves a 272px plot at any width. That is the plot the federal
-          revenue chart had at desktop width with its legend inside a 420px
-          chart. */}
-      <ResponsiveContainer width="100%" height={352}>
+      <ResponsiveContainer width="100%" height={420}>
         <ComposedChart
           data={scaledData}
           margin={{ left: 20, right: 30, top: 10, bottom: 40 }}
@@ -859,13 +852,7 @@ function RevenueDecompositionChart({
               `${value}% shift`
             }
           />
-          {legendHost && (
-            <Legend
-              {...LEGEND_PROPS}
-              content={BandLegend}
-              portal={legendHost}
-            />
-          )}
+          <Legend {...LEGEND_PROPS} content={BandLegend} />
           {/* Band i fills with SERIES[i]; no bucket list holds more than six.
               Each band draws BAND_EDGE along its outer edge, because a band
               near zero lets two bands that are not list neighbours touch. */}
@@ -898,7 +885,6 @@ function RevenueDecompositionChart({
           )}
         </ComposedChart>
       </ResponsiveContainer>
-      <div ref={setLegendHost} className="shift-sweep-legend" />
       {note && <p className="shift-sweep-description">{note}</p>}
     </>
   );
