@@ -27,7 +27,6 @@ import {
   SERIES,
   TEXT,
   TOOLTIP_PROPS,
-  Y_AXIS_LABEL_STYLE,
   ZERO_LINE,
 } from "../charts/kitTheme";
 import { microcosmBuildLabel } from "../utils/modelMetadata";
@@ -149,7 +148,8 @@ function TiltCostChart({ scenarios }) {
               angle: -90,
               position: "insideLeft",
               offset: -8,
-              style: Y_AXIS_LABEL_STYLE,
+              textAnchor: "middle",
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <Tooltip
@@ -281,7 +281,8 @@ function RealizationChart({ rows, breakeven }) {
               angle: -90,
               position: "insideLeft",
               offset: -8,
-              style: Y_AXIS_LABEL_STYLE,
+              textAnchor: "middle",
+              style: AXIS_LABEL_STYLE,
             }}
           />
           <ReferenceLine y={0} {...ZERO_LINE} />

@@ -86,18 +86,16 @@ export const TOOLTIP_PROPS = {
 // Spread onto every XAxis and YAxis, as the kit's own charts set them: tick
 // text in the kit's axis style, the axis line in the grid's colour and no
 // tick marks. Recharts otherwise draws all three in #666. An axis title takes
-// AXIS_LABEL_STYLE, the same muted ink at 13px, and a y-axis title turned to
-// read upwards takes Y_AXIS_LABEL_STYLE.
+// AXIS_LABEL_STYLE, the same muted ink at 13px. A y-axis title turned to read
+// upwards also sets textAnchor: "middle" on its label. Recharts' "insideLeft"
+// position anchors it at its start, at the axis's middle, so a long title
+// would otherwise run up past the chart's top edge.
 export const AXIS_PROPS = {
   tick: AXIS_STYLE,
   tickLine: false,
   axisLine: { stroke: GRID_STYLE.stroke },
 };
 export const AXIS_LABEL_STYLE = { ...AXIS_STYLE, fontSize: 13 };
-// Recharts' "insideLeft" position anchors a rotated title at its start, at the
-// axis's middle, so a long title runs up past the chart's top edge. Anchoring
-// it at its middle centres it on the axis.
-export const Y_AXIS_LABEL_STYLE = { ...AXIS_LABEL_STYLE, textAnchor: "middle" };
 
 // Every CSS variable a chart can reach through this module, including the
 // ones inside the kit's axis, grid, legend and tooltip styles.
@@ -129,7 +127,6 @@ export function tokensUsed() {
     TOOLTIP_PROPS,
     AXIS_PROPS,
     AXIS_LABEL_STYLE,
-    Y_AXIS_LABEL_STYLE,
   ]);
   return [...found].sort();
 }

@@ -46,8 +46,11 @@ function chartUnder(name) {
   return screen.getByRole("heading", { name }).nextElementSibling;
 }
 
+// The chart draws its legend in the element below it.
+const legendOf = (chart) => chart.nextElementSibling;
+
 function legend(chart) {
-  return [...chart.querySelectorAll(".recharts-legend-item-text")]
+  return [...legendOf(chart).querySelectorAll(".recharts-legend-item-text")]
     .map((node) => node.textContent)
     .sort();
 }
@@ -149,10 +152,12 @@ test("the state ranking orders states by their net change with health coverage a
 // it, and each band's fill in the order the chart stacks them.
 function legendColours(chart) {
   return Object.fromEntries(
-    [...chart.querySelectorAll(".recharts-legend-item")].map((item) => [
-      item.textContent,
-      item.querySelector("path")?.getAttribute("stroke"),
-    ]),
+    [...legendOf(chart).querySelectorAll(".recharts-legend-item")].map(
+      (item) => [
+        item.textContent,
+        item.querySelector("path")?.getAttribute("stroke"),
+      ],
+    ),
   );
 }
 
