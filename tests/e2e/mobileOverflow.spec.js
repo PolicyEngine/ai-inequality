@@ -11,7 +11,9 @@ test.use({ viewport: { width: WIDTH, height: 812 } });
 
 // What each version of the page offers. The test checks that it visited
 // these, so it fails instead of passing on fewer states if one stops
-// rendering.
+// rendering. ?country=uk shows the UK view on this export's own path, the
+// same page policyengine.org serves at /uk/ai-inequality/policy-analysis
+// (ukPath.spec.js checks that route).
 const VERSIONS = [
   {
     name: "US",
