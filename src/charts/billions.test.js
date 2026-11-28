@@ -55,3 +55,11 @@ test("prints an amount that rounds to zero unsigned at any precision", () => {
   expect(billions(-0.3, { sign: true, precision: 0 })).toBe("$0B");
   expect(billions(-0.3, { sign: true, precision: 1 })).toBe("-$0.3B");
 });
+
+test("prints any finite amount in full digits by default, as before", () => {
+  expect(billions(1e21)).toBe("$1,000,000,000,000,000,000,000B");
+  expect(billions(-1e21, { sign: true })).toBe(
+    "-$1,000,000,000,000,000,000,000B",
+  );
+  expect(billions(123456789012.3)).toBe("$123,456,789,012B");
+});

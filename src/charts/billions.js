@@ -30,23 +30,29 @@ export function billions(
     throw new Error(`billions: ${value} is not a finite number`);
   }
   const size = Math.abs(value);
-  let shown = size;
-  let digits = precision;
+  let amount;
   if (precision === undefined) {
+    // The health-coverage figures' rounding, as at a98df0a: toLocaleString
+    // rounds the shortest decimal form and never switches to exponents.
     const tenths = Math.round(size * 10) / 10;
-    shown = tenths >= 10 ? Math.round(size) : tenths;
-    digits = shown >= 10 || shown === 0 ? 0 : 1;
+    const shown = tenths >= 10 ? Math.round(size) : tenths;
+    const digits = shown >= 10 || shown === 0 ? 0 : 1;
+    amount = shown.toLocaleString("en-US", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+      useGrouping: grouping,
+    });
+  } else {
+    // The sweep's rounding, as it always printed: toFixed rounds the exact
+    // binary value, so 0.15 at one decimal prints 0.1, where toLocaleString
+    // would print 0.2.
+    const fixed = size.toFixed(precision);
+    amount = grouping
+      ? fixed.replace(/^\d+/, (whole) =>
+          whole.replace(/\B(?=(\d{3})+(?!\d))/g, ","),
+        )
+      : fixed;
   }
-  // toFixed rounds the number's exact binary value, as the sweep always has;
-  // toLocaleString rounds its shortest decimal form, so 0.15 would print 0.2
-  // where toFixed prints 0.1. The default path's shown is rounded already, so
-  // both print it the same up to 10^16 billion, far past any amount here.
-  const fixed = shown.toFixed(digits);
-  const amount = grouping
-    ? fixed.replace(/^\d+/, (whole) =>
-        whole.replace(/\B(?=(\d{3})+(?!\d))/g, ","),
-      )
-    : fixed;
   const suffix = unit === "billion" ? " billion" : "B";
   const printsZero = !/[1-9]/.test(amount);
   const prefix = !sign || printsZero ? "" : value < 0 ? "-" : "+";
