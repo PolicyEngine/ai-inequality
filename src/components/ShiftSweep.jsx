@@ -36,6 +36,7 @@ import {
   TOOLTIP_LABEL_STYLE,
   ZERO_LINE,
 } from "../charts/kitTheme";
+import { billions } from "../charts/billions";
 import { TOOLTIP_STYLE } from "../utils/chartStyles";
 import { niceTicks } from "../utils/chartTicks";
 import {
@@ -233,10 +234,24 @@ function BandLegend(props) {
   return <DefaultLegendContent {...props} payload={payload} />;
 }
 
-const billionFmt = (value, { precision = 0, currencySymbol = "$" } = {}) => {
-  const sign = value >= 0 ? "+" : "";
-  return `${currencySymbol}${sign}${value.toFixed(precision)}B`;
-};
+// Every signed amount in billions on the sweep's axes and tooltips: "-$172B",
+// "+$5.3B", with the sign before the currency symbol as the health-coverage
+// figures print it. Each chart keeps the decimals it has always printed, and
+// amounts keep no thousands separator. A value that isn't a finite number,
+// such as one a regenerated data file left out, prints as a dash: billions()
+// throws on it, and a throw in a tooltip would empty the page.
+export const signedBillions = (
+  value,
+  { precision = 0, currencySymbol = "$" } = {},
+) =>
+  Number.isFinite(value)
+    ? billions(value, {
+        sign: true,
+        precision,
+        currencySymbol,
+        grouping: false,
+      })
+    : "—";
 const axisPctFmt = (value) => {
   const pct = value * 100;
   if (Math.abs(pct) >= 10 || pct === 0) {
@@ -380,9 +395,9 @@ function measuresForMetadata(metadata, withHealthTanf = false) {
       axisLabel:
         metadata.revenue_axis_label ??
         `Change vs baseline (${currencySymbol}B)`,
-      valueFormatter: (value) => billionFmt(value, { currencySymbol }),
+      valueFormatter: (value) => signedBillions(value, { currencySymbol }),
       tooltipFormatter: (value) =>
-        billionFmt(value, { precision: 1, currencySymbol }),
+        signedBillions(value, { precision: 1, currencySymbol }),
       description:
         metadata.revenue_description ??
         (withHealthTanf
@@ -797,11 +812,11 @@ function RevenueDecompositionChart({
   const tickFormatter = (v) =>
     unit === "share"
       ? `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`
-      : `${currencySymbol}${v >= 0 ? "+" : ""}${v.toFixed(0)}B`;
+      : signedBillions(v, { currencySymbol });
   const tooltipFormatter = (v) =>
     unit === "share"
       ? `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`
-      : `${currencySymbol}${v >= 0 ? "+" : ""}${v.toFixed(1)}B`;
+      : signedBillions(v, { precision: 1, currencySymbol });
   // The units toggle names the taxes in full. The axis keeps a short title,
   // centred on the axis, so it fits the chart in either country.
   const resolvedAxisLabel =
@@ -1007,7 +1022,7 @@ function DecileImpactChart({
             tickFormatter={(v) =>
               unit === "share"
                 ? `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`
-                : billionFmt(v, { currencySymbol })
+                : signedBillions(v, { currencySymbol })
             }
             label={{
               value:
@@ -1028,7 +1043,7 @@ function DecileImpactChart({
             formatter={(value, name) => [
               unit === "share"
                 ? `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`
-                : billionFmt(value, { precision: 1, currencySymbol }),
+                : signedBillions(value, { precision: 1, currencySymbol }),
               name,
             ]}
             labelFormatter={(label) => label}
@@ -1198,7 +1213,7 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
             tickFormatter={(v) =>
               unit === "share"
                 ? `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`
-                : `${currencySymbol}${v >= 0 ? "+" : ""}${v.toFixed(0)}B`
+                : signedBillions(v, { currencySymbol })
             }
             label={{
               value:
@@ -1226,7 +1241,7 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
             formatter={(value, name) => [
               unit === "share"
                 ? `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`
-                : `${currencySymbol}${value >= 0 ? "+" : ""}${value.toFixed(2)}B`,
+                : signedBillions(value, { precision: 2, currencySymbol }),
               name,
             ]}
             labelFormatter={(label) => `State: ${label}`}

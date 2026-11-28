@@ -54,8 +54,7 @@
   outline-offset: 1px;
 }
 
-.shift-sweep-state-exposure,
-.shift-sweep-mtr-chart {
+.shift-sweep-state-exposure {
   margin-top: var(--space-8);
   padding-top: var(--space-6);
   border-top: 1px solid var(--pe-gray-200);
