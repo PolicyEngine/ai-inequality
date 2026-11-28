@@ -34,6 +34,7 @@ import {
   TEXT,
   TOOLTIP_ITEM_STYLE,
   TOOLTIP_LABEL_STYLE,
+  Y_AXIS_LABEL_STYLE,
   ZERO_LINE,
 } from "../charts/kitTheme";
 import { TOOLTIP_STYLE } from "../utils/chartStyles";
@@ -838,7 +839,7 @@ function RevenueDecompositionChart({
               angle: -90,
               position: "insideLeft",
               offset: -10,
-              style: { ...AXIS_LABEL_STYLE, textAnchor: "middle" },
+              style: Y_AXIS_LABEL_STYLE,
             }}
           />
           <ReferenceLine y={0} {...ZERO_LINE} />
@@ -986,7 +987,7 @@ function DecileImpactChart({
       <ResponsiveContainer width="100%" height={360}>
         <BarChart
           data={rows}
-          margin={{ left: 10, right: 30, top: 10, bottom: 40 }}
+          margin={{ left: 20, right: 30, top: 10, bottom: 40 }}
         >
           <CartesianGrid {...GRID_STYLE} />
           <XAxis
@@ -1017,7 +1018,7 @@ function DecileImpactChart({
               angle: -90,
               position: "insideLeft",
               offset: -10,
-              style: AXIS_LABEL_STYLE,
+              style: Y_AXIS_LABEL_STYLE,
             }}
           />
           <ReferenceLine y={0} {...ZERO_LINE} />
@@ -1589,7 +1590,7 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
                     angle: -90,
                     position: "insideLeft",
                     offset: -10,
-                    style: AXIS_LABEL_STYLE,
+                    style: Y_AXIS_LABEL_STYLE,
                   }}
                 />
                 {isRevenue && <ReferenceLine y={0} {...ZERO_LINE} />}

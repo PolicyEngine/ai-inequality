@@ -1,11 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { appUrl } from "./basePath";
 
-// Every axis title on the study's charts stays inside its chart, in each state
-// the chart controls reach, for both countries. Recharts' "insideLeft"
-// position anchors a rotated y-axis title at its start, at the axis's middle,
-// so a long title runs up past the chart's top edge unless the chart anchors
-// it at its middle.
+// Every axis title on the study's charts stays inside its chart and clear of
+// its tick labels, in each state the chart controls reach, for both countries.
+// Recharts' "insideLeft" position anchors a rotated y-axis title at its start,
+// at the axis's middle, so a long title runs up past the chart's top edge
+// unless the chart anchors it at its middle.
 //
 // At desktop width the spec checks every title. At phone width it checks the
 // rotated y-axis titles: some horizontal x-axis titles are wider than a phone
@@ -21,14 +21,24 @@ const WIDTHS = [
   { width: 375, rotatedOnly: true },
 ];
 
-// Each chart title's text and how far it runs past its chart's edges, for the
-// charts on screen. Recharts draws a chart only once it has measured its
-// width, so a chart still at zero width has no titles yet.
+// Each chart title's text, how far it runs past its chart's edges, and the
+// tick labels it covers, for the charts on screen. Recharts draws a chart only
+// once it has measured its width, so a chart still at zero width has no
+// titles yet.
 function readTitles(rotatedOnly) {
+  const crosses = (a, b) =>
+    Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 &&
+    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
   const titles = [];
   for (const chart of document.querySelectorAll("svg.recharts-surface")) {
     const edges = chart.getBoundingClientRect();
     if (edges.width === 0) continue;
+    const ticks = [
+      ...chart.querySelectorAll(".recharts-cartesian-axis-tick-value"),
+    ].map((tick) => ({
+      text: tick.textContent,
+      box: tick.getBoundingClientRect(),
+    }));
     for (const title of chart.querySelectorAll("text.recharts-label")) {
       const rotated = /rotate/.test(title.getAttribute("transform") ?? "");
       if (rotatedOnly && !rotated) continue;
@@ -44,6 +54,9 @@ function readTitles(rotatedOnly) {
         past: Object.entries(past)
           .filter(([, px]) => px > 1)
           .map(([edge, px]) => `${edge} by ${Math.round(px)}px`),
+        covers: ticks
+          .filter((tick) => crosses(box, tick.box))
+          .map((tick) => tick.text),
       });
     }
   }
@@ -68,11 +81,14 @@ async function expectTitlesInside(page, { rotatedOnly, state, revenue }) {
           return ["the decile chart hasn't drawn its titles"];
         }
         if (texts.length === 0) return ["no chart has drawn its titles"];
-        return titles
-          .filter(({ past }) => past.length > 0)
-          .map(
-            ({ text, past }) => `"${text}" runs past the ${past.join(", ")}`,
-          );
+        return titles.flatMap(({ text, past, covers }) => [
+          ...(past.length
+            ? [`"${text}" runs past the ${past.join(", ")}`]
+            : []),
+          ...(covers.length
+            ? [`"${text}" covers the tick labels ${covers.join(", ")}`]
+            : []),
+        ]);
       },
       { message: state, timeout: 10_000 },
     )
