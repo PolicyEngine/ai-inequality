@@ -7,7 +7,7 @@ const PROJECTS = {
       title: "OBBBA household-by-household analysis",
       description:
         "Interactive tool showing how the One Big Beautiful Bill Act affects over 20,000 representative household types.",
-      image: withBasePath("/images/obbba-household-by-household.png"),
+      image: "/images/obbba-household-by-household.png",
       url: "https://www.policyengine.org/us/obbba-households",
       type: "Distributional impact",
     },
@@ -15,7 +15,7 @@ const PROJECTS = {
       title: "AI-written policy reports",
       description:
         "Automatically generated policy analysis reports using AI to synthesize microsimulation results.",
-      image: withBasePath("/images/ai-analysis.png"),
+      image: "/images/ai-analysis.png",
       url: "https://policyengine.org/us/research/gpt-analysis",
       type: "AI integration",
     },
@@ -23,7 +23,7 @@ const PROJECTS = {
       title: "Multi-agent AI for policy modeling",
       description:
         "AI agent teams that research, encode, test, and validate state benefit programs into production microsimulation code.",
-      image: withBasePath("/images/multi-agent-ai-policy.png"),
+      image: "/images/multi-agent-ai-policy.png",
       url: "https://policyengine.org/us/research/multi-agent-workflows-policy-research",
       type: "AI infrastructure",
     },
@@ -31,7 +31,7 @@ const PROJECTS = {
       title: "ACA premium tax credit calculator",
       description:
         "Calculate health insurance subsidies under current and alternative policies.",
-      image: withBasePath("/images/aca-calc-chart.png"),
+      image: "/images/aca-calc-chart.png",
       url: "https://policyengine.org/us/research/introducing-aca-calc",
       type: "Policy calculator",
     },
@@ -39,7 +39,7 @@ const PROJECTS = {
       title: "NBER TAXSIM integration",
       description:
         "Partnership with National Bureau of Economic Research to expand tax microsimulation capabilities.",
-      image: withBasePath("/images/policyengine-nber-mou-taxsim.png"),
+      image: "/images/policyengine-nber-mou-taxsim.png",
       url: "https://policyengine.org/us/research/policyengine-nber-mou-taxsim",
       type: "Research partnership",
     },
@@ -49,17 +49,15 @@ const PROJECTS = {
       title: "Autumn Budget 2024 policy reform impacts",
       description:
         "PolicyEngine UK analysis of how major Budget measures affect household incomes across the distribution.",
-      image: withBasePath("/images/ai-analysis.png"),
+      image: "/images/ai-analysis.png",
       url: "https://policyengine.org/uk/research/autumn-budget-2024-policy-reform-impacts",
       type: "UK distributional impact",
     },
     {
       title: "PolicyEngine UK model",
       description:
-        "Open-source tax-benefit microsimulation covering UK taxes, benefits, households, and representative microdata.",
-      image: withBasePath(
-        "/images/how-developers-can-explore-the-policyengine-api.jpg",
-      ),
+        "Open-source tax-benefit microsimulation covering UK taxes, benefits and households.",
+      image: "/images/how-developers-can-explore-the-policyengine-api.jpg",
       url: "https://policyengine.org/uk/model",
       type: "UK model",
     },
@@ -67,7 +65,7 @@ const PROJECTS = {
       title: "AI-written policy reports",
       description:
         "Automatically generated policy analysis reports using AI to synthesize microsimulation results.",
-      image: withBasePath("/images/ai-analysis.png"),
+      image: "/images/ai-analysis.png",
       url: "https://policyengine.org/us/research/gpt-analysis",
       type: "AI integration",
     },
@@ -75,9 +73,7 @@ const PROJECTS = {
       title: "Household benefit eligibility API",
       description:
         "Programmatic access to calculate tax liabilities and benefit eligibility for household configurations.",
-      image: withBasePath(
-        "/images/how-developers-can-explore-the-policyengine-api.jpg",
-      ),
+      image: "/images/how-developers-can-explore-the-policyengine-api.jpg",
       url: "https://policyengine.org/uk/api",
       type: "Developer API",
     },
@@ -111,7 +107,7 @@ function ExampleProjects({ countryKey = "us" }) {
           >
             <div className="project-image-container">
               <img
-                src={project.image}
+                src={withBasePath(project.image)}
                 alt={project.title}
                 className="project-image"
               />

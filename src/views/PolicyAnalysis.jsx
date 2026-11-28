@@ -10,9 +10,10 @@ import revenueLines from "../data/revenueLines.json";
 import {
   COUNTRIES,
   countryFromSearchParams,
+  EXPERIMENT_LIMITS,
   incomeShiftUrl,
 } from "../utils/countryConfig";
-import { policyEngineLabel } from "../utils/modelMetadata";
+import { baselineYearLabel, policyEngineLabel } from "../utils/modelMetadata";
 import { showsHealthCoverageFigures } from "../utils/sweepRevenue";
 
 function formatTrillions(value, currencySymbol) {
@@ -57,6 +58,10 @@ function PolicyAnalysis() {
   const modelLabel = policyEngineLabel(metadata);
   const currencySymbol = metadata.currency_symbol ?? "$";
   const laborTerm = metadata.labor_label ?? "labor";
+  const yearLabel = baselineYearLabel(
+    metadata,
+    metadata.year ?? sweepData.year,
+  );
 
   return (
     <>
@@ -75,8 +80,7 @@ function PolicyAnalysis() {
             <div className="policy-analysis-brief-card">
               <h2>Baseline facts</h2>
               <p>
-                The {metadata.year ?? sweepData.year} {country.label} baseline
-                contains{" "}
+                The {yearLabel} {country.label} baseline contains{" "}
                 <strong>
                   {formatTrillions(
                     baselineFacts.labor_income_t,
@@ -106,18 +110,15 @@ function PolicyAnalysis() {
                 to 100% in 10-point steps, then add the same weighted total to
                 positive capital income. We scale every positive amount by one
                 common factor, so each person gains in proportion to the capital
-                income they already receive.{" "}
-                {countryKey === "us"
-                  ? "Households' total market income stays the same. We don't pass employers' savings on payroll tax to anyone, and we model no behavioral responses."
-                  : "We model no behavioural responses."}
+                income they already receive. {EXPERIMENT_LIMITS[countryKey]}
               </p>
             </div>
             <div className="policy-analysis-brief-card">
               <h2>Model</h2>
               <p>
                 Results shown here come from <strong>{modelLabel}</strong> on a{" "}
-                <strong>{metadata.year ?? sweepData.year}</strong> baseline. For
-                the model structure and variable definitions, see the{" "}
+                <strong>{yearLabel}</strong> baseline. For the model structure
+                and variable definitions, see the{" "}
                 <a href={docsUrl} target="_blank" rel="noreferrer">
                   PolicyEngine model documentation
                 </a>

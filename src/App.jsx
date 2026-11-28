@@ -6,11 +6,11 @@ import PolicyAnalysis from "./views/PolicyAnalysis";
 import IncomeShift from "./views/IncomeShift";
 import References from "./views/References";
 import BudgetLabMemo from "./views/BudgetLabMemo";
-import { basePath } from "./utils/basePath";
+import { currentBasePath } from "./utils/basePath";
 
 function App() {
   return (
-    <Router basename={basePath || undefined}>
+    <Router basename={currentBasePath() || undefined}>
       <div className="App">
         <Routes>
           <Route path="/" element={<Home />} />

@@ -46,6 +46,7 @@ import {
   stateRow,
 } from "../utils/sweepRevenue";
 import {
+  baselineYearLabel,
   policyEngineLabel,
   predatesHeadStartCorrection,
 } from "../utils/modelMetadata";
@@ -69,7 +70,7 @@ const FEDERAL_BUCKETS_US = [
 const NATIONAL_BUCKETS_UK = [
   {
     key: "rev_fed_income_tax_net",
-    label: "Income tax",
+    label: "Income Tax and Capital Gains Tax",
   },
   {
     key: "rev_payroll_all",
@@ -290,6 +291,10 @@ const REVENUE_DESCRIPTION_US =
 // channel. A payload with its own revenue_summary_note (the UK's) skips it.
 const CORPORATE_TAX_NOTE_US =
   "PolicyEngine-US doesn't model corporate income tax, so these estimates leave out any change in corporate tax revenue.";
+
+// analysis/uk_shift_sweep.py's net_fiscal_impact totals these and nothing else.
+const CORPORATION_TAX_NOTE_UK =
+  "These estimates count Income Tax, Capital Gains Tax, National Insurance and household benefits, so they leave out any change in Corporation Tax revenue.";
 
 const REVENUE_DESCRIPTION_US_HEALTH_TANF_REST =
   "We price each new Medicaid enrollee at the baseline cost of an enrollee in their state with the same ACA benchmark premium. The federal and state charts add up to the total, apart from three groups of taxes. We count workers' state payroll taxes such as California's SDI, the Additional Medicare Tax, and local taxes on income and occupations only in the total. We put New York City's and Maryland's local income taxes in those states' charts instead.";
@@ -696,13 +701,18 @@ function summaryForMetric(
   const laborTerm = metadata.labor_label ?? "labor";
 
   if (measureKey === "gini") {
+    // Taxes and benefits dampen the shock only if net-income inequality rises
+    // less than market-income inequality. In the UK sweep it rises more.
+    const marketRise = endPoint?.marketGini - basePoint?.marketGini;
+    const dampens = endValue - startValue < marketRise;
     return (
       <>
         {config.label} rises from {startValue.toFixed(3)} at baseline to{" "}
-        {endValue.toFixed(3)} at a 100% shift.{" "}
+        {endValue.toFixed(3)} at a 100% shift.
         {conceptKey === "net"
-          ? "Current law dampens the shock, but it does not come close to offsetting it."
-          : `We move ${laborTerm} income to people in proportion to the capital income they already receive.`}
+          ? dampens &&
+            " Current law dampens the shock, but it does not come close to offsetting it."
+          : ` We move ${laborTerm} income to people in proportion to the capital income they already receive.`}
       </>
     );
   }
@@ -732,7 +742,11 @@ function summaryForMetric(
 
   const currencySymbol = metadata.currency_symbol ?? "$";
   const corporate =
-    metadata.revenue_summary_note == null ? ` ${CORPORATE_TAX_NOTE_US}` : "";
+    metadata.country_id === "uk"
+      ? ` ${CORPORATION_TAX_NOTE_UK}`
+      : metadata.revenue_summary_note == null
+        ? ` ${CORPORATE_TAX_NOTE_US}`
+        : "";
   if (metadata.revenue_summary_note == null && withHealthTanf) {
     const path = revenuePath(
       chartData,
@@ -803,10 +817,10 @@ function RevenueDecompositionChart({
     unit === "share"
       ? `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`
       : signedBillions(v, { precision: 1, currencySymbol });
+  // The units toggle names the taxes in full. The axis keeps a short title,
+  // centred on the axis, so it fits the chart in either country.
   const resolvedAxisLabel =
-    unit === "share"
-      ? "Change vs baseline (% of income + payroll tax revenue)"
-      : axisLabel;
+    unit === "share" ? "Change vs baseline (% of tax revenue)" : axisLabel;
 
   return (
     <>
@@ -839,7 +853,7 @@ function RevenueDecompositionChart({
               angle: -90,
               position: "insideLeft",
               offset: -10,
-              style: AXIS_LABEL_STYLE,
+              style: { ...AXIS_LABEL_STYLE, textAnchor: "middle" },
             }}
           />
           <ReferenceLine y={0} {...ZERO_LINE} />
@@ -1250,14 +1264,16 @@ function StateExposureChart({ sweepData, currencySymbol, unit = "dollars" }) {
 // The unit toggle's options, in the run's currency and its country's tax names.
 // The UK file keeps Income Tax with Capital Gains Tax under fed_income_tax and
 // National Insurance under the payroll keys federalBaseDenominator adds.
+function shareTaxes(metadata) {
+  return metadata.country_id === "uk"
+    ? "Income Tax, Capital Gains Tax and National Insurance revenue"
+    : "income + payroll tax revenue";
+}
+
 function unitOptions(metadata) {
-  const taxes =
-    metadata.country_id === "uk"
-      ? "Income Tax, Capital Gains Tax and National Insurance revenue"
-      : "income + payroll tax revenue";
   return [
     { key: "dollars", label: `${metadata.currency_symbol ?? "$"} billions` },
-    { key: "share", label: `% of ${taxes}` },
+    { key: "share", label: `% of ${shareTaxes(metadata)}` },
   ];
 }
 
@@ -1684,7 +1700,9 @@ function ShiftSweep({ sweepData = defaultSweepData, forecastBand = null }) {
         </div>
 
         <p className="analysis-metadata">
-          {modelLabel}, {metadata.year ?? sweepData.year} baseline.{" "}
+          {modelLabel},{" "}
+          {baselineYearLabel(metadata, metadata.year ?? sweepData.year)}{" "}
+          baseline.{" "}
           <a
             className="shift-sweep-link"
             href={docsUrl}

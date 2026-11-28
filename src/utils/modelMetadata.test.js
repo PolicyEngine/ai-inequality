@@ -1,6 +1,7 @@
 import usShiftSweepData from "../data/shiftSweepData.json";
 import ukShiftSweepData from "../data/ukShiftSweepData.json";
 import {
+  baselineYearLabel,
   microcosmBuildLabel,
   predatesHeadStartCorrection,
 } from "./modelMetadata";
@@ -119,5 +120,16 @@ describe("predatesHeadStartCorrection", () => {
     expect(predatesHeadStartCorrection(undefined)).toBe(false);
     expect(predatesHeadStartCorrection(null)).toBe(false);
     expect(predatesHeadStartCorrection("policyengine-us")).toBe(false);
+  });
+});
+
+describe("baselineYearLabel", () => {
+  test("names the UK's tax year and the US's calendar year", () => {
+    expect(baselineYearLabel(ukShiftSweepData.metadata)).toBe("2026-27");
+    expect(baselineYearLabel(usShiftSweepData.metadata)).toBe("2026");
+    expect(baselineYearLabel({ country_id: "uk" }, 2029)).toBe("2029-30");
+    expect(baselineYearLabel({ country_id: "uk" }, 2099)).toBe("2099-00");
+    expect(baselineYearLabel({}, 2026)).toBe("2026");
+    expect(baselineYearLabel({ country_id: "uk" })).toBeUndefined();
   });
 });
